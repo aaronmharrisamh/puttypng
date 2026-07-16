@@ -1,0 +1,3910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PuttyPNG - Press your data into a PNG. Hand it to anyone.</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-soft: #444;
+      --paper: #ffffff;
+      --clay: #c96f52;         /* warm clay / salmon accent */
+      --clay-deep: #a8532f;
+      --clay-soft: #f7ede9;    /* clay tint for soft fills */
+      --line: #ececec;
+      --line-strong: #d8d8d8;
+      --muted: #6f6f6f;    /* AA-compliant (>=4.5:1) muted text on white */
+      --ok: #2e7d32;
+      --bad: #c62828;
+      --radius: 14px;
+      --radius-sm: 9px;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 10px 30px rgba(0,0,0,.05);
+      --shadow-lift: 0 2px 6px rgba(0,0,0,.06), 0 18px 46px rgba(0,0,0,.09);
+      --space: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      padding: 0 20px;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    h2 { font-size: 24px; letter-spacing: -0.02em; }
+    h3 { font-size: 17px; letter-spacing: -0.01em; }
+    p { color: var(--ink-soft); }
+    a { color: var(--clay-deep); }
+    code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    /* ---- Header ---- */
+    header.masthead { text-align: center; padding: 60px 0 24px; }
+    header.masthead h1 {
+      font-size: clamp(40px, 8vw, 68px);
+      letter-spacing: -0.035em;
+      font-weight: 700;
+    }
+    header.masthead h1 .png { color: var(--clay); }
+    header.masthead .subtitle {
+      font-size: clamp(16px, 2.6vw, 21px);
+      margin-top: 8px;
+      font-weight: 400;
+      color: var(--ink);
+    }
+    header.masthead .byline { font-size: 14px; color: var(--muted); margin-top: 10px; }
+
+    /* ---- Tabs ---- */
+    nav.tabs {
+      display: flex; justify-content: center; gap: 2px; flex-wrap: wrap;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 36px; position: sticky; top: 0;
+      background: rgba(255,255,255,.9); backdrop-filter: saturate(1.4) blur(8px);
+      padding-top: 6px; z-index: 10;
+    }
+    nav.tabs button {
+      border: none; background: none; font: inherit; font-size: 15px;
+      color: var(--muted); padding: 12px 16px; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color .15s ease, border-color .15s ease;
+    }
+    nav.tabs button:hover { color: var(--ink); }
+    nav.tabs button.active { color: var(--clay); border-bottom-color: var(--clay); font-weight: 600; }
+    nav.tabs button:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 6px; }
+
+    .tab-panel { display: none; padding-bottom: 100px; }
+    .tab-panel.active { display: block; }
+
+    /* ---- Cards / sections ---- */
+    .card {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 26px; margin: 20px 0; box-shadow: var(--shadow); background: #fff;
+    }
+    .section-title { margin: 44px 0 6px; letter-spacing: -0.02em; }
+    .section-sub { color: var(--muted); margin-bottom: 8px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+
+    /* ---- Buttons ---- */
+    .btn {
+      font: inherit; font-weight: 600; font-size: 15px; line-height: 1;
+      border-radius: 999px; padding: 12px 20px; cursor: pointer;
+      border: 1px solid transparent; transition: transform .08s ease, background .15s ease, border-color .15s ease, color .15s ease;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+    .btn-primary { background: var(--ink); color: #fff; }
+    .btn-primary:hover { background: #000; }
+    .btn-clay { background: var(--clay); color: #fff; }
+    .btn-clay:hover { background: var(--clay-deep); }
+    .btn-ghost { background: #fff; color: var(--ink); border-color: var(--line-strong); }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .btn-sm { padding: 8px 14px; font-size: 13px; }
+    .btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+    /* ---- Fields ---- */
+    .field { margin-bottom: 14px; }
+    .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+    textarea, input[type="text"], input[type="password"], input[type="number"], select {
+      width: 100%; font: inherit; font-size: 15px; color: var(--ink);
+      border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+      padding: 11px 13px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+    textarea:focus, input:focus, select:focus {
+      outline: none; border-color: var(--clay); box-shadow: 0 0 0 3px rgba(201,111,82,.15);
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { min-width: 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+
+    /* toggle switch */
+    .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
+    .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .switch .track {
+      width: 42px; height: 24px; border-radius: 999px; background: var(--line-strong);
+      position: relative; transition: background .15s ease; flex: 0 0 auto;
+    }
+    .switch .track::after {
+      content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .18s ease;
+    }
+    .switch input:checked + .track { background: var(--clay); }
+    .switch input:checked + .track::after { transform: translateX(18px); }
+    .switch input:focus-visible + .track { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+    /* segmented radio (cover style) */
+    .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; overflow: hidden; }
+    .seg-opt { padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--ink-soft); transition: background .15s ease, color .15s ease; }
+    .seg-opt + .seg-opt { border-left: 1px solid var(--line-strong); }
+    .seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .seg-opt:has(input:checked) { background: var(--clay); color: #fff; }
+    .seg-opt:focus-within { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+    /* ---- Data input: text, drag-drop file, or attached-file chip ---- */
+    .data-drop { position: relative; }
+    .data-drop.drag-over textarea { border-color: var(--clay); box-shadow: 0 0 0 3px rgba(201,111,82,.15); }
+    .drop-overlay {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      border: 2px dashed var(--clay); border-radius: var(--radius-sm);
+      background: rgba(201,111,82,.10); color: var(--clay-deep); font-weight: 600; font-size: 15px;
+      pointer-events: none;
+    }
+    .data-drop.drag-over .drop-overlay { display: flex; }
+    .file-chip {
+      display: flex; align-items: center; gap: 14px; min-height: 120px;
+      border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 14px 16px; background: #fafafa;
+    }
+    .file-chip .file-ic { font-size: 30px; line-height: 1; }
+    .file-chip .file-meta { flex: 1; min-width: 0; }
+    .file-chip .fn { font-weight: 600; word-break: break-all; }
+    .file-chip .file-size { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .file-x {
+      flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong);
+      background: #fff; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
+      transition: border-color .15s ease, color .15s ease;
+    }
+    .file-x:hover { border-color: var(--bad); color: var(--bad); }
+    .file-x:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+    .input-meta { margin-top: 6px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .linklike {
+      background: none; border: none; font: inherit; font-size: 13px; color: var(--clay-deep);
+      cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .linklike:hover { color: var(--ink); }
+    .linklike:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 4px; }
+
+    /* slider + number pairs (splat controls) */
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-pair { display: flex; gap: 10px; align-items: center; }
+    .slider-pair input[type="range"] { flex: 1; accent-color: var(--clay); min-width: 0; }
+    .slider-pair input[type="number"] { width: 64px; flex: 0 0 auto; }
+
+    /* ---- Confirm modal ---- */
+    .modal-overlay-el {
+      position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.45); padding: 20px;
+    }
+    .modal-card {
+      background: #fff; border-radius: var(--radius); padding: 24px; width: 100%; max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .modal-card h3 { font-size: 18px; margin-bottom: 8px; letter-spacing: -0.01em; }
+    .modal-card p { font-size: 14px; color: var(--ink-soft); margin-bottom: 18px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ---- Advanced drawer ---- */
+    .drawer-toggle {
+      background: none; border: none; font: inherit; font-size: 14px; font-weight: 600;
+      color: var(--clay-deep); cursor: pointer; padding: 6px 0; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .drawer-toggle .chev { transition: transform .2s ease; }
+    .drawer-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
+    .drawer {
+      overflow: hidden; max-height: 0; transition: max-height .28s ease;
+      border-left: 2px solid var(--clay-soft); margin: 6px 0 4px; padding-left: 0;
+    }
+    /* Open height is driven by JS: it animates max-height 0 -> scrollHeight, then
+       releases it to 'none' on transitionend so the drawer never clips its content,
+       no matter how many controls it holds. (No max-height here on purpose, so the
+       0 -> px open transition fires transitionend cleanly.) */
+    .drawer-inner { padding: 14px 2px 4px 16px; }
+
+    /* ---- Output preview ---- */
+    .preview {
+      display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px;
+    }
+    .preview .frame {
+      background:
+        repeating-conic-gradient(#e9e9e9 0% 25%, #f6f6f6 0% 50%) 50% / 18px 18px;
+      border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px;
+      line-height: 0;
+    }
+    /* Display size is set by JS from the real PNG dimensions so the frame hugs
+       the true aspect ratio (a square PNG shows square, a 2:1 shows 2:1). */
+    .preview .frame img { width: 200px; height: 200px; image-rendering: pixelated; border-radius: 4px; display: block; }
+    .preview .meta { flex: 1; min-width: 200px; }
+    .stat-row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+    .stat-row .k { color: var(--muted); }
+    .stat-row .v { font-weight: 600; }
+
+    /* ---- Dropzone ---- */
+    .dropzone {
+      border: 2px dashed var(--line-strong); border-radius: var(--radius);
+      padding: 30px 20px; text-align: center; cursor: pointer; background: #fcfcfc;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .dropzone:hover { border-color: var(--clay); background: var(--clay-soft); }
+    .dropzone.drag-over { border-color: var(--clay); background: var(--clay-soft); box-shadow: 0 0 0 3px rgba(201,111,82,.12); }
+    .dropzone:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; }
+    .dropzone .big { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .dropzone .hint { font-size: 13px; color: var(--muted); }
+
+    .result-box { margin-top: 16px; }
+    .result-text {
+      width: 100%; min-height: 90px; font-size: 13px; background: #fafafa;
+      border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; white-space: pre-wrap; word-break: break-word;
+    }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .badge { font-size: 12px; border-radius: 999px; padding: 3px 10px; background: var(--clay-soft); color: var(--clay-deep); border: 1px solid #eadfd9; }
+
+    /* ---- Toast ---- */
+    #toast {
+      position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+      background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 999px;
+      font-size: 14px; box-shadow: var(--shadow-lift); opacity: 0; pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease; z-index: 100; max-width: 90vw;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.bad { background: var(--bad); }
+    #toast.ok { background: var(--ok); }
+
+    /* ---- Snippets ---- */
+    .snippet { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: 14px 0; box-shadow: var(--shadow); }
+    .snippet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; background: #fafafa; border-bottom: 1px solid var(--line); }
+    .snippet-head .n { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+    .snippet-head .n .num { background: var(--clay); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+    .snippet pre { margin: 0; padding: 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; background: #fff; max-height: 340px; overflow-y: auto; }
+    .snippet .cap { font-size: 13px; color: var(--muted); padding: 0 16px 14px; }
+
+    .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 60px; }
+    .divider { height: 1px; background: var(--line); margin: 22px 0; border: 0; }
+    .hidden { display: none !important; }
+
+    /* ---- Docs ---- */
+    .subnav { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 26px; }
+    .subnav a {
+      font-size: 13px; font-weight: 600; text-decoration: none; color: var(--ink-soft);
+      border: 1px solid var(--line-strong); border-radius: 999px; padding: 6px 14px; background: #fff;
+      transition: border-color .15s ease, color .15s ease, background .15s ease;
+    }
+    .subnav a:hover { border-color: var(--clay); color: var(--clay-deep); background: var(--clay-soft); }
+    .doc-section { scroll-margin-top: 70px; margin-bottom: 10px; }
+    .doc-section > h2 { margin: 40px 0 4px; }
+    .api-sig {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 14px; background: var(--clay-soft); color: var(--clay-deep);
+      border-radius: var(--radius-sm); padding: 10px 14px; margin: 8px 0 14px; overflow-x: auto; white-space: pre;
+    }
+    table.doc { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0 6px; }
+    table.doc th, table.doc td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    table.doc th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    table.doc td.mono, table.doc td .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    .tablewrap { overflow-x: auto; }
+    .err-code { font-weight: 700; color: var(--clay-deep); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .lede { font-size: 17px; color: var(--ink-soft); }
+    .license { font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-soft); }
+    .big-dl { text-align: center; padding: 40px 20px; }
+    .big-dl .lock { font-size: 40px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="masthead">
+      <h1>Putty<span class="png">PNG</span></h1>
+      <div class="subtitle">Press your data into a PNG. Hand it to anyone.</div>
+      <div class="byline">by Aaron Michael Harris</div>
+    </header>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="PuttyPNG sections">
+      <button type="button" class="active" role="tab" aria-selected="true" aria-controls="tab-puttypng" id="tabbtn-puttypng" data-tab="puttypng">PuttyPNG</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-docs" id="tabbtn-docs" data-tab="docs">Docs</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-tutorial" id="tabbtn-tutorial" data-tab="tutorial">Tutorial</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-download" id="tabbtn-download" data-tab="download">Download</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-about" id="tabbtn-about" data-tab="about">About</button>
+    </nav>
+
+    <!-- =================== PuttyPNG (playground) =================== -->
+    <section class="tab-panel active" id="tab-puttypng" role="tabpanel" aria-labelledby="tabbtn-puttypng">
+
+      <!-- EXPORT -->
+      <div class="card">
+        <h2>Make a PuttyPNG</h2>
+        <p class="small">Type or paste anything, then press it into a PNG you can hand to anyone.</p>
+
+        <div class="field" style="margin-top:14px;">
+          <label for="exportText">Your data</label>
+          <div class="data-drop" id="dataDrop">
+            <textarea id="exportText" placeholder="Type or paste text, JSON, anything...">Hello from PuttyPNG! Edit me, then press Make PuttyPNG.</textarea>
+            <div class="file-chip hidden" id="fileChip">
+              <span class="file-ic" aria-hidden="true">&#128196;</span>
+              <span class="file-meta">
+                <span class="fn" id="fileName"></span>
+                <span class="file-size" id="fileSize"></span>
+              </span>
+              <button type="button" class="file-x" id="fileClear" aria-label="Remove file and go back to text">&times;</button>
+            </div>
+            <div class="drop-overlay" id="dropOverlay" aria-hidden="true"><span>Drop a file to load it</span></div>
+          </div>
+          <div class="small muted input-meta">
+            <span id="inputSize">0 bytes</span>
+            <button type="button" class="linklike" id="attachBtn">or attach a file</button>
+            <input type="file" id="attachInput" class="hidden" aria-label="Attach a file to hide in the PuttyPNG">
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-primary" id="makeBtn" type="button">Make PuttyPNG</button>
+          <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
+            <span class="chev">&rsaquo;</span> Advanced
+          </button>
+        </div>
+
+        <!-- Advanced drawer -->
+        <div class="drawer" id="advDrawer">
+          <div class="drawer-inner">
+
+            <!-- Cover style (CD / Noise) + CD options -->
+            <div style="margin-bottom:16px;">
+              <div class="small" style="font-weight:600; margin-bottom:6px;">Cover style</div>
+              <div class="seg" role="radiogroup" aria-label="Cover style">
+                <label class="seg-opt">CD<input type="radio" name="coverStyle" value="cd" checked></label>
+                <label class="seg-opt">Noise<input type="radio" name="coverStyle" value="noise"></label>
+              </div>
+              <div id="cdControls" style="margin-top:12px;">
+                <div class="grid2">
+                  <div class="field" style="margin:0;">
+                    <label for="optLabel">CD label (optional)</label>
+                    <input type="text" id="optLabel" placeholder="e.g. My Mixtape">
+                  </div>
+                  <label class="switch" style="align-self:end; margin-bottom:8px;">
+                    <input type="checkbox" id="optSolidBg">
+                    <span class="track"></span> Solid background (smaller disc)
+                  </label>
+                </div>
+                <div class="field" style="margin:12px 0 0;">
+                  <label for="optImprint">Imprint an image on the disc (optional)</label>
+                  <input type="file" id="optImprint" accept="image/*">
+                  <div class="small muted" id="imprintInfo" style="margin-top:6px;"></div>
+                </div>
+                <div id="cdAdvanced" style="margin-top:12px;">
+                  <div class="grid2">
+                    <div class="field" style="margin:0;">
+                      <label for="optFontFamily">Label font</label>
+                      <select id="optFontFamily">
+                        <option value="-apple-system, Segoe UI, Roboto, sans-serif">Sans (system)</option>
+                        <option value="Georgia, 'Times New Roman', serif">Serif</option>
+                        <option value="ui-monospace, Menlo, Consolas, monospace">Monospace</option>
+                        <option value="'Comic Sans MS', 'Marker Felt', fantasy, cursive">Marker</option>
+                      </select>
+                    </div>
+                    <div class="field" style="margin:0;">
+                      <label for="optFontSize">Label size</label>
+                      <select id="optFontSize">
+                        <option value="small">Small</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="large">Large</option>
+                        <option value="xlarge">Extra large</option>
+                      </select>
+                    </div>
+                    <div class="field" style="margin:10px 0 0; grid-column:1 / -1;">
+                      <label for="optRimText">Rim microtext</label>
+                      <input type="text" id="optRimText" placeholder="auto: PuttyPNG | size | contents">
+                    </div>
+                  </div>
+
+                  <!-- Hub (the round center): sizes + ring thicknesses -->
+                  <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
+                    <div class="small" style="font-weight:600; margin-bottom:8px;">Hub</div>
+                    <div class="grid2">
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splHubSize">Hub size (%)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splHubSize" min="10" max="40" step="1" value="20">
+                          <input type="number" id="splHubSizeNum" min="10" max="40" step="1" value="20" aria-label="Hub size value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splHoleSize">Hole size (%)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splHoleSize" min="3" max="25" step="1" value="8">
+                          <input type="number" id="splHoleSizeNum" min="3" max="25" step="1" value="8" aria-label="Hole size value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splOuter">Gray outer thickness</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splOuter" min="1" max="20" step="1" value="6">
+                          <input type="number" id="splOuterNum" min="1" max="20" step="1" value="6" aria-label="Gray outer thickness value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splInner">Gray inner thickness</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splInner" min="1" max="20" step="1" value="4">
+                          <input type="number" id="splInnerNum" min="1" max="20" step="1" value="4" aria-label="Gray inner thickness value">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Putty splat: the default branding imprint (used unless a custom imprint image is chosen) -->
+                  <div id="splatControls" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
+                    <div class="small" style="font-weight:600; margin-bottom:8px;">Putty splat (the default imprint)</div>
+                    <div class="grid2">
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splPoints">Points</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splPoints" min="3" max="12" step="1" value="5">
+                          <input type="number" id="splPointsNum" min="3" max="12" step="1" value="5" aria-label="Points value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splCurve">Curve length</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splCurve" min="0" max="100" step="1" value="0">
+                          <input type="number" id="splCurveNum" min="0" max="100" step="1" value="0" aria-label="Curve length value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splWaviness">Waviness</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splWaviness" min="0" max="100" step="1" value="100">
+                          <input type="number" id="splWavinessNum" min="0" max="100" step="1" value="100" aria-label="Waviness value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splAmplitude">Peaks &amp; valleys</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splAmplitude" min="0" max="100" step="1" value="16">
+                          <input type="number" id="splAmplitudeNum" min="0" max="100" step="1" value="16" aria-label="Peaks and valleys value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splSize">Splat size (%)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splSize" min="20" max="90" step="1" value="60">
+                          <input type="number" id="splSizeNum" min="20" max="90" step="1" value="60" aria-label="Splat size value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splSeed">Seed</label>
+                        <div class="slider-pair">
+                          <input type="number" id="splSeed" min="0" max="9999" step="1" value="7">
+                          <button type="button" class="btn btn-ghost btn-sm" id="splShuffle">Shuffle</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="small" style="font-weight:600; margin:14px 0 8px;">Dots</div>
+                    <div class="grid2">
+                      <div class="field" style="margin:0;">
+                        <label for="splDotColor">Dot color</label>
+                        <select id="splDotColor">
+                          <option value="rainbowSoft" selected>Rainbow soft</option>
+                          <option value="rainbowStrong">Rainbow strong</option>
+                          <option value="black">Black</option>
+                          <option value="white">White</option>
+                          <option value="dkgray">Dark gray</option>
+                          <option value="ltgray">Light gray</option>
+                          <option value="blue">Blue</option>
+                          <option value="red">Red</option>
+                          <option value="orange">Orange</option>
+                          <option value="yellow">Yellow</option>
+                          <option value="green">Green</option>
+                        </select>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splDotSep">Dot separation (px)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splDotSep" min="1" max="8" step="0.5" value="1.5">
+                          <input type="number" id="splDotSepNum" min="1" max="8" step="0.1" value="1.5" aria-label="Dot separation value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splDotMin">Dot size min (px)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splDotMin" min="0.3" max="4" step="0.1" value="0.5">
+                          <input type="number" id="splDotMinNum" min="0.3" max="4" step="0.1" value="0.5" aria-label="Dot size min value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splDotMax">Dot size max (px)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splDotMax" min="0.3" max="5" step="0.1" value="0.8">
+                          <input type="number" id="splDotMaxNum" min="0.3" max="5" step="0.1" value="0.8" aria-label="Dot size max value">
+                        </div>
+                      </div>
+                      <div class="field slider-row" style="margin:0;">
+                        <label for="splTextBuffer">Dot buffer from text (px)</label>
+                        <div class="slider-pair">
+                          <input type="range" id="splTextBuffer" min="0" max="40" step="1" value="11">
+                          <input type="number" id="splTextBufferNum" min="0" max="40" step="1" value="11" aria-label="Dot buffer value">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="small muted" id="splatDisabledNote" style="margin-top:8px; display:none;">Your imprint image is being used instead of the splat.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="grid2">
+              <div class="field">
+                <label for="optPassword">Password (optional, encrypts with AES-256)</label>
+                <input type="password" id="optPassword" placeholder="leave blank for no encryption" autocomplete="new-password">
+              </div>
+              <div class="field">
+                <label for="optTag">Developer tag (plaintext, optional)</label>
+                <input type="text" id="optTag" placeholder="e.g. myapp v2">
+              </div>
+              <div class="field">
+                <label for="optDepth">Embed depth</label>
+                <select id="optDepth">
+                  <option value="standard">Standard - roomy (1 byte / pixel)</option>
+                  <option value="subtle">Subtle - invisible (3 bits / pixel)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="optSizeMode">Image size</label>
+                <select id="optSizeMode">
+                  <option value="auto">Auto (smallest square that fits)</option>
+                  <option value="pow2">Power of two (32, 64, 128...)</option>
+                  <option value="fixed">Fixed size...</option>
+                </select>
+              </div>
+              <div class="field hidden" id="fixedSizeField">
+                <label for="optFixedSize">Fixed size (pixels, square)</label>
+                <input type="number" id="optFixedSize" min="32" max="4096" step="1" value="256">
+              </div>
+              <div class="field">
+                <label for="optCover">Cover image (optional PNG)</label>
+                <input type="file" id="optCover" accept="image/png,image/jpeg">
+              </div>
+              <div class="field hidden" id="coverFitField">
+                <label for="optCoverFit">Cover fit</label>
+                <select id="optCoverFit">
+                  <option value="crop">Crop (fill the square)</option>
+                  <option value="keepRatio">Keep ratio (original shape)</option>
+                  <option value="scale">Scale (fit inside)</option>
+                  <option value="center">Center (no resize)</option>
+                  <option value="stretch">Stretch (distort to square)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:4px; gap:20px;">
+              <label class="switch">
+                <input type="checkbox" id="optCompress" checked>
+                <span class="track"></span> Compress automatically
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div id="output" class="hidden" style="margin-top:22px;">
+          <hr class="divider">
+          <div class="preview">
+            <div class="frame">
+              <img id="outImg" alt="Your generated PuttyPNG" width="200" height="200">
+            </div>
+            <div class="meta">
+              <div id="outStats"></div>
+              <div class="row" style="margin-top:14px;">
+                <button class="btn btn-clay btn-sm" id="saveBtn" type="button">Save PNG</button>
+                <button class="btn btn-ghost btn-sm" id="copyImgBtn" type="button">Copy image</button>
+              </div>
+              <p class="small muted" style="margin-top:12px;">Right-click the image to copy or save it too. Paste it into the reader below to prove the round-trip.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPORT -->
+      <div class="card">
+        <h2>Read a PuttyPNG</h2>
+        <p class="small">Drop, paste, or choose a PuttyPNG and see what is inside.</p>
+
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop, paste, or choose a PuttyPNG to read" style="margin-top:14px;">
+          <div class="big">Drop a PNG here</div>
+          <div class="hint">or paste with Ctrl/Cmd+V &middot; or <span style="color:var(--clay-deep); font-weight:600;">click to browse [...]</span></div>
+          <input type="file" id="importFile" accept="image/png" class="hidden" aria-label="Choose a PuttyPNG file to read">
+        </div>
+
+        <div class="result-box hidden" id="resultBox">
+          <div class="badges" id="resultBadges"></div>
+          <div id="resultTextWrap">
+            <label class="small muted" for="resultText">Decoded contents</label>
+            <div class="result-text mono" id="resultText"></div>
+          </div>
+          <div class="row" id="resultActions" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <h2 class="section-title">How it works</h2>
+      <p class="section-sub">No server, no magic - just clever use of an ordinary lossless PNG.</p>
+      <div class="card">
+        <p style="margin-bottom:12px;">A PNG stores its pixels <strong>losslessly</strong> - every color value survives a copy, a paste, even a trip through many chat apps. PuttyPNG hides your data in the lowest, least-visible bits of the red, green, and blue channels of the image's fully opaque pixels. Nudging those bits shifts each color by an amount your eye cannot see, but the bytes are perfectly recoverable.</p>
+        <div class="grid2">
+          <div>
+            <h3>The protocol</h3>
+            <p class="small">A tiny header (<span class="mono">PPNG</span> + version + a CRC32 checksum) marks the image and guarantees the data came out exactly as it went in. Descriptive details ride in a small JSON block; the version byte lets the format grow without ever misreading an old PuttyPNG.</p>
+          </div>
+          <div>
+            <h3>Compression &amp; encryption</h3>
+            <p class="small">Data is gzip-compressed automatically whenever that helps. Add a password and it is sealed with AES-256-GCM (a key stretched from your password with PBKDF2) - the filename and type are hidden too, so an encrypted PuttyPNG reveals nothing until it is opened.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- DROP-IN 1-2-3 -->
+      <h2 class="section-title">Drop it into your own project</h2>
+      <p class="section-sub">Three copy-paste steps. No build tools, no dependencies, works offline.</p>
+
+      <div class="snippet">
+        <div class="snippet-head">
+          <span class="n"><span class="num">1</span> The Engine</span>
+          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="engineCode">Copy engine</button>
+        </div>
+        <pre id="engineCode" aria-label="PuttyPNG engine source">Loading engine source...</pre>
+        <div class="cap">Save as <span class="mono">puttypng.js</span> and include it, or paste the whole thing into a <span class="mono">&lt;script&gt;</span> tag. This is the entire protocol - the only file you truly need. <button class="btn btn-ghost btn-sm" type="button" id="dlEngineBtn" style="margin-left:6px;">Download puttypng.js</button></div>
+      </div>
+
+      <div class="snippet">
+        <div class="snippet-head">
+          <span class="n"><span class="num">2</span> The Importer</span>
+          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="importerCode">Copy importer</button>
+        </div>
+        <pre id="importerCode"></pre>
+        <div class="cap">A drop / paste / browse zone. Everything decoded is handed to your <span class="mono">onData</span> callback - your form, game, or app decides what to do with it.</div>
+      </div>
+
+      <div class="snippet">
+        <div class="snippet-head">
+          <span class="n"><span class="num">3</span> The Exporter</span>
+          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="exporterCode">Copy exporter</button>
+        </div>
+        <pre id="exporterCode"></pre>
+        <div class="cap">A box and a button that turns whatever the user types into a downloadable PuttyPNG. See the Docs tab for encryption, custom covers, and calling the engine directly.</div>
+      </div>
+
+    </section>
+
+    <!-- =================== Docs =================== -->
+    <section class="tab-panel" id="tab-docs" role="tabpanel" aria-labelledby="tabbtn-docs">
+      <h2>Docs</h2>
+      <p class="lede">The whole engine is one dependency-free file. These are its four functions, the protocol it speaks, and the ways to wire it into your own project.</p>
+      <nav class="subnav" aria-label="Docs sections">
+        <a href="#docs-api">API</a>
+        <a href="#docs-protocol">Protocol</a>
+        <a href="#docs-covers">Cover styles</a>
+        <a href="#docs-errors">Error codes</a>
+        <a href="#docs-recipes">Recipes</a>
+        <a href="#docs-prompt">Custom prompt</a>
+        <a href="#docs-changelog">Changelog</a>
+      </nav>
+
+      <!-- API -->
+      <div class="doc-section" id="docs-api">
+        <h2>API reference</h2>
+        <p>Everything hangs off the global <span class="mono">PuttyPNG</span>. Both <span class="mono">encode</span> and <span class="mono">decode</span> return promises.</p>
+
+        <div class="card">
+          <h3>PuttyPNG.encode(input, options?)</h3>
+          <div class="api-sig">await PuttyPNG.encode(data, { password, depth, compress, tag, cover, ... }) &rarr; result</div>
+          <p class="small">Hides <span class="mono">input</span> (a string, plain object, <span class="mono">Uint8Array</span>, <span class="mono">ArrayBuffer</span>, or <span class="mono">File</span>/<span class="mono">Blob</span>) inside a PNG.</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">password</td><td class="mono">&mdash;</td><td>If set, encrypts with AES-256-GCM (key from PBKDF2-SHA-256). Filename &amp; type are hidden too.</td></tr>
+              <tr><td class="mono">depth</td><td class="mono">"standard"</td><td><span class="mono">"standard"</span> = 1 byte/pixel (roomy). <span class="mono">"subtle"</span> = 3 bits/pixel (invisible).</td></tr>
+              <tr><td class="mono">compress</td><td class="mono">true</td><td>Auto gzip; kept only if it actually shrinks the data.</td></tr>
+              <tr><td class="mono">tag</td><td class="mono">""</td><td>Plaintext developer tag, readable later via <span class="mono">peek()</span> without decrypting.</td></tr>
+              <tr><td class="mono">cover</td><td class="mono">&mdash;</td><td>A PNG (File/Blob/URL/Image) to hide the data in. Default is generated noise. Resampled with high-quality smoothing; a transparent cover is auto-hardened so no data pixel borders a soft edge.</td></tr>
+              <tr><td class="mono">coverFit</td><td class="mono">"crop"</td><td>How a cover fills the frame: <span class="mono">crop</span>, <span class="mono">keepRatio</span> (non-square, original shape), <span class="mono">scale</span>, <span class="mono">center</span>, <span class="mono">stretch</span>.</td></tr>
+              <tr><td class="mono">size</td><td class="mono">auto</td><td>Fixed square side in pixels. Omit to auto-size to the data.</td></tr>
+              <tr><td class="mono">sizeMode</td><td class="mono">"auto"</td><td><span class="mono">"pow2"</span> rounds the auto size up to a power of two.</td></tr>
+              <tr><td class="mono">minSize</td><td class="mono">32</td><td>Floor for auto-sizing (px). Raise it to keep a custom cover from shrinking to a tiny thumbnail.</td></tr>
+              <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
+              <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
+              <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
+              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: fill the corners with a soft gradient instead of leaving them transparent. Fully opaque &rarr; smaller disc and survives being flattened onto a background.</td></tr>
+              <tr><td class="mono">imprint</td><td class="mono">&mdash;</td><td>CD only: an image (File/Blob/URL/Image) etched onto the disc as a grayscale stipple, beneath the label.</td></tr>
+              <tr><td class="mono">fontFamily</td><td class="mono">system</td><td>CD only: the label font.</td></tr>
+              <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: label size &mdash; <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span> (each scales with the disc size; still shrinks/wraps to fit).</td></tr>
+              <tr><td class="mono">rimText</td><td class="mono">auto</td><td>CD only: the mirrored microtext around the inner rim. Defaults to the informational <span class="mono">"PuttyPNG | {size} | {contents}"</span> (or "Secured" when encrypted), built from the data.</td></tr>
+              <tr><td class="mono">splat</td><td class="mono">branding</td><td>CD only: the default "putty splat" imprint (our reusable Gak-like silhouette, stippled into the surface across the full lobe extent; dots stay 5% clear of the disc edge and the hub). <span class="mono">{ points, curve, waviness, amplitude, seed, size, dotColor, dotMin, dotMax, separation, textBuffer }</span>. <span class="mono">dotColor</span> is a palette (default <span class="mono">"rainbowSoft"</span>; also rainbowStrong, black, white, dkgray, ltgray, blue, red, orange, yellow, green). A custom <span class="mono">imprint</span> image overrides it.</td></tr>
+              <tr><td class="mono">hub</td><td class="mono">round</td><td>CD only: the round clamping centre. <span class="mono">{ size, holeSize, outerThickness, innerThickness }</span> (fractions of the disc). The spindle hole is transparent.</td></tr>
+            </tbody>
+          </table></div>
+          <p class="small muted">Result: <span class="mono">{ dataUrl, blob, width, height, depth, compressed, encrypted, bytesHidden, capacityBytes, usedPercent }</span></p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-encode">Copy</button></div>
+<pre id="ex-encode">const png = await PuttyPNG.encode("hello", { password: "s3cret", depth: "subtle" });
+document.querySelector("img").src = png.dataUrl;   // show it
+// png.blob is a PNG Blob you can upload, download, or copy to the clipboard</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.decode(source, options?)</h3>
+          <div class="api-sig">await PuttyPNG.decode(pngSource, { password, autoDownload }) &rarr; result</div>
+          <p class="small"><span class="mono">source</span> may be a <span class="mono">File</span>/<span class="mono">Blob</span>, an <span class="mono">&lt;img&gt;</span>, a <span class="mono">&lt;canvas&gt;</span>, an <span class="mono">ImageData</span>, or a data-URL / URL string.</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">password</td><td class="mono">&mdash;</td><td>Needed for encrypted PuttyPNGs. If omitted, <span class="mono">passwordPrompt</span> is called.</td></tr>
+              <tr><td class="mono">autoDownload</td><td class="mono">false</td><td>If the payload is a binary file, also save it to disk.</td></tr>
+            </tbody>
+          </table></div>
+          <p class="small muted">Result: <span class="mono">{ type, name, mime, bytes, text?, json?, tag, encrypted, compressed, depth, width, height }</span>. <span class="mono">type</span> is <span class="mono">"text"</span>, <span class="mono">"json"</span>, or <span class="mono">"binary"</span>.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-decode">Copy</button></div>
+<pre id="ex-decode">const result = await PuttyPNG.decode(file);
+if (result.type === "binary") PuttyPNG.download(result);
+else console.log(result.text, result.json);</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.peek(source)</h3>
+          <div class="api-sig">await PuttyPNG.peek(pngSource) &rarr; { isPuttyPNG, version, encrypted, compressed, depth, tag, payloadBytes }</div>
+          <p class="small">Reads the header and the plaintext developer tag <em>without decrypting</em>. Returns <span class="mono">{ isPuttyPNG: false }</span> for anything that is not a PuttyPNG.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-peek">Copy</button></div>
+<pre id="ex-peek">const info = await PuttyPNG.peek(file);
+if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.download(result, filename?) &middot; PuttyPNG.passwordPrompt</h3>
+          <p class="small"><span class="mono">download()</span> saves a decoded result (or a raw Blob) to disk. <span class="mono">passwordPrompt</span> is the override point for password entry &mdash; it defaults to the browser's native <span class="mono">prompt()</span>. Replace it with your own UI (see <a href="#docs-prompt">Custom prompt</a>).</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Also on PuttyPNG</th><th>What it is</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">PuttyPNG.version</td><td>Engine version string (e.g. <span class="mono">"1.0.0"</span>).</td></tr>
+              <tr><td class="mono">PuttyPNG.protocolVersion</td><td>Protocol version number (<span class="mono">1</span>).</td></tr>
+              <tr><td class="mono">PuttyPNG.errors</td><td>The <span class="mono">{ E01: "...", ... }</span> code table (see below).</td></tr>
+              <tr><td class="mono">PuttyPNG.selfTest()</td><td>Runs the built-in test battery; returns <span class="mono">{ passed, failed, results }</span>.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PROTOCOL -->
+      <div class="doc-section" id="docs-protocol">
+        <h2>Protocol v1</h2>
+        <p>Data is written into the low bits of the R, G, B channels of <strong>fully opaque</strong> pixels (alpha = 255), in raster order. Multi-byte integers are big-endian.</p>
+        <div class="card">
+          <h3>Fixed header &mdash; 18 bytes, always at 1-1-1 depth (first 48 opaque pixels)</h3>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Offset</th><th>Size</th><th>Field</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">0</td><td>4</td><td>Magic <span class="mono">PPNG</span></td></tr>
+              <tr><td class="mono">4</td><td>1</td><td>Protocol version (decoders reject a higher number &rarr; E02)</td></tr>
+              <tr><td class="mono">5</td><td>1</td><td>Flags: bit0 compressed, bit1 encrypted, bit2 subtle depth</td></tr>
+              <tr><td class="mono">6</td><td>2</td><td>Developer-tag length</td></tr>
+              <tr><td class="mono">8</td><td>2</td><td>Outer-metadata length</td></tr>
+              <tr><td class="mono">10</td><td>4</td><td>Payload length</td></tr>
+              <tr><td class="mono">14</td><td>4</td><td>CRC32 of the payload (as embedded)</td></tr>
+            </tbody>
+          </table></div>
+          <h3 style="margin-top:18px;">Body &mdash; at the flag-declared depth</h3>
+          <p class="small mono">[dev tag][outer metadata][payload]</p>
+          <p class="small">The <strong>outer metadata</strong> is empty unless encrypted, in which case it holds the (plaintext) crypto parameters: <span class="mono">{ enc, kdf, iterations, salt, iv }</span>. The <strong>payload</strong> is the processed inner container.</p>
+          <h3 style="margin-top:18px;">Inner container (protected content)</h3>
+          <p class="small mono">[uint16 metadata length][metadata JSON: {name, type, mime}][data bytes]</p>
+          <p class="small">Because the inner container lives <em>inside</em> the compress/encrypt envelope, an encrypted PuttyPNG reveals no filename or type.</p>
+        </div>
+        <div class="card">
+          <h3>Depths, opacity &amp; transparency</h3>
+          <p class="small"><strong>Standard</strong> packs 3 bits into R, 2 into G, 3 into B &mdash; one byte per pixel. <strong>Subtle</strong> uses one bit per channel &mdash; three bits per pixel, invisible even on flat art. Only alpha = 255 pixels carry data; alpha is never modified.</p>
+          <p class="small" style="margin-top:8px;"><strong>Transparency is hardened.</strong> Semi-transparent, anti-aliased fringe pixels (alpha 1&ndash;254) are the ones platforms silently rewrite, so a custom cover is snapped to <em>binary</em> alpha: every fringe pixel becomes fully opaque, while genuinely transparent (alpha 0) regions are kept. No data-bearing pixel ever borders fractional alpha, so a lossless round-trip &mdash; or a flatten onto any background &mdash; leaves every hidden byte intact.</p>
+          <h3 style="margin-top:16px;">Order of operations</h3>
+          <p class="small">Encode: build inner container &rarr; gzip (if it helps) &rarr; encrypt (if a password is given) &rarr; CRC32 &rarr; embed. Decode reverses it, and the CRC is checked <em>before</em> any password is requested.</p>
+          <h3 style="margin-top:16px;">Versioning</h3>
+          <p class="small">The version <em>byte</em> bumps only on a breaking byte-layout change &mdash; an old engine refuses a newer PuttyPNG (E02) instead of emitting garbage. Backwards-compatible growth happens by adding optional keys to the metadata JSON, which old decoders simply ignore.</p>
+        </div>
+      </div>
+
+      <!-- COVER STYLES -->
+      <div class="doc-section" id="docs-covers">
+        <h2>Cover styles</h2>
+        <p>When you do not supply your own <span class="mono">cover</span> image, PuttyPNG draws one for you. Pick with <span class="mono">coverStyle</span>.</p>
+        <div class="card">
+          <div class="grid2">
+            <div>
+              <h3>Noise</h3>
+              <p class="small">A fully opaque square of random pixels, auto-sized to the smallest that fits the data (min 32&times;32). Invisible embedding, robust everywhere.</p>
+            </div>
+            <div>
+              <h3>CD</h3>
+              <p class="small">A reflective disc drawn in canvas &mdash; the flagship example of a JS-generated cover. By default it carries the PuttyPNG <strong>"putty splat"</strong> branding (a reusable Gak-like silhouette stippled into the surface) and an informational rim (<span class="mono">PuttyPNG | size | contents</span>). Add a curved <span class="mono">label</span>, replace the splat with your own <span class="mono">imprint</span> image, or tune the hub. Auto-sizes from 32&times;32 up (a little larger than noise, since the transparent corners and spindle hole hold no data). Defaults to subtle depth for a smooth sheen.</p>
+            </div>
+          </div>
+          <h3 style="margin-top:16px;">Transparent vs solid &mdash; and a flattening caveat</h3>
+          <p class="small">By default the CD's corners are <strong>transparent</strong>, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> to fill them with a soft gradient &mdash; that makes the disc fully opaque, which both <strong>shrinks it</strong> (more room for data) and makes it <strong>survive being flattened</strong>. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
+        </div>
+      </div>
+
+      <!-- ERRORS -->
+      <div class="doc-section" id="docs-errors">
+        <h2>Error codes</h2>
+        <p>Every failure is one short, documented <span class="mono">E##</span> code &mdash; logged to the console and thrown as a <span class="mono">PuttyPNGError</span> whose <span class="mono">.code</span> you can branch on. This table is generated live from <span class="mono">PuttyPNG.errors</span>, so it always matches the engine on the page.</p>
+        <div class="card"><div class="tablewrap"><table class="doc" id="errorTable">
+          <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+          <tbody id="errorTableBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+        </table></div></div>
+      </div>
+
+      <!-- RECIPES -->
+      <div class="doc-section" id="docs-recipes">
+        <h2>Recipes</h2>
+        <p>Skip the drop-in importer/exporter and drive the engine directly however your app needs.</p>
+
+        <div class="card">
+          <h3>Call the engine directly</h3>
+          <p class="small">No widgets &mdash; just encode and decode in your own flow.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-direct">Copy</button></div>
+<pre id="rec-direct">// Export whatever your app holds:
+const save = { level: 7, score: 9001, items: ["sword"] };
+const png = await PuttyPNG.encode(save, { name: "save.json" });
+uploadOrShare(png.blob);
+
+// Import from anywhere you already have the image:
+const result = await PuttyPNG.decode(pastedImageElement);
+applySave(result.json);</pre>
+        </div>
+
+        <div class="card">
+          <h3>Your own cover art</h3>
+          <p class="small">Hand PuttyPNG a picture to hide the data in. By default it is resampled (high quality) to the <strong>smallest</strong> size that still fits the data &mdash; the source resolution is ignored, so a huge photo will not make a huge PuttyPNG. Raise <span class="mono">minSize</span> or set a fixed <span class="mono">size</span> to keep the art larger; use <span class="mono">keepRatio</span> to preserve the original (non-square) shape.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-cover">Copy</button></div>
+<pre id="rec-cover">// Smallest square that fits, cropped, fringe auto-hardened:
+await PuttyPNG.encode(data, { cover: "logo.png" });
+
+// Keep the picture's original shape, and don't shrink below 256px:
+await PuttyPNG.encode(data, { cover: "banner.png", coverFit: "keepRatio", minSize: 256 });
+
+// Lock a fixed size regardless of data:
+await PuttyPNG.encode(data, { cover: "logo.png", size: 512 });</pre>
+        </div>
+
+        <div class="card">
+          <h3>Generate your own cover in JS</h3>
+          <p class="small">The CD style is just a canvas drawn in code. You can do the same: draw an <span class="mono">ImageData</span> (or a canvas / data-URL) and pass it as the <span class="mono">cover</span>. PuttyPNG hardens any transparency and hides the data in the opaque pixels. Use the built-in <span class="mono">"cd"</span> style for a ready-made disc.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-gen">Copy</button></div>
+<pre id="rec-gen">// Built-in reflective CD with a label + a burned-in imprint:
+await PuttyPNG.encode(data, { coverStyle: "cd", label: "My Album", imprint: "logo.png" });
+
+// ...or draw your own cover on a canvas and hand it over:
+const c = document.createElement("canvas"); c.width = c.height = 256;
+const x = c.getContext("2d");
+const g = x.createLinearGradient(0, 0, 256, 256);
+g.addColorStop(0, "#1b2a4a"); g.addColorStop(1, "#c96f52");
+x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+await PuttyPNG.encode(data, { cover: c.toDataURL("image/png") });</pre>
+        </div>
+
+        <div class="card">
+          <h3>Recognize your own PuttyPNGs with the dev tag</h3>
+          <p class="small">Stamp a plaintext tag on export, then <span class="mono">peek()</span> on import to route it &mdash; no password needed just to know it is yours. Great for versioning an app's own format (a chess game, a doc editor, ...).</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-tag">Copy</button></div>
+<pre id="rec-tag">await PuttyPNG.encode(move, { tag: "chess v3", password: userPw });
+
+// Later, on any dropped image:
+const info = await PuttyPNG.peek(image);
+if (!info.isPuttyPNG || !/^chess /.test(info.tag)) return ignore();
+const move = (await PuttyPNG.decode(image)).json;   // prompts for the password</pre>
+        </div>
+
+        <div class="card">
+          <h3>Encryption tiers &mdash; good, better, best</h3>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Tier</th><th>How</th><th>Protects against</th></tr></thead>
+            <tbody>
+              <tr><td>Good</td><td>No password (default)</td><td>Nothing &mdash; data is open</td></tr>
+              <tr><td>Better</td><td>A key baked into your page's JS</td><td>Casual snooping (keeps honest people honest)</td></tr>
+              <tr><td>Best</td><td>A password the user sets/enters</td><td>Real protection &mdash; only the password holder can open it</td></tr>
+            </tbody>
+          </table></div>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-tiers">Copy</button></div>
+<pre id="rec-tiers">// Better: a fixed page key (anyone reading your source can find it)
+const PAGE_KEY = "our-club-2026";
+await PuttyPNG.encode(data, { password: PAGE_KEY });
+
+// Best: a real per-user secret
+await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
+        </div>
+      </div>
+
+      <!-- CUSTOM PROMPT -->
+      <div class="doc-section" id="docs-prompt">
+        <h2>A custom password prompt</h2>
+        <p>The engine never prompts on its own &mdash; it calls <span class="mono">PuttyPNG.passwordPrompt(context)</span>, which by default is the plain browser <span class="mono">prompt()</span>. Replace it with a styled modal by assigning your own async function that resolves to the password (or <span class="mono">null</span> to cancel). Here is a complete, chic one you can paste in.</p>
+        <div class="card">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <button class="btn btn-clay btn-sm" type="button" id="tryPromptBtn">Preview the styled prompt</button>
+            <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-prompt">Copy</button>
+          </div>
+          <div class="small muted" id="tryPromptOut" style="margin-top:8px;"></div>
+<pre id="rec-prompt" style="margin-top:10px;">PuttyPNG.passwordPrompt = function (context) {
+  return new Promise(function (resolve) {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;" +
+      "align-items:center;justify-content:center;z-index:9999";
+    wrap.innerHTML =
+      "&lt;form style='background:#fff;border-radius:14px;padding:22px;width:300px;" +
+      "font-family:system-ui;box-shadow:0 20px 60px rgba(0,0,0,.3)'&gt;" +
+      "&lt;h3 style='margin:0 0 10px'&gt;Password&lt;/h3&gt;" +
+      "&lt;p style='margin:0 0 12px;color:#666;font-size:14px'&gt;" + (context.message || "") + "&lt;/p&gt;" +
+      "&lt;input type='password' autofocus style='width:100%;padding:10px;border:1px solid #ccc;" +
+      "border-radius:8px;font-size:15px'&gt;" +
+      "&lt;div style='display:flex;gap:8px;justify-content:flex-end;margin-top:14px'&gt;" +
+      "&lt;button type='button' data-x style='padding:8px 14px'&gt;Cancel&lt;/button&gt;" +
+      "&lt;button style='padding:8px 14px;background:#111;color:#fff;border:none;" +
+      "border-radius:999px'&gt;Open&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;";
+    const input = wrap.querySelector("input");
+    function close(value) { wrap.remove(); resolve(value); }
+    wrap.querySelector("[data-x]").onclick = function () { close(null); };
+    wrap.querySelector("form").onsubmit = function (e) { e.preventDefault(); close(input.value); };
+    document.body.appendChild(wrap);
+    input.focus();
+  });
+};</pre>
+        </div>
+      </div>
+
+      <!-- CHANGELOG -->
+      <div class="doc-section" id="docs-changelog">
+        <h2>Changelog</h2>
+        <div class="card">
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Version</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">Engine 1.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with version byte + CRC32; standard &amp; subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM + PBKDF2-SHA-256 encryption (private by default); plaintext developer tag with <span class="mono">peek()</span>; noise or custom covers; <span class="mono">E01</span>&ndash;<span class="mono">E12</span> error codes.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== Tutorial =================== -->
+    <section class="tab-panel" id="tab-tutorial" role="tabpanel" aria-labelledby="tabbtn-tutorial">
+      <h2>Tutorial</h2>
+      <p class="lede">From "what is this?" to "it's in my project" in a few minutes.</p>
+
+      <div class="card">
+        <h3>1. What a PuttyPNG is</h3>
+        <p>A PuttyPNG is an ordinary PNG image with your data pressed invisibly into its pixels. Because PNGs are lossless, you can copy, paste, download, and message the image around, and the data rides along untouched. Hand someone the picture; they read the data back. No server, no link, no account.</p>
+      </div>
+
+      <div class="card">
+        <h3>2. Make your first one</h3>
+        <p class="small">Type a message and press it into a PNG right here, then read it straight back to see the round-trip.</p>
+        <div class="field" style="margin-top:12px;">
+          <label for="tutText">Your message</label>
+          <input type="text" id="tutText" value="My first PuttyPNG!">
+        </div>
+        <div class="row">
+          <button class="btn btn-primary btn-sm" type="button" id="tutMakeBtn">Make it</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="tutReadBtn" disabled>Read it back</button>
+        </div>
+        <div class="preview" id="tutPreview" style="margin-top:14px; display:none;">
+          <div class="frame"><img id="tutImg" alt="Your tutorial PuttyPNG" width="160" height="160" style="width:160px;height:160px;"></div>
+          <div class="meta"><div class="small muted" id="tutResult">Now press "Read it back".</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>3. Drop it into your project</h3>
+        <p>Three copy-paste steps, no build tools:</p>
+        <ol style="margin:8px 0 8px 20px; color:var(--ink-soft); font-size:15px;">
+          <li style="margin:4px 0;"><strong>The Engine</strong> &mdash; save <span class="mono">puttypng.js</span> and include it.</li>
+          <li style="margin:4px 0;"><strong>The Importer</strong> &mdash; a drop/paste/browse zone that hands decoded data to your callback.</li>
+          <li style="margin:4px 0;"><strong>The Exporter</strong> &mdash; a box and a button that make a PuttyPNG.</li>
+        </ol>
+        <p class="small">All three, ready to copy, are on the <a href="#" data-gototab="puttypng">PuttyPNG tab</a>.</p>
+      </div>
+
+      <div class="card">
+        <h3>Going further</h3>
+        <p class="small">When you are ready for more: <a href="#docs-recipes" data-gototab="docs">call the engine directly</a>, add <a href="#docs-prompt" data-gototab="docs">a styled password prompt</a>, use <a href="#docs-recipes" data-gototab="docs">your own cover art</a>, or route your app's own PuttyPNGs with the <a href="#docs-recipes" data-gototab="docs">developer tag</a>. It is all on the Docs tab.</p>
+      </div>
+    </section>
+
+    <!-- =================== Download =================== -->
+    <section class="tab-panel" id="tab-download" role="tabpanel" aria-labelledby="tabbtn-download">
+      <h2>Download</h2>
+      <p class="lede">There is nothing to install. This page <em>is</em> PuttyPNG.</p>
+      <div class="card big-dl">
+        <div class="lock" aria-hidden="true">&#128230;</div>
+        <h2 style="margin:10px 0 6px;">Save the whole page</h2>
+        <p style="max-width:520px;margin:0 auto 18px;">Everything you need is inside the one <span class="mono">index.html</span> &mdash; the playground, the engine, the docs, and this tutorial. Download it and you own PuttyPNG completely: it works offline, hosts on any server by just dropping the file in, and nothing ever phones home.</p>
+        <button class="btn btn-primary" type="button" id="downloadPageBtn">Download index.html</button>
+        <p class="small muted" style="margin-top:14px;">Prefer just the engine? Grab <span class="mono">puttypng.js</span> from the <a href="#" data-gototab="puttypng">PuttyPNG tab</a>.</p>
+      </div>
+    </section>
+
+    <!-- =================== About =================== -->
+    <section class="tab-panel" id="tab-about" role="tabpanel" aria-labelledby="tabbtn-about">
+      <h2>About</h2>
+      <div class="card">
+        <h3>The idea</h3>
+        <p>As a kid you could press a wad of putty onto a comic strip and lift the ink right off &mdash; a perfect little copy you could carry in your pocket and hand to a friend. PuttyPNG is that trick for data. Press whatever you have &mdash; a note, a form, a game save, a whole file &mdash; into an ordinary picture, and hand the picture to anyone. Because so many places let you paste a lossless PNG without mangling it, the picture becomes a friendly, universal envelope: no server, no link that expires, no account to sign into. Just an image that quietly carries exactly what you put in it.</p>
+      </div>
+      <div class="card">
+        <h3>The author</h3>
+        <p>PuttyPNG is made by <strong>Aaron Michael Harris</strong>. It is a fun, open project &mdash; use it, remix it, decorate your PuttyPNGs however you like, and build your own things on top of the protocol.</p>
+      </div>
+      <div class="card">
+        <h3>License</h3>
+        <p class="small muted">PuttyPNG is released under the MIT License.</p>
+        <div class="license" id="licenseText"></div>
+      </div>
+    </section>
+
+    <div class="foot">PuttyPNG &middot; Protocol v1 &middot; MIT &copy; 2026 Aaron Michael Harris</div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ================= PuttyPNG engine (single source of truth) ================= -->
+  <script id="puttypng-engine">
+/*!
+ * PuttyPNG - Press your data into a PNG. Hand it to anyone.
+ * https://puttypng.com
+ *
+ * Protocol v1  |  Engine v1.0.0
+ * A tiny, dependency-free engine that hides any data inside an ordinary lossless
+ * PNG and reads it back out. Paste this whole file into your project - it is the
+ * documentation of the protocol as much as the implementation of it.
+ *
+ * Copyright (c) 2026 Aaron Michael Harris
+ * Released under the MIT License.
+ */
+
+(function (global) {
+  "use strict";
+
+  // ===========================================================================
+  // SECTION 0 - Engine identity
+  // ===========================================================================
+
+  var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
+  var ENGINE_VERSION = "1.0.0";
+
+  // The public object. Everything a developer touches hangs off of this.
+  var PuttyPNG = {
+    version: ENGINE_VERSION,
+    protocolVersion: PROTOCOL_VERSION
+  };
+
+  // ===========================================================================
+  // SECTION 1 - Error system
+  //
+  // Every failure in PuttyPNG is one short, documented E## code. The engine
+  // logs "PuttyPNG E##: message" to the console AND throws a PuttyPNGError that
+  // carries the code, so developers can react in code without parsing strings.
+  // ===========================================================================
+
+  PuttyPNG.errors = {
+    E01: "Not a PuttyPNG (magic not found)",
+    E02: "Protocol version is newer than this engine can read",
+    E03: "Data is corrupted (checksum or structure mismatch)",
+    E04: "This browser cannot decompress (CompressionStream missing)",
+    E05: "Data is too large for the cover image or the size cap",
+    E06: "Wrong password, or the data could not be decrypted",
+    E07: "Encryption is not available (Web Crypto missing)",
+    E08: "A password is required but none was provided",
+    E09: "Invalid input or options",
+    E10: "The image could not be loaded or read",
+    E11: "The cover image has too few opaque pixels to use",
+    E12: "The developer tag is too long (max 65535 bytes)"
+  };
+
+  function PuttyPNGError(code, detail) {
+    var base = PuttyPNG.errors[code] || "Unknown error";
+    this.name = "PuttyPNGError";
+    this.code = code;
+    this.message = detail ? base + " - " + detail : base;
+    this.stack = (new Error()).stack;
+  }
+  PuttyPNGError.prototype = Object.create(Error.prototype);
+  PuttyPNGError.prototype.constructor = PuttyPNGError;
+  PuttyPNG.PuttyPNGError = PuttyPNGError;
+
+  // Throw a coded error (and mirror it to the console as a brief E## line).
+  function fail(code, detail) {
+    var err = new PuttyPNGError(code, detail);
+    if (typeof console !== "undefined" && console.error) {
+      console.error("PuttyPNG " + code + ": " + err.message);
+    }
+    throw err;
+  }
+
+  // ===========================================================================
+  // SECTION 2 - Byte utilities
+  //
+  // Small, readable helpers for moving between text, bytes, base64, and the
+  // big-endian integers used in the fixed header.
+  // ===========================================================================
+
+  var utf8Encoder = new TextEncoder();
+  var utf8Decoder = new TextDecoder("utf-8", { fatal: false });
+
+  function textToBytes(text) {
+    return utf8Encoder.encode(text == null ? "" : String(text));
+  }
+
+  function bytesToText(bytes) {
+    return utf8Decoder.decode(bytes);
+  }
+
+  // Join several Uint8Arrays into one.
+  function concatBytes(chunks) {
+    var total = 0, i;
+    for (i = 0; i < chunks.length; i++) total += chunks[i].length;
+    var out = new Uint8Array(total);
+    var offset = 0;
+    for (i = 0; i < chunks.length; i++) {
+      out.set(chunks[i], offset);
+      offset += chunks[i].length;
+    }
+    return out;
+  }
+
+  // Big-endian integer writers/readers used by the fixed header.
+  function writeUint16(view, offset, value) {
+    view[offset] = (value >>> 8) & 0xff;
+    view[offset + 1] = value & 0xff;
+  }
+  function readUint16(view, offset) {
+    return ((view[offset] << 8) | view[offset + 1]) >>> 0;
+  }
+  function writeUint32(view, offset, value) {
+    view[offset] = (value >>> 24) & 0xff;
+    view[offset + 1] = (value >>> 16) & 0xff;
+    view[offset + 2] = (value >>> 8) & 0xff;
+    view[offset + 3] = value & 0xff;
+  }
+  function readUint32(view, offset) {
+    return ((view[offset] << 24) | (view[offset + 1] << 16) |
+            (view[offset + 2] << 8) | view[offset + 3]) >>> 0;
+  }
+
+  // Dependency-free base64 (used to store salt/iv in the crypto metadata JSON).
+  var B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  function bytesToBase64(bytes) {
+    var out = "", i;
+    for (i = 0; i < bytes.length; i += 3) {
+      var b0 = bytes[i];
+      var b1 = i + 1 < bytes.length ? bytes[i + 1] : 0;
+      var b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+      out += B64_CHARS[b0 >> 2];
+      out += B64_CHARS[((b0 & 3) << 4) | (b1 >> 4)];
+      out += (i + 1 < bytes.length) ? B64_CHARS[((b1 & 15) << 2) | (b2 >> 6)] : "=";
+      out += (i + 2 < bytes.length) ? B64_CHARS[b2 & 63] : "=";
+    }
+    return out;
+  }
+  function base64ToBytes(b64) {
+    var clean = String(b64).replace(/[^A-Za-z0-9+/]/g, "");
+    var len = Math.floor(clean.length * 3 / 4);
+    var out = new Uint8Array(len);
+    var o = 0, buffer = 0, bits = 0;
+    for (var i = 0; i < clean.length; i++) {
+      buffer = (buffer << 6) | B64_CHARS.indexOf(clean[i]);
+      bits += 6;
+      if (bits >= 8) {
+        bits -= 8;
+        out[o++] = (buffer >> bits) & 0xff;
+      }
+    }
+    return out.subarray(0, o);
+  }
+
+  // ===========================================================================
+  // SECTION 3 - CRC32 (integrity check over the embedded payload)
+  // ===========================================================================
+
+  var crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) {
+          c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        crcTable[n] = c >>> 0;
+      }
+    }
+    var crc = 0 ^ -1;
+    for (var i = 0; i < bytes.length; i++) {
+      crc = (crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)) >>> 0;
+    }
+    return (crc ^ -1) >>> 0;
+  }
+
+  // ===========================================================================
+  // SECTION 4 - Pixel plumbing
+  //
+  // Data lives in the low bits of the R, G, B channels of FULLY OPAQUE pixels
+  // (alpha === 255). Alpha is never touched, and transparent / semi-transparent
+  // pixels are skipped entirely - that is what keeps the hidden bits perfectly
+  // recoverable after a lossless PNG round-trip.
+  //
+  // Two embedding depths:
+  //   standard : 3 bits into R, 2 into G, 3 into B  = 1 byte per pixel (roomy)
+  //   subtle   : 1 bit into each of R, G, B         = 3 bits per pixel (invisible)
+  //
+  // The 18-byte fixed header is ALWAYS written at subtle depth so a decoder can
+  // read it before it knows the body's depth.
+  // ===========================================================================
+
+  var DEPTH_STANDARD = [3, 2, 3];
+  var DEPTH_SUBTLE = [1, 1, 1];
+  var HEADER_WIDTHS = DEPTH_SUBTLE;    // header is always 1-1-1
+  var HEADER_LENGTH = 18;              // bytes
+  var HEADER_PIXELS = 48;              // 18 bytes * 8 bits / 3 bits-per-pixel
+
+  // List the indices of every fully opaque pixel, in raster order.
+  function opaquePixels(px, width, height) {
+    var eligible = [];
+    var count = width * height;
+    for (var i = 0; i < count; i++) {
+      if (px[i * 4 + 3] === 255) eligible.push(i);
+    }
+    return eligible;
+  }
+
+  // How many pixels are needed to hold N bytes at a given depth.
+  function pixelsForBytes(byteCount, widths) {
+    var bitsPerPixel = widths[0] + widths[1] + widths[2];
+    return Math.ceil((byteCount * 8) / bitsPerPixel);
+  }
+
+  // Expand bytes into a flat array of bits, most-significant bit first.
+  function bytesToBits(bytes) {
+    var bits = new Uint8Array(bytes.length * 8);
+    var k = 0;
+    for (var i = 0; i < bytes.length; i++) {
+      var b = bytes[i];
+      for (var j = 7; j >= 0; j--) bits[k++] = (b >> j) & 1;
+    }
+    return bits;
+  }
+
+  // Re-pack a bit array (MSB first) back into bytes.
+  function bitsToBytes(bits) {
+    var n = Math.floor(bits.length / 8);
+    var out = new Uint8Array(n);
+    var k = 0;
+    for (var i = 0; i < n; i++) {
+      var b = 0;
+      for (var j = 0; j < 8; j++) b = (b << 1) | (bits[k++] & 1);
+      out[i] = b;
+    }
+    return out;
+  }
+
+  // Write a bit array into the channels of consecutive eligible pixels.
+  // Returns the pixel cursor (into `eligible`) just past the last pixel used.
+  function writeBits(px, eligible, startPixel, widths, bits) {
+    var bo = 0;
+    var pc = startPixel;
+    while (bo < bits.length && pc < eligible.length) {
+      var base = eligible[pc] * 4;
+      for (var c = 0; c < 3; c++) {
+        var w = widths[c];
+        var mask = (1 << w) - 1;
+        var val = 0, got = 0;
+        for (var k = 0; k < w && bo < bits.length; k++) {
+          val = (val << 1) | bits[bo++];
+          got++;
+        }
+        if (got > 0) {
+          if (got < w) val = val << (w - got);   // left-align a partial final group
+          px[base + c] = (px[base + c] & ~mask) | (val & mask);
+        }
+      }
+      pc++;
+    }
+    return pc;
+  }
+
+  // Read `numPixels` pixels starting at a cursor and return their embedded bits.
+  function readBits(px, eligible, startPixel, widths, numPixels) {
+    var per = widths[0] + widths[1] + widths[2];
+    var bits = new Uint8Array(numPixels * per);
+    var bi = 0;
+    for (var n = 0; n < numPixels; n++) {
+      var pc = startPixel + n;
+      if (pc >= eligible.length) break;
+      var base = eligible[pc] * 4;
+      for (var c = 0; c < 3; c++) {
+        var w = widths[c];
+        var low = px[base + c] & ((1 << w) - 1);
+        for (var k = w - 1; k >= 0; k--) bits[bi++] = (low >> k) & 1;
+      }
+    }
+    return bits.subarray(0, bi);
+  }
+
+  // ===========================================================================
+  // SECTION 5 - Fixed header (18 bytes)
+  //
+  //   offset 0  : magic "PPNG"        (4 bytes)
+  //   offset 4  : protocol version    (1 byte)
+  //   offset 5  : flags               (1 byte)  bit0 compressed, bit1 encrypted,
+  //                                             bit2 subtle depth
+  //   offset 6  : dev tag length      (2 bytes, uint16)
+  //   offset 8  : outer metadata len  (2 bytes, uint16)
+  //   offset 10 : payload length      (4 bytes, uint32)
+  //   offset 14 : CRC32 of payload    (4 bytes, uint32)
+  // ===========================================================================
+
+  var MAGIC = new Uint8Array([0x50, 0x50, 0x4e, 0x47]);   // "PPNG"
+  var FLAG_COMPRESSED = 1;
+  var FLAG_ENCRYPTED = 2;
+  var FLAG_SUBTLE = 4;
+
+  function buildHeader(fields) {
+    var h = new Uint8Array(HEADER_LENGTH);
+    h.set(MAGIC, 0);
+    h[4] = fields.version & 0xff;
+    h[5] = fields.flags & 0xff;
+    writeUint16(h, 6, fields.tagLen);
+    writeUint16(h, 8, fields.metaLen);
+    writeUint32(h, 10, fields.payloadLen);
+    writeUint32(h, 14, fields.crc);
+    return h;
+  }
+
+  function parseHeader(h) {
+    for (var i = 0; i < MAGIC.length; i++) {
+      if (h[i] !== MAGIC[i]) fail("E01");
+    }
+    var version = h[4];
+    if (version > PROTOCOL_VERSION) fail("E02", "found v" + version);
+    return {
+      version: version,
+      flags: h[5],
+      tagLen: readUint16(h, 6),
+      metaLen: readUint16(h, 8),
+      payloadLen: readUint32(h, 10),
+      crc: readUint32(h, 14)
+    };
+  }
+
+  // ===========================================================================
+  // SECTION 6 - Inner container (the protected content)
+  //
+  //   [uint16 inner-metadata length][inner-metadata JSON][data bytes]
+  //
+  // The inner metadata (name, type, mime) lives INSIDE the compress/encrypt
+  // envelope, so an encrypted PuttyPNG reveals no filename or type.
+  // ===========================================================================
+
+  function buildInnerContainer(normalized) {
+    var meta = { name: normalized.name || "", type: normalized.type, mime: normalized.mime };
+    var metaBytes = textToBytes(JSON.stringify(meta));
+    var prefix = new Uint8Array(2);
+    writeUint16(prefix, 0, metaBytes.length);
+    return concatBytes([prefix, metaBytes, normalized.bytes]);
+  }
+
+  function parseInnerContainer(bytes) {
+    if (bytes.length < 2) fail("E03", "inner container too short");
+    var metaLen = readUint16(bytes, 0);
+    if (2 + metaLen > bytes.length) fail("E03", "inner metadata length overflow");
+    var meta;
+    try {
+      meta = JSON.parse(bytesToText(bytes.subarray(2, 2 + metaLen)));
+    } catch (e) {
+      fail("E03", "inner metadata is not valid JSON");
+    }
+    return { meta: meta, data: bytes.subarray(2 + metaLen) };
+  }
+
+  // ===========================================================================
+  // SECTION 7 - Compression (automatic gzip via CompressionStream)
+  //
+  // On encode we try gzip and keep it only if it actually shrinks the data.
+  // On decode we reverse it - and if this browser lacks DecompressionStream we
+  // fail cleanly with E04 rather than emit garbage.
+  // ===========================================================================
+
+  function hasCompression() { return typeof CompressionStream !== "undefined"; }
+  function hasDecompression() { return typeof DecompressionStream !== "undefined"; }
+
+  async function streamThrough(stream, bytes) {
+    var writer = stream.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    var reader = stream.readable.getReader();
+    var chunks = [];
+    while (true) {
+      var step = await reader.read();
+      if (step.done) break;
+      chunks.push(step.value);
+    }
+    return concatBytes(chunks);
+  }
+
+  async function gzipBytes(bytes) {
+    return streamThrough(new CompressionStream("gzip"), bytes);
+  }
+  async function gunzipBytes(bytes) {
+    if (!hasDecompression()) fail("E04");
+    try {
+      return await streamThrough(new DecompressionStream("gzip"), bytes);
+    } catch (e) {
+      fail("E03", "decompression failed");
+    }
+  }
+
+  // Returns compressed bytes only if smaller than the input, else null.
+  async function maybeCompress(bytes) {
+    if (!hasCompression()) return null;
+    try {
+      var gz = await gzipBytes(bytes);
+      return gz.length < bytes.length ? gz : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ===========================================================================
+  // SECTION 8 - Encryption (AES-256-GCM with a PBKDF2-SHA-256 derived key)
+  //
+  // Good  : no password        -> nothing encrypted (default).
+  // Better: dev-preset key     -> the page bakes in a fixed password string.
+  // Best  : user password      -> prompted on export, prompted on import.
+  //
+  // The password is never stored. Only the salt, iv, and iteration count travel
+  // in the (plaintext) outer metadata so any importer knows how to derive the
+  // key once it has the password.
+  // ===========================================================================
+
+  var PBKDF2_ITERATIONS = 210000;
+
+  function subtleCrypto() {
+    if (typeof crypto === "undefined" || !crypto.subtle) fail("E07");
+    return crypto.subtle;
+  }
+
+  async function deriveKey(password, salt, iterations) {
+    var subtle = subtleCrypto();
+    var keyMaterial = await subtle.importKey(
+      "raw", textToBytes(password), "PBKDF2", false, ["deriveKey"]
+    );
+    return subtle.deriveKey(
+      { name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptBytes(bytes, password) {
+    var subtle = subtleCrypto();
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
+    var cipher = new Uint8Array(
+      await subtle.encrypt({ name: "AES-GCM", iv: iv }, key, bytes)
+    );
+    return {
+      cipher: cipher,
+      params: {
+        enc: "AES-256-GCM",
+        kdf: "PBKDF2-SHA-256",
+        iterations: PBKDF2_ITERATIONS,
+        salt: bytesToBase64(salt),
+        iv: bytesToBase64(iv)
+      }
+    };
+  }
+
+  async function decryptBytes(cipher, password, params) {
+    var subtle = subtleCrypto();
+    var salt = base64ToBytes(params.salt);
+    var iv = base64ToBytes(params.iv);
+    var key = await deriveKey(password, salt, params.iterations || PBKDF2_ITERATIONS);
+    try {
+      return new Uint8Array(
+        await subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipher)
+      );
+    } catch (e) {
+      fail("E06");
+    }
+  }
+
+  // ===========================================================================
+  // SECTION 9 - Input normalization
+  //
+  // Turn whatever the developer handed us (text, an object, raw bytes, a File)
+  // into a common shape: { bytes, name, type, mime }.
+  // ===========================================================================
+
+  async function normalizeInput(input, options) {
+    options = options || {};
+    if (input == null) fail("E09", "no data to encode");
+
+    // A Blob or File (browser).
+    if (typeof Blob !== "undefined" && input instanceof Blob) {
+      var buf = new Uint8Array(await input.arrayBuffer());
+      return {
+        bytes: buf,
+        name: options.name || input.name || "",
+        type: "binary",
+        mime: options.mime || input.type || "application/octet-stream"
+      };
+    }
+    if (input instanceof Uint8Array) {
+      return {
+        bytes: input,
+        name: options.name || "",
+        type: "binary",
+        mime: options.mime || "application/octet-stream"
+      };
+    }
+    if (input instanceof ArrayBuffer) {
+      return {
+        bytes: new Uint8Array(input),
+        name: options.name || "",
+        type: "binary",
+        mime: options.mime || "application/octet-stream"
+      };
+    }
+    if (typeof input === "string") {
+      return {
+        bytes: textToBytes(input),
+        name: options.name || "",
+        type: "text",
+        mime: options.mime || "text/plain"
+      };
+    }
+    if (typeof input === "object") {
+      return {
+        bytes: textToBytes(JSON.stringify(input)),
+        name: options.name || "",
+        type: "json",
+        mime: "application/json"
+      };
+    }
+    fail("E09", "unsupported input type");
+  }
+
+  // ===========================================================================
+  // SECTION 10 - Cover images
+  //
+  // The default cover is generated noise sized exactly to the data. Developers
+  // can override with their own PNG (fitted crop/scale/center/stretch) or lock
+  // the size (fixed / power-of-two). Noise generation is pure (no canvas) so the
+  // engine's logic is fully testable without a browser.
+  // ===========================================================================
+
+  var MIN_SIZE = 32;
+  var MAX_SIZE = 4096;
+
+  function nextPowerOfTwo(n) {
+    var p = 1;
+    while (p < n) p *= 2;
+    return p;
+  }
+
+  // Smallest square (side length) that can hold the header + body at this depth.
+  function chooseSize(bodyBytes, widths, options) {
+    options = options || {};
+    var minSize = options.minSize || MIN_SIZE;
+    var maxSize = options.maxSize || MAX_SIZE;
+    var neededPixels = HEADER_PIXELS + pixelsForBytes(bodyBytes, widths);
+
+    var size;
+    if (options.size) {
+      size = options.size;                       // fixed override
+    } else {
+      size = Math.max(minSize, Math.ceil(Math.sqrt(neededPixels)));
+      if (options.sizeMode === "pow2") size = Math.max(nextPowerOfTwo(minSize), nextPowerOfTwo(size));
+    }
+    if (size < minSize) size = minSize;
+    if (size > maxSize) fail("E05", "needs " + neededPixels + "px, cap is " + maxSize + "x" + maxSize);
+    if (size * size < neededPixels) fail("E05", "cover " + size + "x" + size + " holds " + (size * size) + "px, need " + neededPixels);
+    return size;
+  }
+
+  // Pick output dimensions for a CUSTOM cover so it holds `neededPixels` opaque
+  // pixels while ignoring the cover's own resolution (that is what stops a big
+  // photo from producing a needlessly huge PuttyPNG). `aspect` is width/height.
+  //
+  //   - Square modes (crop/scale/center/stretch): the smallest square that fits,
+  //     floored at minSize (default 32) - the same rule as the noise cover.
+  //   - keepRatio: the original aspect ratio, scaled to the smallest size that
+  //     fits (and scaled UP past the source resolution if the data needs it),
+  //     with the shorter side floored at minSize.
+  //
+  // This assumes a fully opaque cover; autoFitCover() grows the result if a
+  // transparent cover turns out to have fewer opaque pixels than its area.
+  function coverDims(neededPixels, aspect, options) {
+    options = options || {};
+    var minSize = options.minSize || MIN_SIZE;
+    var maxSize = options.maxSize || MAX_SIZE;
+    var keepRatio = options.keepRatio === true;
+
+    if (!isFinite(aspect) || aspect <= 0) aspect = 1;
+
+    if (!keepRatio) {
+      // Square. A fixed size overrides the auto minimum.
+      var side = options.size
+        ? options.size
+        : Math.max(minSize, Math.ceil(Math.sqrt(neededPixels)));
+      if (options.sizeMode === "pow2" && !options.size) {
+        side = Math.max(nextPowerOfTwo(minSize), nextPowerOfTwo(side));
+      }
+      side = Math.max(minSize, Math.min(side, maxSize));
+      return { w: side, h: side };
+    }
+
+    // keepRatio: solve w*h >= neededPixels with w/h == aspect.
+    // A fixed size, if given, sets the LONGER side; otherwise auto-fit.
+    var w, h;
+    if (options.size) {
+      if (aspect >= 1) { w = options.size; h = Math.round(options.size / aspect); }
+      else { h = options.size; w = Math.round(options.size * aspect); }
+    } else {
+      h = Math.sqrt(neededPixels / aspect);
+      w = aspect * h;
+      w = Math.ceil(w); h = Math.ceil(h);
+    }
+    // Floor the shorter side at minSize (keeping the ratio).
+    var shorter = Math.min(w, h);
+    if (shorter < minSize) {
+      var up = minSize / shorter;
+      w = Math.round(w * up); h = Math.round(h * up);
+    }
+    // Cap the longer side at maxSize (keeping the ratio).
+    var longer = Math.max(w, h);
+    if (longer > maxSize) {
+      var down = maxSize / longer;
+      w = Math.round(w * down); h = Math.round(h * down);
+    }
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+  }
+
+  // A fully opaque field of random pixels. Pure typed-array work - no canvas.
+  function generateNoiseImageData(size) {
+    var data = new Uint8ClampedArray(size * size * 4);
+    for (var i = 0; i < data.length; i += 4) {
+      data[i] = (Math.random() * 256) | 0;
+      data[i + 1] = (Math.random() * 256) | 0;
+      data[i + 2] = (Math.random() * 256) | 0;
+      data[i + 3] = 255;
+    }
+    return { data: data, width: size, height: size };
+  }
+
+  // Transparency in a cover is neat but risky: platforms routinely rewrite the RGB
+  // of SEMI-transparent, anti-aliased fringe pixels (premultiply round-trips, edge
+  // cleanup, flattening onto a background), which would corrupt data hidden nearby.
+  // Data is only ever stored in fully opaque (alpha = 255) pixels, so the danger is
+  // the soft fringe BETWEEN opaque and transparent regions.
+  //
+  // We harden the cover to BINARY alpha: every semi-transparent pixel (alpha 1..254)
+  // is forced to fully opaque (255), while genuinely transparent pixels (alpha 0)
+  // are kept. The result is that transparency is preserved where it is truly meant,
+  // but no data-bearing pixel ever borders a fractional-alpha pixel, so a lossless
+  // (alpha-preserving) PNG round-trip leaves every hidden byte intact.
+  //
+  // CAVEAT: hardening does NOT survive FLATTENING (a platform compositing the
+  // transparent areas onto an opaque background). Flattening turns transparent
+  // pixels opaque, which changes the set of data-bearing pixels and shifts the
+  // raster-order indexing. For transport that flattens (or to be safe anywhere),
+  // use a fully opaque cover (e.g. the CD's solid-background option).
+  // Returns the number of pixels changed.
+  function hardenCover(imageData) {
+    var px = imageData.data;
+    var total = imageData.width * imageData.height;
+    var changed = 0;
+    for (var i = 0; i < total; i++) {
+      var a = px[i * 4 + 3];
+      if (a !== 0 && a !== 255) {   // any anti-aliased / semi-transparent fringe
+        px[i * 4 + 3] = 255;
+        changed++;
+      }
+    }
+    return changed;
+  }
+
+  // ===========================================================================
+  // SECTION 11 - Embed / extract (operate on an ImageData-like object)
+  //
+  // These are the heart of the protocol. They take { data, width, height } and
+  // either write the header+body into it or read them back. Everything above
+  // canvas/PNG serialization is expressed here, which is why the self-test can
+  // prove a full round-trip with no DOM.
+  // ===========================================================================
+
+  function embed(imageData, header, body, widths) {
+    var px = imageData.data;
+    var eligible = opaquePixels(px, imageData.width, imageData.height);
+    var bodyPixels = pixelsForBytes(body.length, widths);
+    if (eligible.length < HEADER_PIXELS + bodyPixels) {
+      fail("E05", "cover holds " + eligible.length + " opaque pixels, need " + (HEADER_PIXELS + bodyPixels));
+    }
+    var afterHeader = writeBits(px, eligible, 0, HEADER_WIDTHS, bytesToBits(header));
+    writeBits(px, eligible, afterHeader, widths, bytesToBits(body));
+    return imageData;
+  }
+
+  // Read and validate the fixed header. Returns the parsed fields plus the
+  // eligible-pixel list (so callers do not recompute it).
+  function readHeader(imageData) {
+    var px = imageData.data;
+    var eligible = opaquePixels(px, imageData.width, imageData.height);
+    if (eligible.length < HEADER_PIXELS) fail("E01");
+    var headerBits = readBits(px, eligible, 0, HEADER_WIDTHS, HEADER_PIXELS);
+    var header = bitsToBytes(headerBits).subarray(0, HEADER_LENGTH);
+    var fields = parseHeader(header);
+    fields.eligible = eligible;
+    fields.subtle = !!(fields.flags & FLAG_SUBTLE);
+    return fields;
+  }
+
+  // Pull `byteCount` body bytes starting at the first body pixel.
+  function readBody(imageData, eligible, widths, byteCount) {
+    var bodyPixels = pixelsForBytes(byteCount, widths);
+    if (eligible.length < HEADER_PIXELS + bodyPixels) fail("E03", "image is truncated");
+    var bits = readBits(imageData.data, eligible, HEADER_PIXELS, widths, bodyPixels);
+    return bitsToBytes(bits).subarray(0, byteCount);
+  }
+
+  // ===========================================================================
+  // SECTION 12 - Pack / unpack (protocol orchestration, still canvas-free)
+  // ===========================================================================
+
+  // Turn the input + options into the exact bytes that will be embedded: the
+  // 18-byte header and the body ([tag][outer metadata][payload]). This is where
+  // compression and encryption happen. It is canvas-free, so the caller can learn
+  // the final body length BEFORE it decides how big a cover needs to be.
+  async function prepareBody(input, options) {
+    options = options || {};
+    var normalized = await normalizeInput(input, options);
+
+    // 1) inner container (name/type/mime + data), all protectable content
+    var processed = buildInnerContainer(normalized);
+    var flags = 0;
+
+    // 2) automatic compression (kept only if it helps)
+    if (options.compress !== false) {
+      var gz = await maybeCompress(processed);
+      if (gz) { processed = gz; flags |= FLAG_COMPRESSED; }
+    }
+
+    // 3) optional encryption
+    var outerMeta = new Uint8Array(0);
+    if (options.password) {
+      var enc = await encryptBytes(processed, options.password);
+      processed = enc.cipher;
+      outerMeta = textToBytes(JSON.stringify(enc.params));
+      flags |= FLAG_ENCRYPTED;
+    }
+
+    // 4) depth + dev tag
+    var widths = options.depth === "subtle" ? DEPTH_SUBTLE : DEPTH_STANDARD;
+    if (options.depth === "subtle") flags |= FLAG_SUBTLE;
+    var tagBytes = textToBytes(options.tag || "");
+    if (tagBytes.length > 65535) fail("E12");
+
+    // 5) header + body
+    var payload = processed;
+    var header = buildHeader({
+      version: PROTOCOL_VERSION,
+      flags: flags,
+      tagLen: tagBytes.length,
+      metaLen: outerMeta.length,
+      payloadLen: payload.length,
+      crc: crc32(payload)
+    });
+    var body = concatBytes([tagBytes, outerMeta, payload]);
+
+    // Info about the ORIGINAL data, for the CD's informational rim text.
+    var info = {
+      size: normalized.bytes.length,
+      type: normalized.type,
+      name: normalized.name,
+      encrypted: !!(flags & FLAG_ENCRYPTED)
+    };
+
+    return { header: header, body: body, widths: widths, flags: flags, info: info };
+  }
+
+  // How many opaque pixels a cover must have to hold a prepared body.
+  function neededPixelsFor(prep) {
+    return HEADER_PIXELS + pixelsForBytes(prep.body.length, prep.widths);
+  }
+
+  // Embed a prepared body into a given ImageData and return the result + stats.
+  function assemble(prep, imageData) {
+    embed(imageData, prep.header, prep.body, prep.widths);
+
+    var eligibleCount = opaquePixels(imageData.data, imageData.width, imageData.height).length;
+    var bodyCapacity = eligibleCount - HEADER_PIXELS;
+    var capacityBytes = prep.widths === DEPTH_SUBTLE
+      ? Math.floor(bodyCapacity * 3 / 8)
+      : bodyCapacity;
+
+    return {
+      imageData: imageData,
+      width: imageData.width,
+      height: imageData.height,
+      depth: prep.widths === DEPTH_SUBTLE ? "subtle" : "standard",
+      compressed: !!(prep.flags & FLAG_COMPRESSED),
+      encrypted: !!(prep.flags & FLAG_ENCRYPTED),
+      bytesHidden: prep.header.length + prep.body.length,
+      capacityBytes: capacityBytes,
+      usedPercent: capacityBytes ? Math.round((prep.body.length / capacityBytes) * 100) : 0
+    };
+  }
+
+  // Build the finished ImageData with everything embedded. `coverImageData`, if
+  // given, is used as-is; otherwise noise is generated to fit. (Custom-cover
+  // sizing lives in encode(), which needs the browser to rasterize the image.)
+  async function pack(input, options, coverImageData) {
+    var prep = await prepareBody(input, options);
+    var imageData = coverImageData ||
+      generateNoiseImageData(chooseSize(prep.body.length, prep.widths, options || {}));
+    return assemble(prep, imageData);
+  }
+
+  // Read a peeked summary from the header (+ plaintext tag) without decrypting.
+  function unpackHeader(imageData) {
+    var fields = readHeader(imageData);
+    var widths = fields.subtle ? DEPTH_SUBTLE : DEPTH_STANDARD;
+    var tag = "";
+    if (fields.tagLen > 0) {
+      var body = readBody(imageData, fields.eligible, widths, fields.tagLen);
+      tag = bytesToText(body.subarray(0, fields.tagLen));
+    }
+    return {
+      isPuttyPNG: true,
+      version: fields.version,
+      compressed: !!(fields.flags & FLAG_COMPRESSED),
+      encrypted: !!(fields.flags & FLAG_ENCRYPTED),
+      depth: fields.subtle ? "subtle" : "standard",
+      tag: tag,
+      payloadBytes: fields.payloadLen,
+      width: imageData.width,
+      height: imageData.height
+    };
+  }
+
+  // Full extraction: verify, decrypt, decompress, and parse into a result.
+  async function unpack(imageData, options) {
+    options = options || {};
+    var fields = readHeader(imageData);
+    var widths = fields.subtle ? DEPTH_SUBTLE : DEPTH_STANDARD;
+
+    var bodyLen = fields.tagLen + fields.metaLen + fields.payloadLen;
+    var body = readBody(imageData, fields.eligible, widths, bodyLen);
+
+    var tagBytes = body.subarray(0, fields.tagLen);
+    var outerMetaBytes = body.subarray(fields.tagLen, fields.tagLen + fields.metaLen);
+    var payload = body.subarray(fields.tagLen + fields.metaLen, bodyLen);
+
+    // integrity first - fails before we ever ask for a password
+    if (crc32(payload) !== fields.crc) fail("E03");
+
+    var processed = payload;
+
+    // decrypt if needed
+    if (fields.flags & FLAG_ENCRYPTED) {
+      var params;
+      try {
+        params = JSON.parse(bytesToText(outerMetaBytes));
+      } catch (e) {
+        fail("E03", "encryption metadata unreadable");
+      }
+      var password = options.password;
+      if (password == null && typeof PuttyPNG.passwordPrompt === "function") {
+        password = await PuttyPNG.passwordPrompt({ message: "Enter password for this PuttyPNG:" });
+      }
+      if (password == null || password === "") fail("E08");
+      processed = await decryptBytes(payload, password, params);
+    }
+
+    // decompress if needed
+    if (fields.flags & FLAG_COMPRESSED) {
+      processed = await gunzipBytes(processed);
+    }
+
+    // parse the inner container
+    var inner = parseInnerContainer(processed);
+    var meta = inner.meta || {};
+    var data = inner.data;
+
+    var result = {
+      type: meta.type || "binary",
+      name: meta.name || "",
+      mime: meta.mime || "application/octet-stream",
+      bytes: data,
+      tag: fields.tagLen > 0 ? bytesToText(tagBytes) : "",
+      encrypted: !!(fields.flags & FLAG_ENCRYPTED),
+      compressed: !!(fields.flags & FLAG_COMPRESSED),
+      depth: fields.subtle ? "subtle" : "standard",
+      width: imageData.width,
+      height: imageData.height
+    };
+    if (result.type === "text" || result.type === "json") {
+      result.text = bytesToText(data);
+      if (result.type === "json") {
+        try { result.json = JSON.parse(result.text); } catch (e) { /* leave undefined */ }
+      }
+    }
+    return result;
+  }
+
+  // ===========================================================================
+  // SECTION 13 - Browser layer (canvas <-> PNG). Guarded so the engine still
+  // loads and its logic still runs in a non-browser (Node) environment.
+  // ===========================================================================
+
+  function hasDOM() { return typeof document !== "undefined"; }
+
+  function makeCanvas(width, height) {
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }
+
+  // Draw a loaded image onto a w x h canvas using a fit mode, returning ImageData.
+  // High-quality resampling is ON so shrinking or enlarging a cover looks smooth
+  // (the decode path draws at natural size, so it stays pixel-exact regardless).
+  //   crop      - fill the frame, cropping overflow (default)
+  //   scale     - fit the whole image inside the frame (letterbox)
+  //   center    - draw at native size, centered, no resize
+  //   stretch   - distort to exactly fill the frame
+  //   keepRatio - the frame already matches the image's aspect ratio, so this
+  //               fills it while preserving the picture undistorted
+  function fitCoverToImageData(img, w, h, fit) {
+    var canvas = makeCanvas(w, h);
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    var iw = img.width, ih = img.height;
+
+    if (fit === "stretch" || fit === "keepRatio") {
+      ctx.drawImage(img, 0, 0, w, h);
+    } else if (fit === "center") {
+      ctx.drawImage(img, (w - iw) / 2, (h - ih) / 2, iw, ih);
+    } else if (fit === "scale") {
+      var s = Math.min(w / iw, h / ih);
+      var sw = iw * s, sh = ih * s;
+      ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
+    } else { // "crop" (cover) - default
+      var c = Math.max(w / iw, h / ih);
+      var cw = iw * c, ch = ih * c;
+      ctx.drawImage(img, (w - cw) / 2, (h - ch) / 2, cw, ch);
+    }
+    return ctx.getImageData(0, 0, w, h);
+  }
+
+  // Size + fit a custom cover so it holds a prepared body. By default this
+  // ignores the cover's own resolution and produces the smallest image that fits
+  // (floored at minSize, default 32), scaling UP past the source resolution if
+  // the data needs the room. Because a cover may contain transparency (fewer
+  // opaque pixels than its area), we fit, count the opaque pixels, and grow until
+  // the data fits or we hit maxSize (E05).
+  function autoFitCover(coverImg, prep, options) {
+    options = options || {};
+    var fit = options.coverFit || "crop";
+    var keepRatio = fit === "keepRatio";
+    var maxSize = options.maxSize || MAX_SIZE;
+    var needed = neededPixelsFor(prep);
+    var aspect = coverImg.width / coverImg.height;
+    if (!isFinite(aspect) || aspect <= 0) aspect = 1;
+
+    var dimOpts = {
+      minSize: options.minSize, maxSize: maxSize,
+      size: options.size, sizeMode: options.sizeMode, keepRatio: keepRatio
+    };
+
+    // Target opaque count starts at `needed`; if transparency eats into it, we
+    // scale the whole thing up and try again.
+    var target = needed;
+    var imageData = null;
+    for (var iter = 0; iter < 10; iter++) {
+      var d = coverDims(target, aspect, dimOpts);
+      imageData = fitCoverToImageData(coverImg, d.w, d.h, fit);
+      hardenCover(imageData);
+      var opaque = opaquePixels(imageData.data, d.w, d.h).length;
+      if (opaque >= needed) return imageData;
+
+      // Not enough opaque pixels (transparent cover). Grow proportionally, but
+      // stop if we are already pinned at the max size.
+      if (Math.max(d.w, d.h) >= maxSize) break;
+      // Once a fixed size has been honored once and still does not fit, stop
+      // forcing it - let auto growth take over.
+      dimOpts.size = undefined; dimOpts.sizeMode = undefined;
+      target = Math.ceil(target * (needed / Math.max(1, opaque)) * 1.08);
+    }
+    fail("E05", "cover cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
+  }
+
+  // ===========================================================================
+  // SECTION 13a - The "putty splat" silhouette (a reusable generative primitive)
+  //
+  // A smooth, blobby, Gak-like closed shape. buildSplat() is pure math (points
+  // only) so it is deterministic and testable without a canvas; splatCurveTo()
+  // smooths those points into a closed curve on a 2D context. The same silhouette
+  // is meant to be reused across PuttyPNG's generative art (the CD's centre, a
+  // masked Noise blob, a floppy symbol, ...).
+  // ===========================================================================
+
+  // Seeded PRNG (mulberry32) so a given splat is reproducible.
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6d2b79f5) >>> 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Boundary points of a splat around (cx, cy) with mean radius `radius`. Uses a
+  // smooth harmonic radius function so the lobes are ROUND (Gak-like), not spiky.
+  //   opts.points    - number of lobes (>= 3)
+  //   opts.amplitude - lobe depth (peaks out / valleys in), 0..1
+  //   opts.curve     - "curve length": low = round blobby lobes, high = longer,
+  //                    reachier lobes, 0..1
+  //   opts.waviness  - extra organic randomness, 0..1
+  //   opts.seed      - reproducible shape
+  // Densely sampled and returned in order. Scaling `radius` (same seed) yields
+  // exactly concentric splats.
+  function buildSplat(cx, cy, radius, opts) {
+    opts = opts || {};
+    var lobes = Math.max(3, Math.round(opts.points != null ? opts.points : 6));
+    var amp = clamp01(opts.amplitude != null ? opts.amplitude : 0.35);
+    var wav = clamp01(opts.waviness != null ? opts.waviness : 0.35);
+    var curve = clamp01(opts.curve != null ? opts.curve : 0.5);
+    var rand = mulberry32((opts.seed != null ? opts.seed : 1) >>> 0);
+
+    // Organic asymmetry: a random phase, a per-lobe strength, and two low
+    // harmonics of gentle noise.
+    var phase = rand() * Math.PI * 2;
+    var lobeStrength = [];
+    for (var L = 0; L < lobes; L++) lobeStrength.push(0.5 + rand() * 1.0);    // 0.5..1.5 (organic)
+    var h1f = 2 + Math.floor(rand() * 2), h1p = rand() * Math.PI * 2;
+    var h2f = 3 + Math.floor(rand() * 3), h2p = rand() * Math.PI * 2;
+    // Curve length -> lobe sharpness: 0 rounds the peaks, 1 stretches them out.
+    var sharp = 0.6 + curve * 1.6;
+
+    var samples = Math.max(60, lobes * 12);
+    var pts = [];
+    for (var i = 0; i < samples; i++) {
+      var th = (i / samples) * Math.PI * 2;
+      // Blend each sample toward its nearest lobe's strength for varied lobe sizes.
+      var lfrac = (th / (Math.PI * 2)) * lobes;
+      var li = Math.floor(lfrac) % lobes;
+      var ln = (li + 1) % lobes, mix = lfrac - Math.floor(lfrac);
+      var strength = lobeStrength[li] * (1 - mix) + lobeStrength[ln] * mix;
+      var lobe = Math.cos(lobes * th - phase);                 // -1..1, `lobes` rounded peaks
+      var shaped = (lobe < 0 ? -1 : 1) * Math.pow(Math.abs(lobe), sharp);
+      shaped *= (0.55 + 0.45 * strength);
+      var noise = wav * (0.6 * Math.sin(h1f * th + h1p) + 0.4 * Math.sin(h2f * th + h2p));
+      var rr = radius * (1 + amp * shaped + amp * 0.6 * noise);
+      if (rr < radius * 0.25) rr = radius * 0.25;              // keep it well-formed
+      pts.push({ x: cx + Math.cos(th) * rr, y: cy + Math.sin(th) * rr });
+    }
+    return pts;
+  }
+  function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+  // Append a smooth CLOSED curve through the (dense) points to the current path,
+  // using a Catmull-Rom spline converted to cubic beziers.
+  function splatCurveTo(ctx, pts, tension) {
+    var n = pts.length;
+    if (n < 3) return;
+    var k = (tension != null ? tension : 0.5) / 3;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 0; i < n; i++) {
+      var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      var c1x = p1.x + (p2.x - p0.x) * k, c1y = p1.y + (p2.y - p0.y) * k;
+      var c2x = p2.x - (p3.x - p1.x) * k, c2y = p2.y - (p3.y - p1.y) * k;
+      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+    }
+    ctx.closePath();
+  }
+
+  // Begin a fresh path shaped as a splat outline (for fill / stroke / clip).
+  function drawSplatPath(ctx, cx, cy, radius, opts) {
+    var pts = buildSplat(cx, cy, radius, opts);
+    ctx.beginPath();
+    splatCurveTo(ctx, pts, 0.5);
+    return pts;
+  }
+
+  // A standalone Path2D of a splat outline (for isPointInPath containment tests).
+  function splatPath2D(cx, cy, radius, opts) {
+    var path = new Path2D();
+    splatCurveTo(path, buildSplat(cx, cy, radius, opts), 0.5);
+    return path;
+  }
+
+  // ===========================================================================
+  // SECTION 13b - Generated cover: the CD
+  //
+  // A reflective disc drawn entirely in canvas - the flagship demonstration that
+  // a PuttyPNG cover can be generated in JavaScript. Transparent outside the disc
+  // by default (a soft-gradient background is optional), with a curved label and
+  // rim microtext. The anti-aliased rim is hardened to binary alpha so no data
+  // pixel borders transparency. Only runs in a browser (needs a canvas).
+  // ===========================================================================
+
+  var CD_LABEL_MIN = 96;    // draw the arc label only at/above this disc size
+  var CD_RIM_MIN = 128;     // draw the rim microtext only at/above this size
+
+  // Radii (in pixels) for a square CD of the given side length.
+  function cdGeometry(size) {
+    var c = size / 2;
+    return {
+      cx: c, cy: c,
+      rOuter: size * 0.48,   // disc edge
+      rSheen: size * 0.46,   // reflective surface extent
+      rLabel: size * 0.40,   // curved label arc radius
+      rRim: size * 0.235,    // rim microtext radius
+      rHub: size * 0.20,     // grey clamping hub
+      rHole: size * 0.075    // transparent spindle hole
+    };
+  }
+
+  // Draw a string centered on an arc around (cx, cy). `centerAngle` is where the
+  // middle of the text sits (radians; -PI/2 is the top, +PI/2 the bottom). Text
+  // on the bottom half is flipped so it stays upright to the viewer.
+  function drawTextOnArc(ctx, text, cx, cy, radius, centerAngle) {
+    var bottom = Math.sin(centerAngle) > 0;
+    var dir = bottom ? -1 : 1;                 // advance direction along the arc
+    var widths = [], total = 0, i;
+    for (i = 0; i < text.length; i++) { var w = ctx.measureText(text[i]).width; widths.push(w); total += w; }
+    var totalAngle = total / radius;
+    var angle = centerAngle - dir * totalAngle / 2;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (i = 0; i < text.length; i++) {
+      var charAngle = widths[i] / radius;
+      var a = angle + dir * charAngle / 2;
+      ctx.save();
+      ctx.translate(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+      ctx.rotate(a + (bottom ? -Math.PI / 2 : Math.PI / 2));
+      ctx.fillText(text[i], 0, 0);
+      ctx.restore();
+      angle += dir * charAngle;
+    }
+    ctx.restore();
+  }
+
+  // Angular width (radians) the text would occupy at a given font + radius.
+  function arcTextAngle(ctx, text, radius, font) {
+    ctx.save(); ctx.font = font;
+    var total = 0;
+    for (var i = 0; i < text.length; i++) total += ctx.measureText(text[i]).width;
+    ctx.restore();
+    return total / radius;
+  }
+
+  // The curved top label: centered at 12 o'clock, shrinking the font to fit, then
+  // Resolve a label size to pixels, RESPONSIVE to the disc size. Accepts the
+  // named sizes "small" | "medium" | "large" | "xlarge" (each a fraction of the
+  // disc radius, so it scales with the image), or a raw pixel number (legacy).
+  var CD_LABEL_SCALE = { small: 0.11, medium: 0.145, large: 0.185, xlarge: 0.23 };
+  function resolveLabelFont(fontSize, geo) {
+    if (typeof fontSize === "number" && fontSize > 0) return Math.round(fontSize);
+    var mult = CD_LABEL_SCALE[fontSize] || CD_LABEL_SCALE.medium;
+    return Math.max(9, Math.round(geo.rOuter * mult));
+  }
+
+  // wrapping onto a second (inner) arc if it is still too long.
+  function drawCdLabel(ctx, label, geo, fontFamily, fontSizeOverride) {
+    var maxArc = Math.PI * 0.95;               // ~171 degrees of the top
+    // Start from the requested size (if any), else auto from the disc size.
+    var fontSize = fontSizeOverride ? Math.round(fontSizeOverride) : Math.max(9, Math.round(geo.rOuter * 0.16));
+    var minFont = 9;
+    var font;
+
+    // Shrink to fit one line if we can.
+    while (fontSize >= minFont) {
+      font = "600 " + fontSize + "px " + fontFamily;
+      if (arcTextAngle(ctx, label, geo.rLabel, font) <= maxArc) {
+        ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
+        drawTextOnArc(ctx, label, geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
+        return;
+      }
+      fontSize -= 1;
+    }
+
+    // Still too long at the minimum font: split into two lines on two arcs.
+    font = "600 " + minFont + "px " + fontFamily;
+    ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
+    var mid = splitInTwo(label);
+    var lineGap = minFont + 3;
+    drawTextOnArc(ctx, mid[0], geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
+    drawTextOnArc(ctx, mid[1], geo.cx, geo.cy, geo.rLabel - lineGap, -Math.PI / 2);
+  }
+
+  // "Burned-in" image imprint: render a grayscale stipple of a source image onto
+  // the disc annulus, the way a 90s laser labeller (LightScribe) etched discs.
+  // Darker areas of the source become denser, darker dots; light areas stay clear.
+  // Confined to the ring between the hub and the outer edge; drawn beneath the
+  // label so the text stays legible on top.
+  function imprintStipple(ctx, img, geo, size, labelActive) {
+    // Sample the source at disc resolution, cover-fit into the disc's square.
+    var d = Math.max(16, Math.ceil(geo.rOuter * 2));
+    var off = makeCanvas(d, d);
+    var octx = off.getContext("2d", { willReadFrequently: true });
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = "high";
+    var iw = img.width, ih = img.height;
+    var cover = Math.max(d / iw, d / ih);
+    var cw = iw * cover, ch = ih * cover;
+    octx.drawImage(img, (d - cw) / 2, (d - ch) / 2, cw, ch);
+    var src = octx.getImageData(0, 0, d, d).data;
+
+    var rIn = geo.rHub * 1.12;
+    var rOut = geo.rOuter * 0.94;
+    var step = Math.max(1.5, size / 240);                  // finer grid -> ~2x more dots
+    var dotR = Math.max(0.4, step * 0.34);                 // smaller, uniform dots
+
+    ctx.save();
+    ctx.fillStyle = "rgba(12,12,16,1)";
+    for (var y = -geo.rOuter; y < geo.rOuter; y += step) {
+      for (var x = -geo.rOuter; x < geo.rOuter; x += step) {
+        var r = Math.sqrt(x * x + y * y);
+        if (r < rIn || r > rOut) continue;                 // annulus only
+        var sx = (x + geo.rOuter) | 0, sy = (y + geo.rOuter) | 0;
+        if (sx < 0 || sy < 0 || sx >= d || sy >= d) continue;
+        var si = (sy * d + sx) * 4;
+        if (src[si + 3] < 128) continue;                   // transparent source -> skip
+        var lum = src[si] * 0.299 + src[si + 1] * 0.587 + src[si + 2] * 0.114;
+        var darkness = 1 - lum / 255;                      // 0 (white) .. 1 (black)
+        if (darkness < 0.12) continue;                     // leave light areas clear
+        // Thin the imprint out under the top label band so the label stays crisp.
+        if (labelActive && r > geo.rLabel * 0.78) {
+          var ang = Math.atan2(y, x);
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < 1.0 && Math.random() > darkness * 0.35) continue;
+        }
+        if (Math.random() > darkness * 1.2) continue;      // density by darkness
+        var jx = geo.cx + x + (Math.random() - 0.5) * step * 0.5;   // less jitter -> uniform
+        var jy = geo.cy + y + (Math.random() - 0.5) * step * 0.5;
+        ctx.globalAlpha = 0.35 + darkness * 0.4;
+        ctx.beginPath();
+        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // The default PuttyPNG branding: our "putty splat" silhouette stippled into the
+  // disc surface as ink dots, centred and ~60% of the disc across. The grey hub is
+  // drawn on top afterwards, so the splat reads as putty behind the hub; dots
+  // inside the hub are skipped. splat: { points, curve, waviness, amplitude, seed,
+  // size } (size = fraction of the disc side; default 0.6).
+  var CD_SPLAT_DEFAULT = {
+    points: 5, curve: 0, waviness: 1, amplitude: 0.16, seed: 7, size: 0.6,
+    dotColor: "rainbowSoft"
+  };
+
+  // The fill style for a splat dot given the chosen palette and the dot's angle
+  // from centre (used for the rainbow palettes). Named palettes are solid colours.
+  function splatDotStyle(palette, angle) {
+    var hue = ((angle + Math.PI) / (Math.PI * 2)) * 360;   // 0..360
+    switch (palette) {
+      case "white": return "rgb(248,248,252)";
+      case "dkgray": return "rgb(58,60,66)";
+      case "ltgray": return "rgb(150,152,158)";
+      case "blue": return "rgb(46,92,178)";
+      case "red": return "rgb(178,44,48)";
+      case "orange": return "rgb(206,112,40)";
+      case "yellow": return "rgb(196,168,44)";
+      case "green": return "rgb(52,142,72)";
+      case "rainbowStrong": return "hsl(" + hue + ", 78%, 46%)";
+      case "rainbowSoft": return "hsl(" + hue + ", 42%, 40%)";   // soft, darker than the CD sheen
+      case "black":
+      default: return "rgb(14,14,18)";
+    }
+  }
+
+  function imprintSplat(ctx, geo, size, splat, labelActive) {
+    var s = {
+      points: splat.points != null ? splat.points : CD_SPLAT_DEFAULT.points,
+      curve: splat.curve != null ? splat.curve : CD_SPLAT_DEFAULT.curve,
+      waviness: splat.waviness != null ? splat.waviness : CD_SPLAT_DEFAULT.waviness,
+      amplitude: splat.amplitude != null ? splat.amplitude : CD_SPLAT_DEFAULT.amplitude,
+      seed: splat.seed != null ? splat.seed : CD_SPLAT_DEFAULT.seed
+    };
+    var frac = splat.size != null ? splat.size : CD_SPLAT_DEFAULT.size;
+    var radius = frac * size / 2;                         // "60% of the CD" -> radius 0.3*size
+
+    // Draw the splat at its natural size (no fit-scaling). We instead cull any dot
+    // that lands too close to the disc edge or the hub, so the imprint always keeps
+    // a clean margin from both without reshaping the splat.
+    var pts = buildSplat(geo.cx, geo.cy, radius, s);
+    var path = new Path2D();
+    splatCurveTo(path, pts, 0.5);
+    // The splat's lobes reach well PAST `radius` (~1.2-1.7x), so the dot-sampling grid
+    // must span the splat's TRUE extent, not `radius` -- otherwise the outer part of
+    // every lobe is never sampled and the shape gets sliced into a flat box.
+    var maxR = 0, mi;
+    for (mi = 0; mi < pts.length; mi++) {
+      var mdx = pts[mi].x - geo.cx, mdy = pts[mi].y - geo.cy;
+      var mrr = Math.sqrt(mdx * mdx + mdy * mdy);
+      if (mrr > maxR) maxR = mrr;
+    }
+
+    // Adjustable dot look (px). Defaults scale gently with the disc size.
+    var step = splat.separation != null ? Math.max(1, splat.separation) : Math.max(1.5, size / 240);
+    var dotMin = splat.dotMin != null ? splat.dotMin : Math.max(0.4, step * 0.28);
+    var dotMax = splat.dotMax != null ? splat.dotMax : Math.max(dotMin, step * 0.5);
+    var textBuf = splat.textBuffer != null ? splat.textBuffer : size * 0.032;
+    var palette = splat.dotColor || CD_SPLAT_DEFAULT.dotColor;
+    var rainbow = palette === "rainbowSoft" || palette === "rainbowStrong";
+    var rSkip = geo.rHub * 1.05;                          // stay 5% clear of the inner gray hub
+    var rEdge = geo.rOuter * 0.95;                        // stay 5% clear of the disc border
+    // Sample the full splat extent (dots past rEdge are culled below anyway), padded a
+    // touch for the spline bulge between sample points, and never beyond the disc.
+    var gridR = Math.min(maxR + step, geo.rOuter);
+
+    ctx.save();
+    if (!rainbow) ctx.fillStyle = splatDotStyle(palette, 0);
+    ctx.globalAlpha = 0.62;
+    for (var y = -gridR; y <= gridR; y += step) {
+      for (var x = -gridR; x <= gridR; x += step) {
+        var px = geo.cx + x, py = geo.cy + y;
+        var r = Math.sqrt(x * x + y * y);
+        if (r < rSkip || r > rEdge) continue;             // 5% clear of hub and edge
+        if (!ctx.isPointInPath(path, px, py)) continue;   // inside the splat only
+        var ang = Math.atan2(y, x);
+        // Thin out around the top label so it stays crisp.
+        if (labelActive && r > geo.rLabel - textBuf) {
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < 1.0 && Math.random() > 0.3) continue;
+        }
+        // Thin out around the informational rim text (top + bottom, near rRim).
+        if (Math.abs(r - geo.rRim) < textBuf) {
+          var fTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          var fBot = Math.abs(((ang - Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if ((fTop < 1.2 || fBot < 1.2) && Math.random() > 0.28) continue;
+        }
+        if (Math.random() > 0.9) continue;                // high, even fill (uniform)
+        var jx = px + (Math.random() - 0.5) * step * 0.5; // low jitter -> uniform
+        var jy = py + (Math.random() - 0.5) * step * 0.5;
+        var dr = dotMin + Math.random() * (dotMax - dotMin);
+        if (rainbow) ctx.fillStyle = splatDotStyle(palette, ang);
+        ctx.beginPath();
+        ctx.arc(jx, jy, dr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // The default informational rim text: "PuttyPNG | {size} | {contents|Secured}".
+  function buildInfoRim(info) {
+    info = info || {};
+    var sz = info.size != null ? formatSize(info.size) : "";
+    var contents;
+    if (info.encrypted) contents = "Secured";
+    else if (info.name) contents = info.name;
+    else if (info.type === "text") contents = "text";
+    else if (info.type === "json") contents = "JSON";
+    else contents = "binary";
+    return "PuttyPNG | " + sz + " | " + contents;
+  }
+
+  // Human-readable byte size.
+  function formatSize(bytes) {
+    if (bytes == null) return "";
+    if (bytes < 1024) return bytes + " bytes";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  // Split a string into two roughly equal halves, preferring a space near the middle.
+  function splitInTwo(text) {
+    var target = Math.floor(text.length / 2);
+    var left = text.lastIndexOf(" ", target);
+    var right = text.indexOf(" ", target);
+    var at = -1;
+    if (left === -1 && right === -1) at = target;
+    else if (left === -1) at = right;
+    else if (right === -1) at = left;
+    else at = (target - left <= right - target) ? left : right;
+    return [text.slice(0, at).trim(), text.slice(at).trim()];
+  }
+
+  // Render a reflective CD of the given size. opts: { label, rimText, fontFamily,
+  // fontSize, solidBackground, imprint (a loaded HTMLImageElement) }. Returns
+  // ImageData (not yet hardened).
+  function drawCdCover(size, opts) {
+    opts = opts || {};
+    var geo = cdGeometry(size);
+    // Adjustable hub + hole sizes (fractions of the disc side).
+    var hubOpts = opts.hub || {};
+    if (hubOpts.size != null) geo.rHub = size * hubOpts.size;
+    if (hubOpts.holeSize != null) geo.rHole = size * hubOpts.holeSize;
+    var canvas = makeCanvas(size, size);
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.clearRect(0, 0, size, size);
+
+    // Optional soft-gradient background (fills the corners -> more capacity).
+    if (opts.solidBackground) {
+      var bg = ctx.createRadialGradient(geo.cx, geo.cy, size * 0.1, geo.cx, geo.cy, size * 0.75);
+      bg.addColorStop(0, "#f4f4f6");
+      bg.addColorStop(1, "#d9d9de");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, size, size);
+    }
+
+    // --- Disc body: silver base ---
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rOuter, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    var silver = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub * 0.8, geo.cx, geo.cy, geo.rOuter);
+    silver.addColorStop(0, "#d6d8dd");
+    silver.addColorStop(0.5, "#eef0f3");
+    silver.addColorStop(0.85, "#cccfd5");
+    silver.addColorStop(1, "#b6b9c1");
+    ctx.fillStyle = silver;
+    ctx.fillRect(0, 0, size, size);
+
+    // --- Rainbow diffraction sheen: a full conic sweep, weighted toward the rim ---
+    var sheen;
+    if (typeof ctx.createConicGradient === "function") {
+      sheen = ctx.createConicGradient(-Math.PI / 2, geo.cx, geo.cy);
+      sheen.addColorStop(0.00, "rgba(255,120,120,0.60)");
+      sheen.addColorStop(0.14, "rgba(255,180,90,0.60)");
+      sheen.addColorStop(0.28, "rgba(250,240,130,0.62)");
+      sheen.addColorStop(0.42, "rgba(150,235,170,0.58)");
+      sheen.addColorStop(0.56, "rgba(140,220,255,0.60)");
+      sheen.addColorStop(0.70, "rgba(150,170,255,0.58)");
+      sheen.addColorStop(0.84, "rgba(210,150,255,0.58)");
+      sheen.addColorStop(1.00, "rgba(255,120,120,0.60)");
+    } else {
+      // Fallback: a diagonal rainbow band.
+      sheen = ctx.createLinearGradient(0, 0, size, size);
+      sheen.addColorStop(0.15, "rgba(255,180,90,0.55)");
+      sheen.addColorStop(0.4, "rgba(250,240,130,0.6)");
+      sheen.addColorStop(0.6, "rgba(140,220,255,0.6)");
+      sheen.addColorStop(0.85, "rgba(210,150,255,0.5)");
+    }
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, size, size);
+
+    // Wash silver back over the centre so the rainbow concentrates near the rim
+    // (real CD diffraction is strongest toward the outer edge).
+    var wash = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub, geo.cx, geo.cy, geo.rOuter);
+    wash.addColorStop(0.00, "rgba(233,235,239,0.92)");
+    wash.addColorStop(0.50, "rgba(233,235,239,0.55)");
+    wash.addColorStop(0.80, "rgba(233,235,239,0.16)");
+    wash.addColorStop(1.00, "rgba(233,235,239,0)");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, size, size);
+
+    // Bias the rainbow toward one side (silver on the left, spectrum on the
+    // right) so it reads like a disc catching the light rather than a full wheel.
+    var side = ctx.createLinearGradient(0, 0, size, 0);
+    side.addColorStop(0.00, "rgba(233,235,239,0.72)");
+    side.addColorStop(0.45, "rgba(233,235,239,0.22)");
+    side.addColorStop(1.00, "rgba(233,235,239,0)");
+    ctx.fillStyle = side;
+    ctx.fillRect(0, 0, size, size);
+
+    // Soft specular highlight (upper-left) for a reflective feel.
+    var hx = geo.cx - geo.rOuter * 0.34, hy = geo.cy - geo.rOuter * 0.34;
+    var spec = ctx.createRadialGradient(hx, hy, geo.rOuter * 0.08, hx, hy, geo.rOuter * 1.15);
+    spec.addColorStop(0, "rgba(255,255,255,0.34)");
+    spec.addColorStop(0.4, "rgba(255,255,255,0.08)");
+    spec.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = spec;
+    ctx.fillRect(0, 0, size, size);
+
+    // --- Concentric ring texture + fine stipple (also masks LSB embedding) ---
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = "#3a3a40";
+    var ringStep = Math.max(2, Math.round(size / 120));
+    for (var rr = geo.rHub; rr < geo.rOuter; rr += ringStep) {
+      ctx.beginPath();
+      ctx.arc(geo.cx, geo.cy, rr, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Resolve the label up front so the stipple can clear a buffer around its arc.
+    var labelActive = !!(opts.label && size >= CD_LABEL_MIN);
+    var labelFontPx = resolveLabelFont(opts.fontSize, geo);
+    var labelBand = labelActive
+      ? { rIn: geo.rLabel - labelFontPx * 1.05, halfAngle: Math.PI * 0.52 }
+      : null;
+
+    stippleSurface(ctx, geo, size, labelBand);
+
+    // --- Imprint (beneath the label), still inside the disc clip ---
+    // A user-supplied image wins; otherwise the default PuttyPNG "putty splat"
+    // branding is stippled into the rainbow surface (the hub covers its middle).
+    if (opts.imprint) {
+      imprintStipple(ctx, opts.imprint, geo, size, labelActive);
+    } else if (size >= CD_RIM_MIN) {
+      imprintSplat(ctx, geo, size, opts.splat || {}, labelActive);
+    }
+
+    ctx.restore();  // remove disc clip
+
+    // --- Curved label (top) if the disc is big enough to read ---
+    if (labelActive) {
+      drawCdLabel(ctx, String(opts.label), geo,
+        opts.fontFamily || "-apple-system, Segoe UI, Roboto, sans-serif", labelFontPx);
+    }
+
+    // --- Rim microtext x2 (top + bottom of the inner rim), informational by default ---
+    var rim = opts.rimText != null && opts.rimText !== ""
+      ? String(opts.rimText)
+      : buildInfoRim(opts.info || {});
+    if (rim && size >= CD_RIM_MIN) {
+      ctx.font = "600 " + Math.max(7, Math.round(size * 0.027)) + "px -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.fillStyle = "rgba(28,28,34,0.9)";
+      drawTextOnArc(ctx, rim, geo.cx, geo.cy, geo.rRim, -Math.PI / 2);
+      drawTextOnArc(ctx, rim, geo.cx, geo.cy, geo.rRim, Math.PI / 2);
+    }
+
+    // --- The round clamping hub + transparent spindle hole ---
+    drawCdCenter(ctx, geo, size, opts.hub || {});
+
+    return ctx.getImageData(0, 0, size, size);
+  }
+
+  // Draw the CD's centre: the classic round clamping hub (grey gradient) with an
+  // outer ring, a faint inner ring, and a fully transparent round spindle hole.
+  // hub: { outerThickness, innerThickness } (hub/hole SIZE is applied to `geo`
+  // upstream in drawCdCover). The transparent hole is what the user meant by "the
+  // central whitespace treated as transparent".
+  function drawCdCenter(ctx, geo, size, hub) {
+    var outerW = size * (hub.outerThickness != null ? hub.outerThickness : 0.006);
+    var innerW = size * (hub.innerThickness != null ? hub.innerThickness : 0.004);
+
+    var grad = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHole, geo.cx, geo.cy, geo.rHub);
+    grad.addColorStop(0, "rgba(196,198,203,0.95)");
+    grad.addColorStop(0.72, "rgba(210,212,217,0.95)");
+    grad.addColorStop(1, "rgba(228,230,234,0.97)");
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHub, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.lineWidth = Math.max(1, outerW);
+    ctx.strokeStyle = "rgba(150,152,158,0.85)";
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHub * 0.62, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(1, innerW);
+    ctx.strokeStyle = "rgba(160,162,168,0.5)";
+    ctx.stroke();
+
+    // Punch the spindle hole fully transparent. The fill must be fully opaque
+    // (destination-out uses the SOURCE alpha), so use solid black.
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHole, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Fine darkening dots across the disc surface - looks like a disc and helps
+  // hide the low-bit data embedding. Laid on an evenly-spaced (jittered) grid so
+  // the dots have a consistent size and separation. `labelBand`, when given,
+  // clears a buffer around the top label arc so the label reads cleanly.
+  function stippleSurface(ctx, geo, size, labelBand) {
+    var sep = Math.max(3, Math.round(size * 0.0105));   // ~2x the old density
+    var dotR = Math.max(0.7, size * 0.0035);            // consistent middle size
+    var jitter = sep * 0.34;
+    ctx.fillStyle = "rgba(20,20,24,0.032)";             // ~20% less opaque than before
+    for (var gy = -geo.rOuter; gy <= geo.rOuter; gy += sep) {
+      for (var gx = -geo.rOuter; gx <= geo.rOuter; gx += sep) {
+        var r = Math.sqrt(gx * gx + gy * gy);
+        if (r < geo.rHub || r > geo.rOuter) continue;
+        // Clear a buffer around the label arc (top sector, outer band).
+        if (labelBand && r >= labelBand.rIn) {
+          var ang = Math.atan2(gy, gx);
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < labelBand.halfAngle) continue;
+        }
+        var jx = geo.cx + gx + (Math.random() - 0.5) * jitter * 2;
+        var jy = geo.cy + gy + (Math.random() - 0.5) * jitter * 2;
+        ctx.beginPath();
+        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Size + render a generated cover to hold a prepared body. Finds the smallest
+  // square (min 32, cap maxSize) whose OPAQUE pixels fit the data, growing when
+  // transparency (the CD's corners + hole) leaves too few.
+  //
+  // To add a new generated style (e.g. "blob", "floppy"): write a
+  // draw<Style>Cover(size, opts) that returns ImageData, add a branch here that
+  // renders + hardens it in the same grow loop, and add its radio option in the UI.
+  function fitGeneratedCover(style, prep, options) {
+    options = options || {};
+    if (style !== "cd") {
+      // Noise is fully opaque, so the square math is exact.
+      return generateNoiseImageData(chooseSize(prep.body.length, prep.widths, options));
+    }
+    if (!hasDOM()) fail("E10", "the CD cover requires a browser");
+
+    var minSize = options.minSize || MIN_SIZE;
+    var maxSize = options.maxSize || MAX_SIZE;
+    var needed = neededPixelsFor(prep);
+    var cdOpts = {
+      label: options.label,
+      rimText: options.rimText,
+      fontFamily: options.fontFamily,
+      fontSize: options.fontSize,
+      imprint: options.imprintImg,       // a pre-loaded HTMLImageElement (see encode)
+      solidBackground: !!options.solidBackground,
+      hub: options.hub,                  // { size, holeSize, outerThickness, innerThickness }
+      splat: options.splat,              // default-imprint splat { points, curve, waviness, amplitude, seed, size }
+      info: prep.info                    // { size, type, name, encrypted } -> informational rim text
+    };
+
+    // First guess assumes ~72% of the square is opaque disc (or 100% if solid bg).
+    var fraction = options.solidBackground ? 0.98 : 0.72;
+    var size = options.size || Math.max(minSize, Math.ceil(Math.sqrt(needed / fraction)));
+    size = Math.min(size, maxSize);
+
+    for (var iter = 0; iter < 8; iter++) {
+      var imageData = drawCdCover(size, cdOpts);
+      hardenCover(imageData);
+      var opaque = opaquePixels(imageData.data, size, size).length;
+      if (opaque >= needed) return imageData;
+      if (size >= maxSize) break;
+      var grow = Math.sqrt(needed / Math.max(1, opaque)) * 1.06;
+      size = Math.min(maxSize, Math.max(size + 1, Math.ceil(size * grow)));
+    }
+    fail("E05", "the CD cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
+  }
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { reject(new PuttyPNGError("E10")); };
+      img.src = src;
+    });
+  }
+
+  // Convert any decode source into an ImageData object.
+  async function sourceToImageData(source) {
+    if (!hasDOM()) fail("E10", "no DOM available to read the image");
+
+    // Already ImageData-like.
+    if (source && source.data && typeof source.width === "number" && typeof source.height === "number") {
+      return source;
+    }
+
+    var img;
+    if (typeof source === "string") {
+      img = await loadImage(source);
+    } else if (typeof HTMLCanvasElement !== "undefined" && source instanceof HTMLCanvasElement) {
+      var cctx = source.getContext("2d", { willReadFrequently: true });
+      return cctx.getImageData(0, 0, source.width, source.height);
+    } else if (typeof HTMLImageElement !== "undefined" && source instanceof HTMLImageElement) {
+      img = source;
+    } else if (typeof Blob !== "undefined" && source instanceof Blob) {
+      img = await loadImage(URL.createObjectURL(source));
+    } else {
+      fail("E10", "unrecognized image source");
+    }
+
+    var canvas = makeCanvas(img.width, img.height);
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0, 0, img.width, img.height);
+  }
+
+  // Serialize an ImageData object to a lossless PNG (data URL + blob).
+  async function imageDataToPng(imageData) {
+    var canvas = makeCanvas(imageData.width, imageData.height);
+    var ctx = canvas.getContext("2d");
+    // imageData may be our plain {data,width,height}; wrap into a real ImageData.
+    var real = (typeof ImageData !== "undefined" && imageData instanceof ImageData)
+      ? imageData
+      : new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height);
+    ctx.putImageData(real, 0, 0);
+    var dataUrl = canvas.toDataURL("image/png");
+    var blob = await new Promise(function (resolve) {
+      if (canvas.toBlob) canvas.toBlob(resolve, "image/png");
+      else resolve(null);
+    });
+    return { dataUrl: dataUrl, blob: blob };
+  }
+
+  // ===========================================================================
+  // SECTION 14 - Public API
+  // ===========================================================================
+
+  // Hide data inside a PNG. Returns { blob, dataUrl, width, height, ...stats }.
+  PuttyPNG.encode = async function encode(input, options) {
+    options = options || {};
+    var style = options.coverStyle || "noise";
+
+    // The CD's smooth sheen defaults to subtle depth (invisible embedding). The
+    // caller can still override depth explicitly.
+    if (style === "cd" && options.depth == null) {
+      options = Object.assign({}, options, { depth: "subtle" });
+    }
+
+    var packed;
+    if (options.cover) {
+      // Custom cover: prepare the body first so we know how much room the data
+      // needs, then size + fit the cover to the SMALLEST image that holds it
+      // (ignoring the cover's own resolution), scaling up only if required.
+      if (!hasDOM()) fail("E10", "custom covers require a browser");
+      var coverImg = (typeof HTMLImageElement !== "undefined" && options.cover instanceof HTMLImageElement)
+        ? options.cover
+        : await loadImage(typeof options.cover === "string" ? options.cover : URL.createObjectURL(options.cover));
+
+      var prep = await prepareBody(input, options);
+      var coverImageData = autoFitCover(coverImg, prep, options);   // fits + hardens
+      if (opaquePixels(coverImageData.data, coverImageData.width, coverImageData.height).length < HEADER_PIXELS + 1) {
+        fail("E11");
+      }
+      packed = assemble(prep, coverImageData);
+    } else if (style === "cd") {
+      // Generated CD cover: prepare the body, then size the disc to fit it.
+      var cdPrep = await prepareBody(input, options);
+      // Pre-load an imprint image (File/Blob/URL/Image) if one was supplied.
+      if (options.imprint) {
+        if (!hasDOM()) fail("E10", "the CD imprint requires a browser");
+        var imprintImg = (typeof HTMLImageElement !== "undefined" && options.imprint instanceof HTMLImageElement)
+          ? options.imprint
+          : await loadImage(typeof options.imprint === "string" ? options.imprint : URL.createObjectURL(options.imprint));
+        options = Object.assign({}, options, { imprintImg: imprintImg });
+      }
+      var cdImage = fitGeneratedCover("cd", cdPrep, options);       // fits + hardens
+      if (opaquePixels(cdImage.data, cdImage.width, cdImage.height).length < HEADER_PIXELS + 1) {
+        fail("E11");
+      }
+      packed = assemble(cdPrep, cdImage);
+    } else {
+      packed = await pack(input, options, null);
+    }
+
+    var out = {
+      width: packed.width,
+      height: packed.height,
+      depth: packed.depth,
+      compressed: packed.compressed,
+      encrypted: packed.encrypted,
+      bytesHidden: packed.bytesHidden,
+      capacityBytes: packed.capacityBytes,
+      usedPercent: packed.usedPercent,
+      imageData: packed.imageData
+    };
+
+    if (hasDOM()) {
+      var png = await imageDataToPng(packed.imageData);
+      out.dataUrl = png.dataUrl;
+      out.blob = png.blob;
+    }
+    return out;
+  };
+
+  // Read data back out of a PNG. Returns a result object (see unpack). If the
+  // payload is a binary file and options.autoDownload is true, also downloads it.
+  PuttyPNG.decode = async function decode(source, options) {
+    options = options || {};
+    var imageData = await sourceToImageData(source);
+    var result = await unpack(imageData, options);
+    if (options.autoDownload && result.type === "binary") {
+      PuttyPNG.download(result);
+    }
+    return result;
+  };
+
+  // Inspect a PuttyPNG without decrypting: version, flags, dev tag, size.
+  PuttyPNG.peek = async function peek(source) {
+    try {
+      var imageData = await sourceToImageData(source);
+      return unpackHeader(imageData);
+    } catch (e) {
+      if (e && e.code === "E01") return { isPuttyPNG: false };
+      throw e;
+    }
+  };
+
+  // Convenience: save a decoded result (or a raw blob) to the user's disk.
+  PuttyPNG.download = function download(resultOrBlob, filename) {
+    if (!hasDOM()) fail("E10", "download requires a browser");
+    var blob, name;
+    if (typeof Blob !== "undefined" && resultOrBlob instanceof Blob) {
+      blob = resultOrBlob;
+      name = filename || "puttypng-file";
+    } else {
+      blob = new Blob([resultOrBlob.bytes], { type: resultOrBlob.mime || "application/octet-stream" });
+      name = filename || resultOrBlob.name || "puttypng-file";
+    }
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Override point for the password prompt. Default uses the browser's native
+  // prompt(); developers can replace this with a styled modal (see the docs).
+  PuttyPNG.passwordPrompt = async function passwordPrompt(context) {
+    if (typeof window !== "undefined" && window.prompt) {
+      return window.prompt((context && context.message) || "Enter password:");
+    }
+    return null;
+  };
+
+  // Internals exposed for the self-test and advanced use.
+  PuttyPNG.internals = {
+    crc32: crc32,
+    textToBytes: textToBytes,
+    bytesToText: bytesToText,
+    bytesToBase64: bytesToBase64,
+    base64ToBytes: base64ToBytes,
+    bytesToBits: bytesToBits,
+    bitsToBytes: bitsToBytes,
+    opaquePixels: opaquePixels,
+    buildHeader: buildHeader,
+    parseHeader: parseHeader,
+    buildInnerContainer: buildInnerContainer,
+    parseInnerContainer: parseInnerContainer,
+    generateNoiseImageData: generateNoiseImageData,
+    hardenCover: hardenCover,
+    chooseSize: chooseSize,
+    coverDims: coverDims,
+    neededPixelsFor: neededPixelsFor,
+    cdGeometry: cdGeometry,
+    drawCdCover: drawCdCover,
+    imprintStipple: imprintStipple,
+    fitGeneratedCover: fitGeneratedCover,
+    mulberry32: mulberry32,
+    buildSplat: buildSplat,
+    splatCurveTo: splatCurveTo,
+    drawSplatPath: drawSplatPath,
+    splatPath2D: splatPath2D,
+    imprintSplat: imprintSplat,
+    splatDotStyle: splatDotStyle,
+    buildInfoRim: buildInfoRim,
+    formatSize: formatSize,
+    prepareBody: prepareBody,
+    assemble: assemble,
+    pack: pack,
+    unpack: unpack,
+    unpackHeader: unpackHeader,
+    embed: embed,
+    DEPTH_STANDARD: DEPTH_STANDARD,
+    DEPTH_SUBTLE: DEPTH_SUBTLE
+  };
+
+  // ===========================================================================
+  // SECTION 15 - Self-test suite
+  //
+  // Registers a battery of round-trip and failure-mode checks. Runs fully in a
+  // browser or in Node (it works at the ImageData level; PNG serialization is
+  // lossless so it need not be exercised to prove the protocol).
+  // ===========================================================================
+
+  function assert(condition, message) {
+    if (!condition) throw new Error(message || "assertion failed");
+  }
+  function bytesEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+  // Encode to an ImageData (no canvas) then decode it back.
+  async function roundTrip(input, options) {
+    var packed = await pack(input, options || {}, null);
+    return unpack(packed.imageData, options || {});
+  }
+  PuttyPNG._tests = [];
+  function test(name, run) { PuttyPNG._tests.push({ name: name, run: run }); }
+
+  test("CRC32 known-answer vector", async function () {
+    assert(crc32(textToBytes("123456789")) === 0xcbf43926, "crc32 mismatch");
+  });
+
+  test("header build/parse round-trip", async function () {
+    var h = buildHeader({ version: 1, flags: 5, tagLen: 7, metaLen: 9, payloadLen: 123456, crc: 0xdeadbeef });
+    var f = parseHeader(h);
+    assert(f.version === 1 && f.flags === 5 && f.tagLen === 7 && f.metaLen === 9, "header fields");
+    assert(f.payloadLen === 123456 && f.crc === 0xdeadbeef, "header ints");
+  });
+
+  test("text round-trip (standard depth)", async function () {
+    var r = await roundTrip("Hello, PuttyPNG!");
+    assert(r.type === "text" && r.text === "Hello, PuttyPNG!", "text mismatch");
+  });
+
+  test("unicode text round-trip", async function () {
+    var s = "putty éè 你好 😀 ✨";
+    var r = await roundTrip(s);
+    assert(r.text === s, "unicode mismatch: " + r.text);
+  });
+
+  test("JSON object round-trip", async function () {
+    var obj = { game: "chess", moves: ["e4", "e5"], n: 42, nested: { ok: true } };
+    var r = await roundTrip(obj);
+    assert(r.type === "json" && JSON.stringify(r.json) === JSON.stringify(obj), "json mismatch");
+  });
+
+  test("binary round-trip (subtle depth)", async function () {
+    var bytes = new Uint8Array(600);
+    for (var i = 0; i < bytes.length; i++) bytes[i] = (i * 7 + 3) & 0xff;
+    var r = await roundTrip(bytes, { depth: "subtle" });
+    assert(r.type === "binary" && bytesEqual(r.bytes, bytes), "binary mismatch");
+    assert(r.depth === "subtle", "depth flag lost");
+  });
+
+  test("compression is applied to compressible data", async function () {
+    var repetitive = new Array(500).join("PUTTY");   // very compressible
+    var packed = await pack(repetitive, {}, null);
+    assert(packed.compressed === true, "expected compression to help");
+    var r = await unpack(packed.imageData, {});
+    assert(r.text === repetitive, "compressed text mismatch");
+  });
+
+  test("encryption round-trip with correct password", async function () {
+    var r = await roundTrip("top secret", { password: "correct horse" });
+    assert(r.encrypted === true, "encrypted flag missing");
+    assert(r.text === "top secret", "decrypted text mismatch");
+  });
+
+  test("wrong password fails with E06", async function () {
+    var packed = await pack("top secret", { password: "right" }, null);
+    var code = null;
+    try { await unpack(packed.imageData, { password: "wrong" }); }
+    catch (e) { code = e.code; }
+    assert(code === "E06", "expected E06, got " + code);
+  });
+
+  test("encrypted PuttyPNG hides filename/type until decrypted", async function () {
+    var packed = await pack(new Uint8Array([1, 2, 3]), { password: "pw", name: "secret.bin" }, null);
+    var peeked = unpackHeader(packed.imageData);
+    assert(peeked.encrypted === true, "peek should see encrypted flag");
+    assert(peeked.tag === "", "no tag expected");
+    // Nothing in the peek reveals the name.
+    assert(JSON.stringify(peeked).indexOf("secret.bin") === -1, "filename leaked in peek");
+  });
+
+  test("tampered payload fails CRC with E03", async function () {
+    var packed = await pack("integrity matters", {}, null);
+    // Flip a low bit of a body pixel (pixel 60 is well past the header).
+    packed.imageData.data[60 * 4] ^= 1;
+    var code = null;
+    try { await unpack(packed.imageData, {}); }
+    catch (e) { code = e.code; }
+    assert(code === "E03", "expected E03, got " + code);
+  });
+
+  test("non-PuttyPNG image reports E01", async function () {
+    var noise = generateNoiseImageData(64);
+    var code = null;
+    try { await unpack(noise, {}); }
+    catch (e) { code = e.code; }
+    assert(code === "E01", "expected E01, got " + code);
+  });
+
+  test("future protocol version reports E02", async function () {
+    var packed = await pack("hi", {}, null);
+    // Bump the version byte in the embedded header. Header is at subtle depth,
+    // MSB-first: byte 4 (version) occupies header bits 32..39 => pixels 10..13.
+    // Simplest: re-embed a header with version 99 over a fresh noise cover.
+    var eligible = opaquePixels(packed.imageData.data, packed.imageData.width, packed.imageData.height);
+    var badHeader = buildHeader({ version: 99, flags: 0, tagLen: 0, metaLen: 0, payloadLen: 1, crc: 0 });
+    writeBits(packed.imageData.data, eligible, 0, HEADER_WIDTHS, bytesToBits(badHeader));
+    var code = null;
+    try { await unpack(packed.imageData, {}); }
+    catch (e) { code = e.code; }
+    assert(code === "E02", "expected E02, got " + code);
+  });
+
+  test("payload too large for a fixed size reports E05", async function () {
+    // Incompressible random bytes with compression off, so it cannot shrink to fit.
+    var big = crypto.getRandomValues(new Uint8Array(5000));
+    var code = null;
+    try { await pack(big, { size: 32, compress: false }, null); }   // 32x32 = 1024 px
+    catch (e) { code = e.code; }
+    assert(code === "E05", "expected E05, got " + code);
+  });
+
+  test("dev tag survives and is readable via peek (no decryption)", async function () {
+    var packed = await pack("payload", { tag: "chess-save v3", password: "pw" }, null);
+    var peeked = unpackHeader(packed.imageData);
+    assert(peeked.tag === "chess-save v3", "tag mismatch: " + peeked.tag);
+    assert(peeked.encrypted === true, "should still be encrypted");
+  });
+
+  test("auto-sized noise cover is 1:1 and within bounds", async function () {
+    var packed = await pack("small", {}, null);
+    assert(packed.width === packed.height, "cover not square");
+    assert(packed.width >= 32 && packed.width <= 4096, "cover out of bounds");
+  });
+
+  test("hardenCover removes the semi-transparent fringe (binary alpha)", async function () {
+    // Build a 4x4 cover: one fully transparent pixel, one anti-aliased fringe
+    // pixel (alpha 128), the rest opaque.
+    var img = { data: new Uint8ClampedArray(4 * 4 * 4), width: 4, height: 4 };
+    for (var i = 0; i < 16; i++) img.data[i * 4 + 3] = 255;
+    img.data[0 * 4 + 3] = 0;      // fully transparent - should stay 0
+    img.data[5 * 4 + 3] = 128;    // semi-transparent fringe - should become 255
+    var changed = PuttyPNG.internals.hardenCover(img);
+    assert(changed === 1, "expected exactly one pixel hardened, got " + changed);
+    assert(img.data[0 * 4 + 3] === 0, "fully transparent pixel should be preserved");
+    assert(img.data[5 * 4 + 3] === 255, "semi-transparent pixel should be hardened to 255");
+    // No fractional alpha remains anywhere.
+    for (var j = 0; j < 16; j++) {
+      var a = img.data[j * 4 + 3];
+      assert(a === 0 || a === 255, "fractional alpha left at pixel " + j + ": " + a);
+    }
+  });
+
+  test("data survives in a cover that had transparency (after hardening)", async function () {
+    // A cover with a transparent hole and a soft fringe still round-trips once
+    // hardened, embedding only in the opaque pixels.
+    var size = 40;
+    var img = generateNoiseImageData(size);
+    // Punch a transparent hole with a semi-transparent ring around it.
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        var d = Math.sqrt((x - 20) * (x - 20) + (y - 20) * (y - 20));
+        var idx = (y * size + x) * 4 + 3;
+        if (d < 5) img.data[idx] = 0;
+        else if (d < 7) img.data[idx] = 128;
+      }
+    }
+    PuttyPNG.internals.hardenCover(img);
+    var packed = await pack("hole-y cover still works", {}, img);
+    var r = await unpack(packed.imageData, {});
+    assert(r.text === "hole-y cover still works", "round-trip failed through hardened cover");
+  });
+
+  test("coverDims: square auto is smallest-that-fits, floored at 32", async function () {
+    var tiny = coverDims(101, 1, {});                 // ~default text worth of pixels
+    assert(tiny.w === 32 && tiny.h === 32, "tiny should floor to 32x32, got " + tiny.w + "x" + tiny.h);
+    var big = coverDims(200000, 1, {});               // needs ~448px
+    assert(big.w === big.h && big.w * big.h >= 200000, "big square must fit");
+    assert(big.w >= 447 && big.w <= 460, "big square ~sqrt(200000), got " + big.w);
+  });
+
+  test("coverDims: custom cover size ignores native resolution", async function () {
+    // A 1000-need with default floor should be ~32, NOT the source's size.
+    var d = coverDims(101, 1, { minSize: 32 });
+    assert(Math.max(d.w, d.h) <= 32, "auto must not inflate to source size");
+  });
+
+  test("coverDims: keepRatio preserves aspect ratio and floors short side", async function () {
+    var d = coverDims(101, 2, { keepRatio: true });   // 2:1 landscape, tiny data
+    assert(Math.abs(d.w / d.h - 2) < 0.15, "should keep ~2:1, got " + d.w + "x" + d.h);
+    assert(Math.min(d.w, d.h) >= 32, "short side floored at 32, got " + Math.min(d.w, d.h));
+  });
+
+  test("coverDims: keepRatio scales UP to fit large data", async function () {
+    var need = 500000;
+    var d = coverDims(need, 2, { keepRatio: true });
+    assert(Math.abs(d.w / d.h - 2) < 0.15, "ratio kept while scaling up");
+    assert(d.w * d.h >= need, "keepRatio must scale up until it fits, got " + (d.w * d.h) + " < " + need);
+  });
+
+  test("coverDims: dev can override the floor via minSize", async function () {
+    var d = coverDims(101, 1, { minSize: 128 });
+    assert(d.w === 128 && d.h === 128, "minSize override should win, got " + d.w + "x" + d.h);
+  });
+
+  test("buildSplat: densely sampled (>= 60 points, even)", async function () {
+    var p = buildSplat(0, 0, 100, { points: 6 });
+    assert(p.length >= 60, "expected >= 60 samples, got " + p.length);
+  });
+
+  test("buildSplat: has the requested number of lobes (radial maxima)", async function () {
+    var lobes = 6;
+    var pts = buildSplat(0, 0, 100, { points: lobes, amplitude: 0.4, waviness: 0, curve: 0.5, seed: 7 });
+    var rs = pts.map(function (p) { return Math.sqrt(p.x * p.x + p.y * p.y); });
+    var maxima = 0, n = rs.length;
+    for (var i = 0; i < n; i++) {
+      if (rs[i] > rs[(i - 1 + n) % n] && rs[i] >= rs[(i + 1) % n]) maxima++;
+    }
+    assert(maxima === lobes, "expected " + lobes + " lobes, found " + maxima);
+  });
+
+  test("buildSplat: deterministic for a seed, varies across seeds", async function () {
+    var a = buildSplat(0, 0, 100, { points: 5, seed: 42 });
+    var b = buildSplat(0, 0, 100, { points: 5, seed: 42 });
+    var c = buildSplat(0, 0, 100, { points: 5, seed: 43 });
+    assert(a[3].x === b[3].x && a[3].y === b[3].y, "same seed -> identical");
+    assert(a[3].x !== c[3].x || a[3].y !== c[3].y, "different seed -> different");
+  });
+
+  test("buildSplat: radii stay within sane bounds", async function () {
+    var R = 100, amp = 0.35, wav = 0.35;
+    var pts = buildSplat(0, 0, R, { points: 7, amplitude: amp, waviness: wav, seed: 9 });
+    var max = R * (1 + amp * 1.3 + amp * 0.45 * wav) + 1e-6;
+    for (var i = 0; i < pts.length; i++) {
+      var r = Math.sqrt(pts[i].x * pts[i].x + pts[i].y * pts[i].y);
+      assert(r <= max && r >= R * 0.24, "vertex " + i + " r=" + r + " out of bounds (max " + max + ")");
+    }
+  });
+
+  test("buildSplat: same seed scales concentrically with radius", async function () {
+    var o = { points: 6, amplitude: 0.3, waviness: 0.3, seed: 7 };
+    var a = buildSplat(0, 0, 50, o);
+    var b = buildSplat(0, 0, 100, o);
+    for (var i = 0; i < a.length; i++) {
+      assert(Math.abs(b[i].x - 2 * a[i].x) < 1e-6 && Math.abs(b[i].y - 2 * a[i].y) < 1e-6,
+        "vertex " + i + " not concentric");
+    }
+  });
+
+  test("formatSize: bytes / KB / MB", async function () {
+    assert(formatSize(320) === "320 bytes", "bytes");
+    assert(formatSize(5320) === "5.2 KB", "KB, got " + formatSize(5320));
+    assert(formatSize(3 * 1024 * 1024) === "3.00 MB", "MB, got " + formatSize(3 * 1024 * 1024));
+  });
+
+  test("splatDotStyle: solid palettes fixed, rainbow varies by angle", async function () {
+    assert(splatDotStyle("black", 0) === "rgb(14,14,18)", "black");
+    assert(splatDotStyle("blue", 1) === splatDotStyle("blue", 2), "solid is angle-independent");
+    assert(splatDotStyle("rainbowSoft", 0) !== splatDotStyle("rainbowSoft", Math.PI), "rainbow varies by angle");
+    assert(splatDotStyle("rainbowStrong", 0).indexOf("hsl(") === 0, "rainbow is hsl");
+  });
+
+  test("buildInfoRim: Secured when encrypted, else name/type", async function () {
+    assert(buildInfoRim({ size: 5320, type: "binary", name: "x.zip", encrypted: true }) === "PuttyPNG | 5.2 KB | Secured", "encrypted -> Secured");
+    assert(buildInfoRim({ size: 320, type: "text" }) === "PuttyPNG | 320 bytes | text", "text");
+    assert(buildInfoRim({ size: 100, type: "json" }) === "PuttyPNG | 100 bytes | JSON", "json");
+    assert(buildInfoRim({ size: 2048, type: "binary", name: "photo.jpg" }) === "PuttyPNG | 2.0 KB | photo.jpg", "file -> name");
+  });
+
+  // ---- self-test runner ------------------------------------------------------
+  PuttyPNG.selfTest = async function selfTest() {
+    var results = [];
+    var passed = 0, failed = 0;
+    for (var i = 0; i < PuttyPNG._tests.length; i++) {
+      var t = PuttyPNG._tests[i];
+      try {
+        await t.run();
+        results.push({ name: t.name, ok: true });
+        passed++;
+      } catch (err) {
+        results.push({ name: t.name, ok: false, error: String((err && err.message) || err) });
+        failed++;
+      }
+    }
+    return { passed: passed, failed: failed, total: PuttyPNG._tests.length, results: results };
+  };
+
+  // ===========================================================================
+  // Export - works as a browser global AND as a CommonJS module (Node runner).
+  // ===========================================================================
+  global.PuttyPNG = PuttyPNG;
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = PuttyPNG;
+  }
+
+})(typeof globalThis !== "undefined" ? globalThis : this);
+
+  </script>
+
+  <!-- ================= Snippet source (shown in the cards) ================= -->
+  <script type="text/plain" id="importerSource">&lt;!-- PuttyPNG importer: drop, paste, or browse a PuttyPNG --&gt;
+&lt;div id="drop" tabindex="0" style="border:2px dashed #ccc;padding:24px;text-align:center;cursor:pointer"&gt;
+  Drop a PuttyPNG here, paste it, or click to browse
+  &lt;input id="file" type="file" accept="image/png" hidden&gt;
+&lt;/div&gt;
+&lt;script src="puttypng.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  // Your app decides what to do with the decoded data.
+  async function onData(result) {
+    if (result.type === "binary") PuttyPNG.download(result);   // save the file
+    else console.log("Got:", result.text);                     // text or JSON
+  }
+
+  const drop = document.getElementById("drop");
+  const file = document.getElementById("file");
+
+  async function read(source) {
+    try { onData(await PuttyPNG.decode(source)); }             // prompts if encrypted
+    catch (err) { alert(err.message); }                        // err.code is the E## code
+  }
+
+  drop.addEventListener("click", () =&gt; file.click());
+  file.addEventListener("change", () =&gt; file.files[0] &amp;&amp; read(file.files[0]));
+  drop.addEventListener("dragover", e =&gt; e.preventDefault());
+  drop.addEventListener("drop", e =&gt; {
+    e.preventDefault();
+    if (e.dataTransfer.files[0]) read(e.dataTransfer.files[0]);
+  });
+  drop.addEventListener("paste", e =&gt; {
+    for (const item of e.clipboardData.items)
+      if (item.type.startsWith("image/")) read(item.getAsFile());
+  });
+&lt;/script&gt;</script>
+
+  <script type="text/plain" id="exporterSource">&lt;!-- PuttyPNG exporter: type something, get a PuttyPNG --&gt;
+&lt;textarea id="text"&gt;Hello!&lt;/textarea&gt;
+&lt;button id="make"&gt;Make PuttyPNG&lt;/button&gt;
+&lt;a id="save" download="my.png"&gt;Save&lt;/a&gt;
+&lt;img id="out" alt="your PuttyPNG"&gt;
+&lt;script src="puttypng.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  document.getElementById("make").addEventListener("click", async () =&gt; {
+    const text = document.getElementById("text").value;
+    const png = await PuttyPNG.encode(text);   // add { password, depth, cover }, etc.
+    document.getElementById("out").src = png.dataUrl;
+    document.getElementById("save").href = png.dataUrl;
+  });
+&lt;/script&gt;</script>
+
+  <!-- ================= Page behavior ================= -->
+  <script>
+  (function () {
+    "use strict";
+
+    // ---- Toast ---------------------------------------------------------------
+    var toastEl = document.getElementById("toast");
+    var toastTimer = null;
+    function toast(message, kind) {
+      toastEl.textContent = message;
+      toastEl.className = "show" + (kind ? " " + kind : "");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.className = ""; }, 2600);
+    }
+    // Turn an engine error into a friendly line (keeps the E## code visible).
+    function friendly(err) {
+      var code = err && err.code;
+      var map = {
+        E01: "That image is not a PuttyPNG.",
+        E02: "This PuttyPNG needs a newer version of the engine.",
+        E03: "This PuttyPNG looks corrupted - it may have been re-saved lossily.",
+        E05: "That data is too large for the chosen image size.",
+        E06: "Wrong password.",
+        E08: "This PuttyPNG is encrypted - a password is needed.",
+        E11: "That cover image has too little opaque area to hold data."
+      };
+      return (map[code] || (err && err.message) || "Something went wrong") + (code ? " (" + code + ")" : "");
+    }
+
+    // ---- Tabs ----------------------------------------------------------------
+    function switchTab(name) {
+      document.querySelectorAll("nav.tabs button").forEach(function (b) {
+        var on = b.getAttribute("data-tab") === name;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      document.querySelectorAll(".tab-panel").forEach(function (p) {
+        p.classList.toggle("active", p.id === "tab-" + name);
+      });
+    }
+    document.getElementById("tabs").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-tab]");
+      if (!btn) return;
+      switchTab(btn.getAttribute("data-tab"));
+    });
+    // In-page links that jump to another tab (optionally to an anchor within it).
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest("[data-gototab]");
+      if (!link) return;
+      e.preventDefault();
+      switchTab(link.getAttribute("data-gototab"));
+      var href = link.getAttribute("href");
+      if (href && href.charAt(0) === "#" && href.length > 1) {
+        var target = document.getElementById(href.slice(1));
+        if (target) setTimeout(function () { target.scrollIntoView({ behavior: "smooth", block: "start" }); }, 40);
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+
+    // ---- Advanced drawer -----------------------------------------------------
+    var advToggle = document.getElementById("advToggle");
+    var advDrawer = document.getElementById("advDrawer");
+    // Drive the drawer height from JS so it can NEVER clip its content: animate
+    // max-height to the measured scrollHeight, then release it to 'none' once open
+    // (so later height changes -- CD/Noise toggle, sizeMode fields -- show in full).
+    function setDrawerOpen(open) {
+      advToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) {
+        advDrawer.classList.add("open");
+        advDrawer.style.maxHeight = advDrawer.scrollHeight + "px";
+      } else {
+        // Pin to the current pixel height first so the collapse can animate from it.
+        advDrawer.style.maxHeight = advDrawer.scrollHeight + "px";
+        advDrawer.offsetHeight;                       // force reflow
+        advDrawer.classList.remove("open");
+        advDrawer.style.maxHeight = "0px";
+      }
+    }
+    advDrawer.addEventListener("transitionend", function (e) {
+      // Once fully open, drop the fixed cap so the content is free to grow/shrink.
+      if (e.propertyName === "max-height" && advDrawer.classList.contains("open")) {
+        advDrawer.style.maxHeight = "none";
+      }
+    });
+    advToggle.addEventListener("click", function () {
+      setDrawerOpen(!advDrawer.classList.contains("open"));
+    });
+    // Call whenever an inner control shows/hides (which changes the drawer's height)
+    // so an open drawer immediately fits the new content instead of clipping it.
+    function releaseDrawerHeight() {
+      if (advDrawer.classList.contains("open")) advDrawer.style.maxHeight = "none";
+    }
+
+    // Show fixed-size + cover-fit fields only when relevant.
+    var sizeMode = document.getElementById("optSizeMode");
+    var fixedSizeField = document.getElementById("fixedSizeField");
+    sizeMode.addEventListener("change", function () {
+      fixedSizeField.classList.toggle("hidden", sizeMode.value !== "fixed");
+      releaseDrawerHeight();
+    });
+    var coverInput = document.getElementById("optCover");
+    var coverFitField = document.getElementById("coverFitField");
+    coverInput.addEventListener("change", function () {
+      coverFitField.classList.toggle("hidden", !coverInput.files || !coverInput.files.length);
+      releaseDrawerHeight();
+    });
+
+    // Cover style: show CD-only controls for CD, and default the depth to subtle
+    // (smooth sheen) for CD / standard for noise. The user can still override depth.
+    var optDepth = document.getElementById("optDepth");
+    var cdControls = document.getElementById("cdControls");
+    var cdAdvanced = document.getElementById("cdAdvanced");
+    function onCoverStyleChange() {
+      var style = (document.querySelector('input[name="coverStyle"]:checked') || {}).value || "cd";
+      var isCd = style === "cd";
+      cdControls.classList.toggle("hidden", !isCd);
+      cdAdvanced.classList.toggle("hidden", !isCd);
+      optDepth.value = isCd ? "subtle" : "standard";
+      releaseDrawerHeight();
+    }
+    document.querySelectorAll('input[name="coverStyle"]').forEach(function (r) {
+      r.addEventListener("change", onCoverStyleChange);
+    });
+    onCoverStyleChange();   // set initial state (CD default)
+
+    // Imprint chooser: an image replaces the default putty-splat branding.
+    var imprintInput = document.getElementById("optImprint");
+    var imprintInfo = document.getElementById("imprintInfo");
+    var splatControls = document.getElementById("splatControls");
+    var splatDisabledNote = document.getElementById("splatDisabledNote");
+    function onImprintChange() {
+      var f = imprintInput.files && imprintInput.files[0];
+      imprintInfo.textContent = f ? ("Imprinting: " + f.name + " (burned-in, replaces the splat)") : "";
+      // Grey out the splat sliders when a custom imprint image is in use.
+      splatControls.style.opacity = f ? "0.5" : "";
+      splatDisabledNote.style.display = f ? "block" : "none";
+      releaseDrawerHeight();
+    }
+    imprintInput.addEventListener("change", onImprintChange);
+
+    // Hub + splat sliders: keep each range slider in sync with its number field.
+    function bindSlider(id) {
+      var range = document.getElementById(id);
+      var num = document.getElementById(id + "Num");
+      if (!range || !num) return;
+      range.addEventListener("input", function () { num.value = range.value; });
+      num.addEventListener("input", function () { range.value = num.value; });
+    }
+    ["splHubSize", "splHoleSize", "splOuter", "splInner",
+     "splPoints", "splCurve", "splWaviness", "splAmplitude", "splSize",
+     "splDotSep", "splDotMin", "splDotMax", "splTextBuffer"].forEach(bindSlider);
+
+    document.getElementById("splShuffle").addEventListener("click", function () {
+      document.getElementById("splSeed").value = Math.floor(Math.random() * 10000);
+    });
+
+    // ---- The data box: type text, or attach a file (drag-drop / browse) ------
+    var exportText = document.getElementById("exportText");
+    var inputSize = document.getElementById("inputSize");
+    var dataDrop = document.getElementById("dataDrop");
+    var fileChip = document.getElementById("fileChip");
+    var fileNameEl = document.getElementById("fileName");
+    var fileSizeEl = document.getElementById("fileSize");
+    var attachBtn = document.getElementById("attachBtn");
+    var attachInput = document.getElementById("attachInput");
+    var attachedFile = null;   // when set, Make encodes this file instead of the text
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + " bytes";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+    }
+    function updateInputSize() {
+      if (attachedFile) return;   // file mode shows the file size instead
+      inputSize.textContent = formatSize(new TextEncoder().encode(exportText.value).length);
+    }
+    exportText.addEventListener("input", updateInputSize);
+
+    function attachFile(file) {
+      attachedFile = file;
+      fileNameEl.textContent = file.name || "(unnamed file)";
+      fileSizeEl.textContent = formatSize(file.size) + (file.type ? " · " + file.type : "");
+      fileChip.classList.remove("hidden");
+      exportText.classList.add("hidden");
+      attachBtn.classList.add("hidden");
+      inputSize.textContent = formatSize(file.size);
+    }
+    function clearFile() {
+      attachedFile = null;
+      fileChip.classList.add("hidden");
+      exportText.classList.remove("hidden");
+      attachBtn.classList.remove("hidden");
+      attachInput.value = "";
+      updateInputSize();
+    }
+    document.getElementById("fileClear").addEventListener("click", clearFile);
+
+    // "attach a file" opens a picker and attaches directly (the picker is the confirm).
+    attachBtn.addEventListener("click", function () { attachInput.click(); });
+    attachInput.addEventListener("change", function () {
+      if (attachInput.files && attachInput.files[0]) attachFile(attachInput.files[0]);
+    });
+
+    // Drag a FILE onto the data box -> drop-in visual, then a confirm modal.
+    function dragHasFiles(e) {
+      return !!(e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") !== -1);
+    }
+    var dropCount = 0;
+    dataDrop.addEventListener("dragenter", function (e) {
+      if (!dragHasFiles(e)) return;                 // let normal text drags through
+      e.preventDefault(); dropCount++; dataDrop.classList.add("drag-over");
+    });
+    dataDrop.addEventListener("dragover", function (e) { if (dragHasFiles(e)) e.preventDefault(); });
+    dataDrop.addEventListener("dragleave", function () {
+      dropCount--; if (dropCount <= 0) { dropCount = 0; dataDrop.classList.remove("drag-over"); }
+    });
+    dataDrop.addEventListener("drop", async function (e) {
+      if (!dragHasFiles(e)) return;
+      e.preventDefault(); e.stopPropagation();
+      dropCount = 0; dataDrop.classList.remove("drag-over");
+      var file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      var ok = await confirmModal({
+        title: "Replace the contents?",
+        message: "Hide <strong>" + escapeHtml(file.name) + "</strong> (" + formatSize(file.size) +
+                 ") in your PuttyPNG instead of the text above?",
+        confirm: "Replace", cancel: "Cancel"
+      });
+      if (ok) attachFile(file);
+    });
+
+    // A small, styled confirm dialog. Resolves true (confirm) / false (cancel).
+    function confirmModal(o) {
+      return new Promise(function (resolve) {
+        var wrap = document.createElement("div");
+        wrap.className = "modal-overlay-el";
+        wrap.innerHTML =
+          '<div class="modal-card" role="dialog" aria-modal="true">' +
+          '<h3>' + escapeHtml(o.title || "Are you sure?") + "</h3>" +
+          "<p>" + (o.message || "") + "</p>" +
+          '<div class="modal-actions">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-cancel>' + escapeHtml(o.cancel || "Cancel") + "</button>" +
+          '<button type="button" class="btn btn-clay btn-sm" data-ok>' + escapeHtml(o.confirm || "OK") + "</button>" +
+          "</div></div>";
+        function close(v) { wrap.remove(); document.removeEventListener("keydown", onKey); resolve(v); }
+        function onKey(e) { if (e.key === "Escape") close(false); else if (e.key === "Enter") close(true); }
+        wrap.addEventListener("click", function (e) { if (e.target === wrap) close(false); });
+        wrap.querySelector("[data-cancel]").addEventListener("click", function () { close(false); });
+        wrap.querySelector("[data-ok]").addEventListener("click", function () { close(true); });
+        document.addEventListener("keydown", onKey);
+        document.body.appendChild(wrap);
+        wrap.querySelector("[data-ok]").focus();
+      });
+    }
+
+    updateInputSize();
+
+    // ---- Build encode options from the form ----------------------------------
+    function gatherOptions() {
+      var opts = {};
+      var pw = document.getElementById("optPassword").value;
+      if (pw) opts.password = pw;
+      var tag = document.getElementById("optTag").value;
+      if (tag) opts.tag = tag;
+      opts.depth = document.getElementById("optDepth").value;
+      opts.compress = document.getElementById("optCompress").checked;
+      var mode = sizeMode.value;
+      if (mode === "pow2") opts.sizeMode = "pow2";
+      else if (mode === "fixed") opts.size = parseInt(document.getElementById("optFixedSize").value, 10) || 256;
+
+      // Cover style: a custom uploaded image always wins; otherwise noise or CD.
+      var style = document.querySelector('input[name="coverStyle"]:checked');
+      style = style ? style.value : "cd";
+      if (coverInput.files && coverInput.files[0]) {
+        opts.cover = coverInput.files[0];
+        opts.coverFit = document.getElementById("optCoverFit").value;
+      } else if (style === "cd") {
+        opts.coverStyle = "cd";
+        var label = document.getElementById("optLabel").value;
+        if (label) opts.label = label;
+        opts.solidBackground = document.getElementById("optSolidBg").checked;
+        var imprintFile = document.getElementById("optImprint").files;
+        if (imprintFile && imprintFile[0]) opts.imprint = imprintFile[0];
+        opts.fontFamily = document.getElementById("optFontFamily").value;
+        opts.fontSize = document.getElementById("optFontSize").value;   // small|medium|large|xlarge
+        var rim = document.getElementById("optRimText").value;
+        if (rim) opts.rimText = rim;
+
+        // Hub (round center): sizes + gray-ring thicknesses.
+        opts.hub = {
+          size: parseInt(document.getElementById("splHubSize").value, 10) / 100,
+          holeSize: parseInt(document.getElementById("splHoleSize").value, 10) / 100,
+          outerThickness: parseInt(document.getElementById("splOuter").value, 10) / 1000,
+          innerThickness: parseInt(document.getElementById("splInner").value, 10) / 1000
+        };
+        // The default putty-splat imprint (ignored if a custom imprint image is set).
+        opts.splat = {
+          points: parseInt(document.getElementById("splPoints").value, 10),
+          curve: parseInt(document.getElementById("splCurve").value, 10) / 100,
+          waviness: parseInt(document.getElementById("splWaviness").value, 10) / 100,
+          amplitude: parseInt(document.getElementById("splAmplitude").value, 10) / 100,
+          seed: parseInt(document.getElementById("splSeed").value, 10) || 0,
+          size: parseInt(document.getElementById("splSize").value, 10) / 100,
+          dotColor: document.getElementById("splDotColor").value,
+          separation: parseFloat(document.getElementById("splDotSep").value),
+          dotMin: parseFloat(document.getElementById("splDotMin").value),
+          dotMax: parseFloat(document.getElementById("splDotMax").value),
+          textBuffer: parseFloat(document.getElementById("splTextBuffer").value)
+        };
+      } else {
+        opts.coverStyle = "noise";
+      }
+      return opts;
+    }
+
+    // ---- Make PuttyPNG -------------------------------------------------------
+    var lastPng = null;
+    var makeBtn = document.getElementById("makeBtn");
+    makeBtn.addEventListener("click", async function () {
+      makeBtn.disabled = true;
+      var original = makeBtn.textContent;
+      makeBtn.textContent = "Pressing...";
+      try {
+        var opts = gatherOptions();
+        // An attached file (dropped or browsed) encodes as binary with its name;
+        // otherwise the typed text is used.
+        var input = attachedFile ? attachedFile : exportText.value;
+
+        var png = await PuttyPNG.encode(input, opts);
+        lastPng = png;
+
+        var outImg = document.getElementById("outImg");
+        outImg.src = png.dataUrl;
+        sizePreview(outImg, png.width, png.height);   // keep the true aspect ratio
+        document.getElementById("outStats").innerHTML = statsHtml(png);
+        document.getElementById("output").classList.remove("hidden");
+        toast("PuttyPNG created", "ok");
+      } catch (err) {
+        toast(friendly(err), "bad");
+      } finally {
+        makeBtn.disabled = false;
+        makeBtn.textContent = original;
+      }
+    });
+
+    // Scale a preview image to the real PNG aspect ratio, longest side = longSide,
+    // so the checkered frame hugs the true shape (square stays square, 2:1 stays 2:1).
+    function sizePreview(img, w, h, longSide) {
+      longSide = longSide || 200;
+      var scale = longSide / Math.max(w, h);
+      img.style.width = Math.max(1, Math.round(w * scale)) + "px";
+      img.style.height = Math.max(1, Math.round(h * scale)) + "px";
+    }
+
+    function statsHtml(png) {
+      function row(k, v) { return '<div class="stat-row"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>"; }
+      return row("Image", png.width + " &times; " + png.height + " px") +
+             row("Hidden", png.bytesHidden.toLocaleString() + " bytes") +
+             row("Capacity used", png.usedPercent + "%") +
+             row("Depth", png.depth) +
+             row("Compressed", png.compressed ? "yes" : "no") +
+             row("Encrypted", png.encrypted ? "yes (AES-256)" : "no");
+    }
+
+    // ---- Save / copy image ---------------------------------------------------
+    document.getElementById("saveBtn").addEventListener("click", function () {
+      if (!lastPng) return;
+      var a = document.createElement("a");
+      a.href = lastPng.dataUrl;
+      a.download = "puttypng.png";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
+    document.getElementById("copyImgBtn").addEventListener("click", async function () {
+      if (!lastPng || !lastPng.blob) { toast("Nothing to copy yet", "bad"); return; }
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": lastPng.blob })]);
+          toast("Image copied to clipboard", "ok");
+        } else { toast("Clipboard images not supported here - use Save", "bad"); }
+      } catch (e) { toast("Could not copy image", "bad"); }
+    });
+
+    // ---- Import / read -------------------------------------------------------
+    var dropzone = document.getElementById("dropzone");
+    var importFile = document.getElementById("importFile");
+    var resultBox = document.getElementById("resultBox");
+
+    function showResult(result) {
+      var badges = document.getElementById("resultBadges");
+      var chips = [];
+      chips.push('<span class="badge">type: ' + result.type + "</span>");
+      if (result.name) chips.push('<span class="badge">' + escapeHtml(result.name) + "</span>");
+      if (result.encrypted) chips.push('<span class="badge">encrypted</span>');
+      if (result.compressed) chips.push('<span class="badge">compressed</span>');
+      if (result.tag) chips.push('<span class="badge">tag: ' + escapeHtml(result.tag) + "</span>");
+      chips.push('<span class="badge">' + result.depth + "</span>");
+      badges.innerHTML = chips.join("");
+
+      var textWrap = document.getElementById("resultTextWrap");
+      var actions = document.getElementById("resultActions");
+      actions.innerHTML = "";
+      if (result.type === "binary") {
+        textWrap.classList.add("hidden");
+        var btn = document.createElement("button");
+        btn.className = "btn btn-clay btn-sm";
+        btn.type = "button";
+        btn.textContent = "Download " + (result.name || "file");
+        btn.addEventListener("click", function () { PuttyPNG.download(result); });
+        actions.appendChild(btn);
+      } else {
+        textWrap.classList.remove("hidden");
+        document.getElementById("resultText").textContent = result.text || "";
+      }
+      resultBox.classList.remove("hidden");
+      toast("PuttyPNG decoded", "ok");
+    }
+
+    async function readSource(source) {
+      try {
+        var result = await PuttyPNG.decode(source);
+        showResult(result);
+      } catch (err) {
+        toast(friendly(err), "bad");
+      }
+    }
+
+    dropzone.addEventListener("click", function () { importFile.click(); });
+    dropzone.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); importFile.click(); }
+    });
+    importFile.addEventListener("change", function () {
+      if (importFile.files && importFile.files[0]) readSource(importFile.files[0]);
+    });
+    dropzone.addEventListener("dragover", function (e) { e.preventDefault(); dropzone.classList.add("drag-over"); });
+    dropzone.addEventListener("dragleave", function () { dropzone.classList.remove("drag-over"); });
+    dropzone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dropzone.classList.remove("drag-over");
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      if (f.type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
+      readSource(f);
+    });
+    // Paste anywhere reads into the reader.
+    document.addEventListener("paste", function (e) {
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image/") === 0) {
+          if (items[i].type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
+          readSource(items[i].getAsFile());
+          return;
+        }
+      }
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    }
+
+    // ---- Snippet cards -------------------------------------------------------
+    // The engine card shows the exact bytes embedded in this page.
+    var engineSource = document.getElementById("puttypng-engine").textContent.trim();
+    document.getElementById("engineCode").textContent = engineSource;
+    document.getElementById("importerCode").textContent =
+      decodeEntities(document.getElementById("importerSource").textContent);
+    document.getElementById("exporterCode").textContent =
+      decodeEntities(document.getElementById("exporterSource").textContent);
+
+    function decodeEntities(s) {
+      var t = document.createElement("textarea");
+      t.innerHTML = s;
+      return t.value;
+    }
+
+    // Copy buttons
+    document.querySelectorAll(".copy-btn").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var el = document.getElementById(btn.getAttribute("data-copy"));
+        var text = el.textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          var original = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(function () { btn.textContent = original; }, 1400);
+        } catch (e) { toast("Copy failed - select and copy manually", "bad"); }
+      });
+    });
+
+    // Download the engine as puttypng.js
+    document.getElementById("dlEngineBtn").addEventListener("click", function () {
+      var blob = new Blob([engineSource + "\n"], { type: "text/javascript" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "puttypng.js";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // ---- Docs: error table rendered live from the engine ---------------------
+    (function renderErrorTable() {
+      var body = document.getElementById("errorTableBody");
+      if (!body || typeof PuttyPNG === "undefined" || !PuttyPNG.errors) return;
+      var rows = "";
+      Object.keys(PuttyPNG.errors).forEach(function (code) {
+        rows += "<tr><td class='err-code'>" + code + "</td><td>" + escapeHtml(PuttyPNG.errors[code]) + "</td></tr>";
+      });
+      body.innerHTML = rows;
+    })();
+
+    // ---- About: full MIT license text ----------------------------------------
+    var MIT_LICENSE =
+      "MIT License\n\n" +
+      "Copyright (c) 2026 Aaron Michael Harris\n\n" +
+      "Permission is hereby granted, free of charge, to any person obtaining a copy\n" +
+      "of this software and associated documentation files (the \"Software\"), to deal\n" +
+      "in the Software without restriction, including without limitation the rights\n" +
+      "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n" +
+      "copies of the Software, and to permit persons to whom the Software is\n" +
+      "furnished to do so, subject to the following conditions:\n\n" +
+      "The above copyright notice and this permission notice shall be included in all\n" +
+      "copies or substantial portions of the Software.\n\n" +
+      "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n" +
+      "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n" +
+      "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n" +
+      "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n" +
+      "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n" +
+      "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n" +
+      "SOFTWARE.\n";
+    (function () {
+      var el = document.getElementById("licenseText");
+      if (el) el.textContent = MIT_LICENSE;
+    })();
+
+    // ---- Tutorial: make + read a PuttyPNG live -------------------------------
+    var tutLast = null;
+    var tutMake = document.getElementById("tutMakeBtn");
+    var tutRead = document.getElementById("tutReadBtn");
+    if (tutMake) {
+      tutMake.addEventListener("click", async function () {
+        try {
+          var png = await PuttyPNG.encode(document.getElementById("tutText").value || "(empty)");
+          tutLast = png;
+          document.getElementById("tutImg").src = png.dataUrl;
+          document.getElementById("tutPreview").style.display = "flex";
+          document.getElementById("tutResult").textContent = 'Now press "Read it back".';
+          tutRead.disabled = false;
+          toast("Made a PuttyPNG", "ok");
+        } catch (e) { toast(friendly(e), "bad"); }
+      });
+      tutRead.addEventListener("click", async function () {
+        if (!tutLast) return;
+        try {
+          var r = await PuttyPNG.decode(tutLast.dataUrl);
+          document.getElementById("tutResult").textContent = 'It says: “' + (r.text || "") + '”';
+          toast("Read it back", "ok");
+        } catch (e) { toast(friendly(e), "bad"); }
+      });
+    }
+
+    // ---- Download: save this whole page --------------------------------------
+    var dlPage = document.getElementById("downloadPageBtn");
+    if (dlPage) {
+      dlPage.addEventListener("click", async function () {
+        var html = null;
+        try { html = await (await fetch(location.href)).text(); }   // pristine bytes when allowed
+        catch (e) { /* file:// fetch can be blocked - fall back below */ }
+        if (!html) html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        var blob = new Blob([html], { type: "text/html" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = "index.html";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast("Saved index.html", "ok");
+      });
+    }
+
+    // ---- Docs: the styled password-prompt example, live ----------------------
+    // This is the exact function shown in the Custom prompt snippet.
+    function makeStyledPrompt() {
+      return function (context) {
+        return new Promise(function (resolve) {
+          var wrap = document.createElement("div");
+          wrap.style.cssText =
+            "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;" +
+            "align-items:center;justify-content:center;z-index:9999";
+          wrap.innerHTML =
+            "<form style='background:#fff;border-radius:14px;padding:22px;width:300px;" +
+            "font-family:system-ui;box-shadow:0 20px 60px rgba(0,0,0,.3)'>" +
+            "<h3 style='margin:0 0 10px'>Password</h3>" +
+            "<p style='margin:0 0 12px;color:#666;font-size:14px'>" + (context.message || "") + "</p>" +
+            "<input type='password' style='width:100%;padding:10px;border:1px solid #ccc;" +
+            "border-radius:8px;font-size:15px'>" +
+            "<div style='display:flex;gap:8px;justify-content:flex-end;margin-top:14px'>" +
+            "<button type='button' data-x style='padding:8px 14px'>Cancel</button>" +
+            "<button style='padding:8px 14px;background:#111;color:#fff;border:none;" +
+            "border-radius:999px'>Open</button></div></form>";
+          var input = wrap.querySelector("input");
+          function close(value) { wrap.remove(); resolve(value); }
+          wrap.querySelector("[data-x]").onclick = function () { close(null); };
+          wrap.querySelector("form").onsubmit = function (e) { e.preventDefault(); close(input.value); };
+          document.body.appendChild(wrap);
+          input.focus();
+        });
+      };
+    }
+    var tryPrompt = document.getElementById("tryPromptBtn");
+    if (tryPrompt) {
+      tryPrompt.addEventListener("click", async function () {
+        var out = document.getElementById("tryPromptOut");
+        var styled = makeStyledPrompt();
+        var pw = await styled({ message: "Preview only - type anything and press Open." });
+        out.textContent = (pw === null)
+          ? "Cancelled - the promise resolved to null."
+          : ("Resolved with a password of length " + pw.length + " (nothing is stored).");
+      });
+    }
+  })();
+  </script>
+</body>
+</html>
