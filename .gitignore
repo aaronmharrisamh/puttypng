@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# puttypng - .gitignore
+#
+# NOTE ON THE SQUARE BRACKETS BELOW:
+# In gitignore syntax, [ ] is a character-class wildcard. An unescaped line
+# reading "[archived]/" would mean "any folder named a, r, c, h, i, v, e or d"
+# and would NOT match the literal folder "[archived]". The backslashes are
+# required. Verify any change with:  git check-ignore -v "[archived]/pyside6"
+# ---------------------------------------------------------------------------
+
+# Archived / dead code kept locally for reference, not shipped to the repo.
+/\[archived\]/
+
+# Local planning + design docs (Claude plan files). Root-anchored on purpose,
+# so a future nested folder such as src/docs/ can still be committed.
+/docs/
+
+# Local-only developer tooling. Scratch scripts, one-off utilities, helpers.
+/.devtools/
+
+# ---------------------------------------------------------------------------
+# Standard noise
+# ---------------------------------------------------------------------------
+
+# Dependencies
+node_modules/
+
+# OS cruft
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs and local env
+*.log
+npm-debug.log*
+.env
+.env.local
