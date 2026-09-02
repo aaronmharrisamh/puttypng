@@ -15,7 +15,11 @@
   "use strict";
 
   // ===========================================================================
-  // SECTION 0 - Engine identity
+  // SECTION 1 - HEADER / SETUP AND IDENTITY
+  //
+  // The engine's name, its two version numbers, and the public object that
+  // everything else hangs from. PROTOCOL_VERSION changes only when the byte
+  // layout changes. ENGINE_VERSION changes for any release.
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
@@ -28,7 +32,9 @@
   };
 
   // ===========================================================================
-  // SECTION 1 - Error system
+  // SECTION 2 - ERROR SYSTEM
+  //
+  // One error type and one table of codes, defined before anything can fail.
   //
   // Every failure in PuttyPNG is one short, documented E## code. The engine
   // logs "PuttyPNG E##: message" to the console AND throws a PuttyPNGError that
@@ -71,7 +77,10 @@
   }
 
   // ===========================================================================
-  // SECTION 2 - Byte utilities
+  // SECTION 3 - BYTE AND BIT HELPERS
+  //
+  // The lowest layer. These functions know about bytes and bits and nothing
+  // about PuttyPNG. Everything above this section is built from them.
   //
   // Small, readable helpers for moving between text, bytes, base64, and the
   // big-endian integers used in the fixed header.
@@ -151,9 +160,7 @@
     return out.subarray(0, o);
   }
 
-  // ===========================================================================
-  // SECTION 3 - CRC32 (integrity check over the embedded payload)
-  // ===========================================================================
+  // ---- CRC32, the integrity check over the embedded payload --------------------
 
   var crcTable = null;
   function crc32(bytes) {
@@ -175,7 +182,10 @@
   }
 
   // ===========================================================================
-  // SECTION 4 - Pixel plumbing
+  // SECTION 4 - PIXEL PLUMBING
+  //
+  // How a bit becomes part of an image, and how it is read back out. This is
+  // the layer where the steganography happens.
   //
   // Data lives in the low bits of the R, G, B channels of FULLY OPAQUE pixels
   // (alpha === 255). Alpha is never touched, and transparent / semi-transparent
@@ -237,7 +247,7 @@
   }
 
   // Write a bit array into the channels of consecutive eligible pixels.
-  // Returns the pixel cursor (into `eligible`) just past the last pixel used.
+  // Returns the pixel cursor (into `eligible`) one past the last pixel used.
   function writeBits(px, eligible, startPixel, widths, bits) {
     var bo = 0;
     var pc = startPixel;
@@ -280,7 +290,10 @@
   }
 
   // ===========================================================================
-  // SECTION 5 - Fixed header (18 bytes)
+  // SECTION 5 - PROTOCOL FORMAT
+  //
+  // The wire format, in two parts: an 18-byte fixed header that any decoder
+  // can read first, and the inner container it describes.
   //
   //   offset 0  : magic "PPNG"        (4 bytes)
   //   offset 4  : protocol version    (1 byte)
@@ -325,14 +338,12 @@
     };
   }
 
-  // ===========================================================================
-  // SECTION 6 - Inner container (the protected content)
+  // ---- The inner container, which holds the protected content ------------------
   //
   //   [uint16 inner-metadata length][inner-metadata JSON][data bytes]
   //
   // The inner metadata (name, type, mime) lives INSIDE the compress/encrypt
   // envelope, so an encrypted PuttyPNG reveals no filename or type.
-  // ===========================================================================
 
   function buildInnerContainer(normalized) {
     var meta = { name: normalized.name || "", type: normalized.type, mime: normalized.mime };
@@ -356,9 +367,13 @@
   }
 
   // ===========================================================================
-  // SECTION 7 - Compression (automatic gzip via CompressionStream)
+  // SECTION 6 - PROTECTION
   //
-  // On encode we try gzip and keep it only if it actually shrinks the data.
+  // Two optional layers applied to the payload before it is embedded:
+  // compression to make it smaller, then encryption to make it unreadable.
+  // Order matters. Compressing after encrypting would gain nothing.
+  //
+  // On encode we try gzip and keep it only when it makes the data smaller.
   // On decode we reverse it - and if this browser lacks DecompressionStream we
   // fail cleanly with E04 rather than emit garbage.
   // ===========================================================================
@@ -403,17 +418,16 @@
     }
   }
 
-  // ===========================================================================
-  // SECTION 8 - Encryption (AES-256-GCM with a PBKDF2-SHA-256 derived key)
+  // ---- Encryption: AES-256-GCM with a PBKDF2-SHA-256 derived key ---------------
   //
-  // Good  : no password        -> nothing encrypted (default).
-  // Better: dev-preset key     -> the page bakes in a fixed password string.
-  // Best  : user password      -> prompted on export, prompted on import.
+  // Three modes:
+  //   no password      -> nothing is encrypted. This is the default.
+  //   dev-preset key   -> the page bakes in a fixed password string.
+  //   user password    -> prompted on export, prompted on import.
   //
-  // The password is never stored. Only the salt, iv, and iteration count travel
-  // in the (plaintext) outer metadata so any importer knows how to derive the
-  // key once it has the password.
-  // ===========================================================================
+  // The password is never stored. Only the salt, iv, and iteration count
+  // travel in the plaintext outer metadata, so any importer knows how to
+  // derive the key once it has the password.
 
   var PBKDF2_ITERATIONS = 210000;
 
@@ -471,63 +485,11 @@
   }
 
   // ===========================================================================
-  // SECTION 9 - Input normalization
+  // SECTION 7 - COVER GENERATION
   //
-  // Turn whatever the developer handed us (text, an object, raw bytes, a File)
-  // into a common shape: { bytes, name, type, mime }.
-  // ===========================================================================
-
-  async function normalizeInput(input, options) {
-    options = options || {};
-    if (input == null) fail("E09", "no data to encode");
-
-    // A Blob or File (browser).
-    if (typeof Blob !== "undefined" && input instanceof Blob) {
-      var buf = new Uint8Array(await input.arrayBuffer());
-      return {
-        bytes: buf,
-        name: options.name || input.name || "",
-        type: "binary",
-        mime: options.mime || input.type || "application/octet-stream"
-      };
-    }
-    if (input instanceof Uint8Array) {
-      return {
-        bytes: input,
-        name: options.name || "",
-        type: "binary",
-        mime: options.mime || "application/octet-stream"
-      };
-    }
-    if (input instanceof ArrayBuffer) {
-      return {
-        bytes: new Uint8Array(input),
-        name: options.name || "",
-        type: "binary",
-        mime: options.mime || "application/octet-stream"
-      };
-    }
-    if (typeof input === "string") {
-      return {
-        bytes: textToBytes(input),
-        name: options.name || "",
-        type: "text",
-        mime: options.mime || "text/plain"
-      };
-    }
-    if (typeof input === "object") {
-      return {
-        bytes: textToBytes(JSON.stringify(input)),
-        name: options.name || "",
-        type: "json",
-        mime: "application/json"
-      };
-    }
-    fail("E09", "unsupported input type");
-  }
-
-  // ===========================================================================
-  // SECTION 10 - Cover images
+  // Making the image that carries the data. A cover can be generated noise, a
+  // generated CD, or an image the developer supplies. The generated covers are
+  // built from a reusable splat primitive further down this section.
   //
   // The default cover is generated noise sized exactly to the data. Developers
   // can override with their own PNG (fitted crop/scale/center/stretch) or lock
@@ -535,7 +497,11 @@
   // engine's logic is fully testable without a browser.
   // ===========================================================================
 
-  var MIN_SIZE = 32;
+  // The floor for an AUTO-SIZED cover. A small payload still produces a cover
+  // people can see and share, rather than a thumbnail a few pixels across.
+  // An explicit `size` is an instruction and is never raised to this floor.
+  // A developer can move the floor with the `minSize` option.
+  var MIN_SIZE = 256;
   var MAX_SIZE = 4096;
 
   function nextPowerOfTwo(n) {
@@ -551,14 +517,16 @@
     var maxSize = options.maxSize || MAX_SIZE;
     var neededPixels = HEADER_PIXELS + pixelsForBytes(bodyBytes, widths);
 
+    // An explicit size is an instruction, so the minimum floor does not apply
+    // to it. The floor exists to stop an AUTO size from becoming too small.
     var size;
     if (options.size) {
-      size = options.size;                       // fixed override
+      size = options.size;
     } else {
       size = Math.max(minSize, Math.ceil(Math.sqrt(neededPixels)));
       if (options.sizeMode === "pow2") size = Math.max(nextPowerOfTwo(minSize), nextPowerOfTwo(size));
+      if (size < minSize) size = minSize;
     }
-    if (size < minSize) size = minSize;
     if (size > maxSize) fail("E05", "needs " + neededPixels + "px, cap is " + maxSize + "x" + maxSize);
     if (size * size < neededPixels) fail("E05", "cover " + size + "x" + size + " holds " + (size * size) + "px, need " + neededPixels);
     return size;
@@ -569,7 +537,7 @@
   // photo from producing a needlessly huge PuttyPNG). `aspect` is width/height.
   //
   //   - Square modes (crop/scale/center/stretch): the smallest square that fits,
-  //     floored at minSize (default 32) - the same rule as the noise cover.
+  //     floored at minSize (default 256) - the same rule as the noise cover.
   //   - keepRatio: the original aspect ratio, scaled to the smallest size that
   //     fits (and scaled UP past the source resolution if the data needs it),
   //     with the shorter side floored at minSize.
@@ -666,14 +634,1000 @@
     return changed;
   }
 
+  // ---- The putty splat, a reusable generative primitive ------------------------
+  //
+  // A smooth, blobby, Gak-like closed shape. buildSplat() is pure math (points
+  // only) so it is deterministic and testable without a canvas; splatCurveTo()
+  // smooths those points into a closed curve on a 2D context. The same silhouette
+  // is meant to be reused across PuttyPNG's generative art (the CD's centre, a
+  // masked Noise blob, a floppy symbol, ...).
+
+  // Seeded PRNG (mulberry32) so a given splat is reproducible.
+  function mulberry32(seed) {
+    var t = seed >>> 0;
+    return function () {
+      t = (t + 0x6d2b79f5) >>> 0;
+      var r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Boundary points of a splat around (cx, cy) with mean radius `radius`. Uses a
+  // smooth harmonic radius function so the lobes are ROUND (Gak-like), not spiky.
+  //   opts.points    - number of lobes (>= 3)
+  //   opts.amplitude - lobe depth (peaks out / valleys in), 0..1
+  //   opts.curve     - "curve length": low = round blobby lobes, high = longer,
+  //                    reachier lobes, 0..1
+  //   opts.waviness  - extra organic randomness, 0..1
+  //   opts.seed      - reproducible shape
+  // Densely sampled and returned in order. Scaling `radius` (same seed) yields
+  // exactly concentric splats.
+  function buildSplat(cx, cy, radius, opts) {
+    opts = opts || {};
+    var lobes = Math.max(3, Math.round(opts.points != null ? opts.points : 6));
+    var amp = clamp01(opts.amplitude != null ? opts.amplitude : 0.35);
+    var wav = clamp01(opts.waviness != null ? opts.waviness : 0.35);
+    var curve = clamp01(opts.curve != null ? opts.curve : 0.5);
+    var rand = mulberry32((opts.seed != null ? opts.seed : 1) >>> 0);
+
+    // Organic asymmetry: a random phase, a per-lobe strength, and two low
+    // harmonics of gentle noise.
+    var phase = rand() * Math.PI * 2;
+    var lobeStrength = [];
+    for (var L = 0; L < lobes; L++) lobeStrength.push(0.5 + rand() * 1.0);    // 0.5..1.5 (organic)
+    var h1f = 2 + Math.floor(rand() * 2), h1p = rand() * Math.PI * 2;
+    var h2f = 3 + Math.floor(rand() * 3), h2p = rand() * Math.PI * 2;
+    // Curve length -> lobe sharpness: 0 rounds the peaks, 1 stretches them out.
+    var sharp = 0.6 + curve * 1.6;
+
+    var samples = Math.max(60, lobes * 12);
+    var pts = [];
+    for (var i = 0; i < samples; i++) {
+      var th = (i / samples) * Math.PI * 2;
+      // Blend each sample toward its nearest lobe's strength for varied lobe sizes.
+      var lfrac = (th / (Math.PI * 2)) * lobes;
+      var li = Math.floor(lfrac) % lobes;
+      var ln = (li + 1) % lobes, mix = lfrac - Math.floor(lfrac);
+      var strength = lobeStrength[li] * (1 - mix) + lobeStrength[ln] * mix;
+      var lobe = Math.cos(lobes * th - phase);                 // -1..1, `lobes` rounded peaks
+      var shaped = (lobe < 0 ? -1 : 1) * Math.pow(Math.abs(lobe), sharp);
+      shaped *= (0.55 + 0.45 * strength);
+      var noise = wav * (0.6 * Math.sin(h1f * th + h1p) + 0.4 * Math.sin(h2f * th + h2p));
+      var rr = radius * (1 + amp * shaped + amp * 0.6 * noise);
+      if (rr < radius * 0.25) rr = radius * 0.25;              // keep it well-formed
+      pts.push({ x: cx + Math.cos(th) * rr, y: cy + Math.sin(th) * rr });
+    }
+    return pts;
+  }
+  function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+  // Append a smooth CLOSED curve through the (dense) points to the current path,
+  // using a Catmull-Rom spline converted to cubic beziers.
+  function splatCurveTo(ctx, pts, tension) {
+    var n = pts.length;
+    if (n < 3) return;
+    var k = (tension != null ? tension : 0.5) / 3;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 0; i < n; i++) {
+      var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      var c1x = p1.x + (p2.x - p0.x) * k, c1y = p1.y + (p2.y - p0.y) * k;
+      var c2x = p2.x - (p3.x - p1.x) * k, c2y = p2.y - (p3.y - p1.y) * k;
+      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+    }
+    ctx.closePath();
+  }
+
+  // Begin a fresh path shaped as a splat outline (for fill / stroke / clip).
+  function drawSplatPath(ctx, cx, cy, radius, opts) {
+    var pts = buildSplat(cx, cy, radius, opts);
+    ctx.beginPath();
+    splatCurveTo(ctx, pts, 0.5);
+    return pts;
+  }
+
+  // A standalone Path2D of a splat outline (for isPointInPath containment tests).
+  function splatPath2D(cx, cy, radius, opts) {
+    var path = new Path2D();
+    splatCurveTo(path, buildSplat(cx, cy, radius, opts), 0.5);
+    return path;
+  }
+
+  // ---- The generated CD cover --------------------------------------------------
+  //
+  // A reflective disc drawn entirely in canvas - the flagship demonstration that
+  // a PuttyPNG cover can be generated in JavaScript. Transparent outside the disc
+  // by default (a soft-gradient background is optional), with a curved label and
+  // rim microtext. The anti-aliased rim is hardened to binary alpha so no data
+  // pixel borders transparency. Only runs in a browser (needs a canvas).
+
+  var CD_LABEL_MIN = 96;    // draw the arc label only at/above this disc size
+  var CD_RIM_MIN = 128;     // draw the rim microtext only at/above this size
+
+  // The rim microtext when the caller sets no `rimText`. It tells a person who
+  // receives the image what to do with it, which the image cannot say by itself.
+  var CD_RIM_DEFAULT = "Decode at PuttyPNG.com";
+
+  // The rim text is drawn twice, at the top and the bottom of the rim. Each copy
+  // gets half the circle, so it must stay inside this arc to leave a clear gap
+  // on both sides. Measured in radians.
+  var CD_RIM_MAX_ARC = Math.PI * 0.82;
+
+  // Named rim text sizes, as a fraction of the disc size.
+  var CD_RIM_SCALE = { small: 0.021, medium: 0.027, large: 0.034, xlarge: 0.042 };
+  var CD_RIM_BUMP = 2;
+
+  // A CSS pixel is 96 per inch and a point is 72 per inch.
+  var PT_TO_PX = 96 / 72;
+
+  // A point size for the rim is read against this disc size, then scaled to the
+  // real disc. 13pt means "13pt on a 256px disc", so a 512px disc draws it twice
+  // as large and the text keeps the same proportion of the rim at every size.
+  var CD_RIM_REF_SIZE = 256;
+
+  // Clear space between the hub edge and the text's ink, as a fraction of the
+  // disc. The hub is drawn after the surface and its size is adjustable, so the
+  // text is placed clear of it instead of sitting at a fixed radius.
+  var CD_RIM_HUB_GAP = 0.012;
+
+  // Dot-clearing defaults, both measured on a CD_RIM_REF_SIZE disc.
+  var CD_TEXT_PAD_DEFAULT = 4;      // px of clear space around the text
+  var CD_TEXT_CLEAR_DEFAULT = 0.25; // how much of that space is emptied
+
+  // The clear space around rim text, scaled from the reference disc so it
+  // tracks the text, which is sized the same way.
+  function resolveTextPad(splat, size) {
+    var pad = splat.textBuffer != null ? splat.textBuffer : CD_TEXT_PAD_DEFAULT;
+    return pad * (size / CD_RIM_REF_SIZE);
+  }
+
+  // The text may run past CD_RIM_MAX_ARC and wrap the whole rim. It is only
+  // reduced when it would lap over its own start, which no size can read.
+  var CD_RIM_FULL_ARC = Math.PI * 2 * 0.97;
+
+  // The raised look for the rim microtext, as fractions of the font size.
+  // The disc surface below the text is a busy rainbow of stippled dots, so the
+  // text needs its own light ground to stay readable at a small size.
+  // A stroke sits centered on the glyph outline, so half of it grows inward and
+  // narrows the holes in letters such as e and a. This ratio is kept low on
+  // purpose: enough halo to separate the text, not enough to close it up.
+  var CD_RIM_HALO_WIDTH = 0.26;    // outline thickness, total across the stroke
+  var CD_RIM_HALO_BLUR = 0.24;     // shadow softness
+  var CD_RIM_HALO_LIFT = 0.12;     // shadow offset below each letter
+
+  // Build the outline and shadow settings for a rim text of `px` pixels.
+  function rimTextStyle(px) {
+    return {
+      textColor: "rgba(24,24,30,0.95)",
+      haloColor: "rgba(255,255,255,0.92)",
+      haloWidth: Math.max(1.4, px * CD_RIM_HALO_WIDTH),
+      shadowColor: "rgba(0,0,0,0.38)",
+      shadowBlur: Math.max(1, px * CD_RIM_HALO_BLUR),
+      shadowOffsetY: Math.max(0.6, px * CD_RIM_HALO_LIFT)
+    };
+  }
+
+  // How far the finished text reaches from its own centre line, counting the
+  // glyphs, the outline that sits around them, and the shadow under them.
+  // The rim is placed using this, so nothing the text draws can be clipped.
+  function rimInkReach(style, px) {
+    return px / 2 + style.haloWidth / 2 + style.shadowBlur + style.shadowOffsetY;
+  }
+
+  // Radii (in pixels) for a square CD of the given side length.
+  function cdGeometry(size) {
+    var c = size / 2;
+    return {
+      cx: c, cy: c,
+      rOuter: size * 0.48,   // disc edge
+      rSheen: size * 0.46,   // reflective surface extent
+      rLabel: size * 0.40,   // curved label arc radius
+      rRim: size * 0.235,    // rim microtext radius
+      rHub: size * 0.20,     // grey clamping hub
+      rHole: size * 0.075    // transparent spindle hole
+    };
+  }
+
+  // Draw a string centered on an arc around (cx, cy). `centerAngle` is where the
+  // middle of the text sits (radians; -PI/2 is the top, +PI/2 the bottom). Text
+  // on the bottom half is flipped so it stays upright to the viewer.
+  // `spacing` adds pixels after every letter. `mode` is "stroke" to draw the
+  // outlines or "fill" to draw the letters, and defaults to "fill".
+  //
+  // Each pass does one job on purpose. Stroking and filling a letter before
+  // moving to the next one lets the next letter's outline paint over the previous
+  // letter, which eats a sliver off its edge. Every outline must be laid
+  // down before any letter is.
+  function drawTextOnArc(ctx, text, cx, cy, radius, centerAngle, spacing, mode) {
+    spacing = spacing || 0;
+    var bottom = Math.sin(centerAngle) > 0;
+    var dir = bottom ? -1 : 1;                 // advance direction along the arc
+    var widths = [], total = 0, i;
+    for (i = 0; i < text.length; i++) {
+      var w = ctx.measureText(text[i]).width + spacing;
+      widths.push(w); total += w;
+    }
+    var totalAngle = total / radius;
+    var angle = centerAngle - dir * totalAngle / 2;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (i = 0; i < text.length; i++) {
+      var charAngle = widths[i] / radius;
+      var a = angle + dir * charAngle / 2;
+      ctx.save();
+      ctx.translate(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+      ctx.rotate(a + (bottom ? -Math.PI / 2 : Math.PI / 2));
+      if (mode === "stroke") ctx.strokeText(text[i], 0, 0);
+      else ctx.fillText(text[i], 0, 0);
+      ctx.restore();
+      angle += dir * charAngle;
+    }
+    ctx.restore();
+  }
+
+  // Draw the rim microtext as one piece.
+  //
+  // The text goes onto its own transparent canvas: every outline first, then
+  // every letter on top. That canvas is then composited in one go with the
+  // shadow applied, so the whole word casts a single drop shadow instead of
+  // each letter casting its own onto its neighbours.
+  function drawRimText(ctx, rimBand, geo, size, style) {
+    var font = "600 " + rimBand.px + "px -apple-system, Segoe UI, Roboto, sans-serif";
+    var layer = makeCanvas(size, size);
+    var lc = layer.getContext("2d");
+    lc.font = font;
+    // Ask for shape-accurate glyphs. A browser that does not know this property
+    // ignores it, and canvas text is smoothed either way.
+    lc.textRendering = "geometricPrecision";
+    lc.lineJoin = "round";
+    lc.miterLimit = 2;
+    lc.lineWidth = style.haloWidth;
+    lc.strokeStyle = style.haloColor;
+    lc.fillStyle = style.textColor;
+
+    var copies = rimBand.spans.map(function (s) { return s.center; });
+    var pass, c;
+    for (pass = 0; pass < 2; pass++) {
+      var mode = pass === 0 ? "stroke" : "fill";
+      for (c = 0; c < copies.length; c++) {
+        drawTextOnArc(lc, rimBand.text, geo.cx, geo.cy, rimBand.radius, copies[c], rimBand.spacing, mode);
+      }
+    }
+
+    ctx.save();
+    ctx.shadowColor = style.shadowColor;
+    ctx.shadowBlur = style.shadowBlur;
+    ctx.shadowOffsetY = style.shadowOffsetY;
+    ctx.drawImage(layer, 0, 0);
+    ctx.restore();
+  }
+
+  // Angular width (radians) the text would occupy at a given font + radius.
+  // `spacing` is extra pixels added after every letter. It must be applied here
+  // as well as when drawing, or the fit decision and the drawn text disagree.
+  function arcTextAngle(ctx, text, radius, font, spacing) {
+    spacing = spacing || 0;
+    ctx.save(); ctx.font = font;
+    var total = 0;
+    for (var i = 0; i < text.length; i++) total += ctx.measureText(text[i]).width + spacing;
+    ctx.restore();
+    return total / radius;
+  }
+
+  // The smallest distance between two angles on a circle, in radians.
+  function angleGap(a, b) {
+    var d = Math.abs(a - b) % (Math.PI * 2);
+    return d > Math.PI ? Math.PI * 2 - d : d;
+  }
+
+  // The pixel size for the rim microtext, before any fitting.
+  // rimSize accepts a number of POINTS for an exact size, or one of the names
+  // in CD_RIM_SCALE to scale with the disc.
+  // A number is points measured against a CD_RIM_REF_SIZE disc, then scaled to
+  // the real disc, so the text keeps its proportion at any size. A name picks a
+  // fraction of the disc directly.
+  function resolveRimPx(rimSize, size) {
+    if (typeof rimSize === "number" && rimSize > 0) {
+      return Math.max(4, Math.round(rimSize * PT_TO_PX * (size / CD_RIM_REF_SIZE)));
+    }
+    var mult = CD_RIM_SCALE[rimSize] || CD_RIM_SCALE.medium;
+    return Math.max(9, Math.round(size * mult) + CD_RIM_BUMP);
+  }
+
+  // Work out the rim microtext, its size, and how it is laid out. This runs
+  // before the surface is stippled, so the dots can be cleared around the text
+  // wherever the text ends up.
+  //
+  // Two layouts:
+  //   short text -> one copy at the top and one at the bottom, mirrored.
+  //   long text  -> one copy that wraps the whole rim.
+  //
+  // Returns null when there is no rim text, or the disc is too small to read it.
+  function resolveRim(ctx, opts, geo, size, pad) {
+    var text = opts.rimText != null && opts.rimText !== "" ? String(opts.rimText) : CD_RIM_DEFAULT;
+    if (!text || size < CD_RIM_MIN) return null;
+
+    var family = "px -apple-system, Segoe UI, Roboto, sans-serif";
+    var px = resolveRimPx(opts.rimSize, size);
+    // Letter spacing is given for a reference disc too, so it tracks the text.
+    var spacing = (opts.rimSpacing || 0) * (size / CD_RIM_REF_SIZE);
+    var forced = opts.rimTwoSided === true;
+
+    // Place the text so its outline and shadow clear the hub. The hub is drawn
+    // over the surface, and its size is adjustable up to a point where it would
+    // otherwise swallow the rim, so the radius is worked out from the ink the
+    // text really puts down rather than assumed.
+    var radius, reach, arc;
+    var measure = function () { return arcTextAngle(ctx, text, radius, "600 " + px + family, spacing); };
+
+    for (;;) {
+      reach = rimInkReach(rimTextStyle(px), px);
+      radius = Math.max(geo.rRim, geo.rHub + reach + CD_RIM_HUB_GAP * size);
+      // The text must also stay inside the reflective surface.
+      if (radius + reach <= geo.rSheen || px <= 5) break;
+      px -= 1;
+    }
+
+    arc = measure();
+
+    // Two copies each need their own half of the circle, so forcing two sides
+    // means the text must be reduced to fit one. Left free, the text may run
+    // past that limit and wrap the rim, and is reduced only when it would lap
+    // over its own start.
+    var limit = forced ? CD_RIM_MAX_ARC : CD_RIM_FULL_ARC;
+    while (px > 5 && arc > limit) {
+      px -= 1;
+      reach = rimInkReach(rimTextStyle(px), px);
+      radius = Math.max(geo.rRim, geo.rHub + reach + CD_RIM_HUB_GAP * size);
+      arc = measure();
+    }
+
+    var twoSided = forced || arc <= CD_RIM_MAX_ARC;
+
+    // Where the text sits, so the imprint can clear the dots around it and
+    // nowhere else. `pad` is the buffer in pixels, converted to an angle at the
+    // text radius for the sideways part.
+    var halfHeight = reach + pad;
+    var halfArc = Math.min(Math.PI, arc / 2 + pad / radius);
+    var spans = twoSided
+      ? [{ center: -Math.PI / 2, half: halfArc }, { center: Math.PI / 2, half: halfArc }]
+      : [{ center: -Math.PI / 2, half: halfArc }];
+
+    return {
+      text: text, px: px, arc: arc, spacing: spacing, twoSided: twoSided,
+      radius: radius, rIn: radius - halfHeight, rOut: radius + halfHeight, spans: spans
+    };
+  }
+
+  // The curved top label: centered at 12 o'clock, shrinking the font to fit, then
+  // Resolve a label size to pixels, RESPONSIVE to the disc size. Accepts the
+  // named sizes "small" | "medium" | "large" | "xlarge" (each a fraction of the
+  // disc radius, so it scales with the image), or a raw pixel number (legacy).
+  var CD_LABEL_SCALE = { small: 0.11, medium: 0.145, large: 0.185, xlarge: 0.23 };
+  function resolveLabelFont(fontSize, geo) {
+    if (typeof fontSize === "number" && fontSize > 0) return Math.round(fontSize);
+    var mult = CD_LABEL_SCALE[fontSize] || CD_LABEL_SCALE.medium;
+    return Math.max(9, Math.round(geo.rOuter * mult));
+  }
+
+  // wrapping onto a second (inner) arc if it is still too long.
+  function drawCdLabel(ctx, label, geo, fontFamily, fontSizeOverride) {
+    var maxArc = Math.PI * 0.95;               // ~171 degrees of the top
+    // Start from the requested size (if any), else auto from the disc size.
+    var fontSize = fontSizeOverride ? Math.round(fontSizeOverride) : Math.max(9, Math.round(geo.rOuter * 0.16));
+    var minFont = 9;
+    var font;
+
+    // Shrink to fit one line if we can.
+    while (fontSize >= minFont) {
+      font = "600 " + fontSize + "px " + fontFamily;
+      if (arcTextAngle(ctx, label, geo.rLabel, font) <= maxArc) {
+        ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
+        drawTextOnArc(ctx, label, geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
+        return;
+      }
+      fontSize -= 1;
+    }
+
+    // Still too long at the minimum font: split into two lines on two arcs.
+    font = "600 " + minFont + "px " + fontFamily;
+    ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
+    var mid = splitInTwo(label);
+    var lineGap = minFont + 3;
+    drawTextOnArc(ctx, mid[0], geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
+    drawTextOnArc(ctx, mid[1], geo.cx, geo.cy, geo.rLabel - lineGap, -Math.PI / 2);
+  }
+
+  // "Burned-in" image imprint: render a grayscale stipple of a source image onto
+  // the disc annulus, the way a 90s laser labeller (LightScribe) etched discs.
+  // Darker areas of the source become denser, darker dots; light areas stay clear.
+  // Confined to the ring between the hub and the outer edge; drawn beneath the
+  // label so the text stays legible on top.
+  function imprintStipple(ctx, img, geo, size, labelActive) {
+    // Sample the source at disc resolution, cover-fit into the disc's square.
+    var d = Math.max(16, Math.ceil(geo.rOuter * 2));
+    var off = makeCanvas(d, d);
+    var octx = off.getContext("2d", { willReadFrequently: true });
+    octx.imageSmoothingEnabled = true;
+    octx.imageSmoothingQuality = "high";
+    var iw = img.width, ih = img.height;
+    var cover = Math.max(d / iw, d / ih);
+    var cw = iw * cover, ch = ih * cover;
+    octx.drawImage(img, (d - cw) / 2, (d - ch) / 2, cw, ch);
+    var src = octx.getImageData(0, 0, d, d).data;
+
+    var rIn = geo.rHub * 1.12;
+    var rOut = geo.rOuter * 0.94;
+    var step = Math.max(1.5, size / 240);                  // finer grid -> ~2x more dots
+    var dotR = Math.max(0.4, step * 0.34);                 // smaller, uniform dots
+
+    ctx.save();
+    ctx.fillStyle = "rgba(12,12,16,1)";
+    for (var y = -geo.rOuter; y < geo.rOuter; y += step) {
+      for (var x = -geo.rOuter; x < geo.rOuter; x += step) {
+        var r = Math.sqrt(x * x + y * y);
+        if (r < rIn || r > rOut) continue;                 // annulus only
+        var sx = (x + geo.rOuter) | 0, sy = (y + geo.rOuter) | 0;
+        if (sx < 0 || sy < 0 || sx >= d || sy >= d) continue;
+        var si = (sy * d + sx) * 4;
+        if (src[si + 3] < 128) continue;                   // transparent source -> skip
+        var lum = src[si] * 0.299 + src[si + 1] * 0.587 + src[si + 2] * 0.114;
+        var darkness = 1 - lum / 255;                      // 0 (white) .. 1 (black)
+        if (darkness < 0.12) continue;                     // leave light areas clear
+        // Thin the imprint out under the top label band so the label stays crisp.
+        if (labelActive && r > geo.rLabel * 0.78) {
+          var ang = Math.atan2(y, x);
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < 1.0 && Math.random() > darkness * 0.35) continue;
+        }
+        if (Math.random() > darkness * 1.2) continue;      // density by darkness
+        var jx = geo.cx + x + (Math.random() - 0.5) * step * 0.5;   // less jitter -> uniform
+        var jy = geo.cy + y + (Math.random() - 0.5) * step * 0.5;
+        ctx.globalAlpha = 0.35 + darkness * 0.4;
+        ctx.beginPath();
+        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // The default PuttyPNG branding: our "putty splat" silhouette stippled into the
+  // disc surface as ink dots, centred and ~60% of the disc across. The grey hub is
+  // drawn on top afterwards, so the splat reads as putty behind the hub; dots
+  // inside the hub are skipped. splat: { points, curve, waviness, amplitude, seed,
+  // size } (size = fraction of the disc side; default 0.6).
+  var CD_SPLAT_DEFAULT = {
+    points: 5, curve: 0, waviness: 1, amplitude: 0.16, seed: 7, size: 0.6,
+    dotColor: "rainbowSoft"
+  };
+
+  // The fill style for a splat dot given the chosen palette and the dot's angle
+  // from centre (used for the rainbow palettes). Named palettes are solid colours.
+  function splatDotStyle(palette, angle) {
+    var hue = ((angle + Math.PI) / (Math.PI * 2)) * 360;   // 0..360
+    switch (palette) {
+      case "white": return "rgb(248,248,252)";
+      case "dkgray": return "rgb(58,60,66)";
+      case "ltgray": return "rgb(150,152,158)";
+      case "blue": return "rgb(46,92,178)";
+      case "red": return "rgb(178,44,48)";
+      case "orange": return "rgb(206,112,40)";
+      case "yellow": return "rgb(196,168,44)";
+      case "green": return "rgb(52,142,72)";
+      case "rainbowStrong": return "hsl(" + hue + ", 78%, 46%)";
+      case "rainbowSoft": return "hsl(" + hue + ", 42%, 40%)";   // soft, darker than the CD sheen
+      case "black":
+      default: return "rgb(14,14,18)";
+    }
+  }
+
+  function imprintSplat(ctx, geo, size, splat, labelActive, rimBand) {
+    var s = {
+      points: splat.points != null ? splat.points : CD_SPLAT_DEFAULT.points,
+      curve: splat.curve != null ? splat.curve : CD_SPLAT_DEFAULT.curve,
+      waviness: splat.waviness != null ? splat.waviness : CD_SPLAT_DEFAULT.waviness,
+      amplitude: splat.amplitude != null ? splat.amplitude : CD_SPLAT_DEFAULT.amplitude,
+      seed: splat.seed != null ? splat.seed : CD_SPLAT_DEFAULT.seed
+    };
+    var frac = splat.size != null ? splat.size : CD_SPLAT_DEFAULT.size;
+    var radius = frac * size / 2;                         // "60% of the CD" -> radius 0.3*size
+
+    // Draw the splat at its natural size (no fit-scaling). We instead cull any dot
+    // that lands too close to the disc edge or the hub, so the imprint always keeps
+    // a clean margin from both without reshaping the splat.
+    var pts = buildSplat(geo.cx, geo.cy, radius, s);
+    var path = new Path2D();
+    splatCurveTo(path, pts, 0.5);
+    // The splat's lobes reach well PAST `radius` (~1.2-1.7x), so the dot-sampling grid
+    // must span the splat's TRUE extent, not `radius` -- otherwise the outer part of
+    // every lobe is never sampled and the shape gets sliced into a flat box.
+    var maxR = 0, mi;
+    for (mi = 0; mi < pts.length; mi++) {
+      var mdx = pts[mi].x - geo.cx, mdy = pts[mi].y - geo.cy;
+      var mrr = Math.sqrt(mdx * mdx + mdy * mdy);
+      if (mrr > maxR) maxR = mrr;
+    }
+
+    // Adjustable dot look (px). Defaults scale gently with the disc size.
+    var step = splat.separation != null ? Math.max(1, splat.separation) : Math.max(1.5, size / 240);
+    var dotMin = splat.dotMin != null ? splat.dotMin : Math.max(0.4, step * 0.28);
+    var dotMax = splat.dotMax != null ? splat.dotMax : Math.max(dotMin, step * 0.5);
+    var textBuf = resolveTextPad(splat, size);
+    // How many of the dots inside the text buffer are removed, from 0 to 1.
+    // A higher value leaves the text cleaner and the surface emptier around it.
+    var textClear = splat.textClear != null ? clamp01(splat.textClear) : CD_TEXT_CLEAR_DEFAULT;
+    var palette = splat.dotColor || CD_SPLAT_DEFAULT.dotColor;
+    var rainbow = palette === "rainbowSoft" || palette === "rainbowStrong";
+    var rSkip = geo.rHub * 1.05;                          // stay 5% clear of the inner gray hub
+    var rEdge = geo.rOuter * 0.95;                        // stay 5% clear of the disc border
+    // Sample the full splat extent (dots past rEdge are culled below anyway), padded a
+    // touch for the spline bulge between sample points, and never beyond the disc.
+    var gridR = Math.min(maxR + step, geo.rOuter);
+
+    ctx.save();
+    if (!rainbow) ctx.fillStyle = splatDotStyle(palette, 0);
+    ctx.globalAlpha = 0.62;
+    for (var y = -gridR; y <= gridR; y += step) {
+      for (var x = -gridR; x <= gridR; x += step) {
+        var px = geo.cx + x, py = geo.cy + y;
+        var r = Math.sqrt(x * x + y * y);
+        if (r < rSkip || r > rEdge) continue;             // 5% clear of hub and edge
+        if (!ctx.isPointInPath(path, px, py)) continue;   // inside the splat only
+        var ang = Math.atan2(y, x);
+        // Thin out around the top label so it stays crisp.
+        if (labelActive && r > geo.rLabel - textBuf) {
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < 1.0 && Math.random() < textClear) continue;
+        }
+        // Thin out around the rim text, and only there. rimBand carries the
+        // band the text occupies and the arcs it runs along, both already
+        // widened by the buffer, so a one-sided line clears one arc and leaves
+        // the rest of the rim as it is.
+        if (rimBand && r >= rimBand.rIn && r <= rimBand.rOut && Math.random() < textClear) {
+          var covered = false;
+          for (var sp = 0; sp < rimBand.spans.length; sp++) {
+            if (angleGap(ang, rimBand.spans[sp].center) <= rimBand.spans[sp].half) { covered = true; break; }
+          }
+          if (covered) continue;
+        }
+        if (Math.random() > 0.9) continue;                // high, even fill (uniform)
+        var jx = px + (Math.random() - 0.5) * step * 0.5; // low jitter -> uniform
+        var jy = py + (Math.random() - 0.5) * step * 0.5;
+        var dr = dotMin + Math.random() * (dotMax - dotMin);
+        if (rainbow) ctx.fillStyle = splatDotStyle(palette, ang);
+        ctx.beginPath();
+        ctx.arc(jx, jy, dr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // The default informational rim text: "PuttyPNG | {size} | {contents|Secured}".
+  function buildInfoRim(info) {
+    info = info || {};
+    var sz = info.size != null ? formatSize(info.size) : "";
+    var contents;
+    if (info.encrypted) contents = "Secured";
+    else if (info.name) contents = info.name;
+    else if (info.type === "text") contents = "text";
+    else if (info.type === "json") contents = "JSON";
+    else contents = "binary";
+    return "PuttyPNG | " + sz + " | " + contents;
+  }
+
+  // Human-readable byte size.
+  function formatSize(bytes) {
+    if (bytes == null) return "";
+    if (bytes < 1024) return bytes + " bytes";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  // Split a string into two roughly equal halves, preferring a space near the middle.
+  function splitInTwo(text) {
+    var target = Math.floor(text.length / 2);
+    var left = text.lastIndexOf(" ", target);
+    var right = text.indexOf(" ", target);
+    var at = -1;
+    if (left === -1 && right === -1) at = target;
+    else if (left === -1) at = right;
+    else if (right === -1) at = left;
+    else at = (target - left <= right - target) ? left : right;
+    return [text.slice(0, at).trim(), text.slice(at).trim()];
+  }
+
+  // Render a reflective CD of the given size. opts: { label, rimText, rimSize,
+  // rimSpacing, rimTwoSided, fontFamily,
+  // fontSize, solidBackground, imprint (a loaded HTMLImageElement) }. Returns
+  // ImageData (not yet hardened).
+  function drawCdCover(size, opts) {
+    opts = opts || {};
+    var geo = cdGeometry(size);
+    // Adjustable hub + hole sizes (fractions of the disc side).
+    var hubOpts = opts.hub || {};
+    if (hubOpts.size != null) geo.rHub = size * hubOpts.size;
+    if (hubOpts.holeSize != null) geo.rHole = size * hubOpts.holeSize;
+    var canvas = makeCanvas(size, size);
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.clearRect(0, 0, size, size);
+
+    // Optional soft-gradient background (fills the corners -> more capacity).
+    if (opts.solidBackground) {
+      var bg = ctx.createRadialGradient(geo.cx, geo.cy, size * 0.1, geo.cx, geo.cy, size * 0.75);
+      bg.addColorStop(0, "#f4f4f6");
+      bg.addColorStop(1, "#d9d9de");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, size, size);
+    }
+
+    // --- Disc body: silver base ---
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rOuter, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+
+    var silver = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub * 0.8, geo.cx, geo.cy, geo.rOuter);
+    silver.addColorStop(0, "#d6d8dd");
+    silver.addColorStop(0.5, "#eef0f3");
+    silver.addColorStop(0.85, "#cccfd5");
+    silver.addColorStop(1, "#b6b9c1");
+    ctx.fillStyle = silver;
+    ctx.fillRect(0, 0, size, size);
+
+    // --- Rainbow diffraction sheen: a full conic sweep, weighted toward the rim ---
+    var sheen;
+    if (typeof ctx.createConicGradient === "function") {
+      sheen = ctx.createConicGradient(-Math.PI / 2, geo.cx, geo.cy);
+      sheen.addColorStop(0.00, "rgba(255,120,120,0.60)");
+      sheen.addColorStop(0.14, "rgba(255,180,90,0.60)");
+      sheen.addColorStop(0.28, "rgba(250,240,130,0.62)");
+      sheen.addColorStop(0.42, "rgba(150,235,170,0.58)");
+      sheen.addColorStop(0.56, "rgba(140,220,255,0.60)");
+      sheen.addColorStop(0.70, "rgba(150,170,255,0.58)");
+      sheen.addColorStop(0.84, "rgba(210,150,255,0.58)");
+      sheen.addColorStop(1.00, "rgba(255,120,120,0.60)");
+    } else {
+      // Fallback: a diagonal rainbow band.
+      sheen = ctx.createLinearGradient(0, 0, size, size);
+      sheen.addColorStop(0.15, "rgba(255,180,90,0.55)");
+      sheen.addColorStop(0.4, "rgba(250,240,130,0.6)");
+      sheen.addColorStop(0.6, "rgba(140,220,255,0.6)");
+      sheen.addColorStop(0.85, "rgba(210,150,255,0.5)");
+    }
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, size, size);
+
+    // Wash silver back over the centre so the rainbow concentrates near the rim
+    // (real CD diffraction is strongest toward the outer edge).
+    var wash = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub, geo.cx, geo.cy, geo.rOuter);
+    wash.addColorStop(0.00, "rgba(233,235,239,0.92)");
+    wash.addColorStop(0.50, "rgba(233,235,239,0.55)");
+    wash.addColorStop(0.80, "rgba(233,235,239,0.16)");
+    wash.addColorStop(1.00, "rgba(233,235,239,0)");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, size, size);
+
+    // Bias the rainbow toward one side (silver on the left, spectrum on the
+    // right) so it reads like a disc catching the light rather than a full wheel.
+    var side = ctx.createLinearGradient(0, 0, size, 0);
+    side.addColorStop(0.00, "rgba(233,235,239,0.72)");
+    side.addColorStop(0.45, "rgba(233,235,239,0.22)");
+    side.addColorStop(1.00, "rgba(233,235,239,0)");
+    ctx.fillStyle = side;
+    ctx.fillRect(0, 0, size, size);
+
+    // Soft specular highlight (upper-left) for a reflective feel.
+    var hx = geo.cx - geo.rOuter * 0.34, hy = geo.cy - geo.rOuter * 0.34;
+    var spec = ctx.createRadialGradient(hx, hy, geo.rOuter * 0.08, hx, hy, geo.rOuter * 1.15);
+    spec.addColorStop(0, "rgba(255,255,255,0.34)");
+    spec.addColorStop(0.4, "rgba(255,255,255,0.08)");
+    spec.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = spec;
+    ctx.fillRect(0, 0, size, size);
+
+    // --- Concentric ring texture + fine stipple (also masks LSB embedding) ---
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = "#3a3a40";
+    var ringStep = Math.max(2, Math.round(size / 120));
+    for (var rr = geo.rHub; rr < geo.rOuter; rr += ringStep) {
+      ctx.beginPath();
+      ctx.arc(geo.cx, geo.cy, rr, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Resolve the label up front so the stipple can clear a buffer around its arc.
+    var labelActive = !!(opts.label && size >= CD_LABEL_MIN);
+    var labelFontPx = resolveLabelFont(opts.fontSize, geo);
+    var labelBand = labelActive
+      ? { rIn: geo.rLabel - labelFontPx * 1.05, halfAngle: Math.PI * 0.52 }
+      : null;
+
+    // Resolve the rim text up front for the same reason: the imprint needs to
+    // know where the text sits before it stipples dots over that band. The
+    // buffer is resolved here too, because the text carries its own clear area.
+    var splatOpts = opts.splat || {};
+    var textPad = resolveTextPad(splatOpts, size);
+    var rimBand = resolveRim(ctx, opts, geo, size, textPad);
+
+    stippleSurface(ctx, geo, size, labelBand);
+
+    // --- Imprint (beneath the label), still inside the disc clip ---
+    // A user-supplied image wins; otherwise the default PuttyPNG "putty splat"
+    // branding is stippled into the rainbow surface (the hub covers its middle).
+    if (opts.imprint) {
+      imprintStipple(ctx, opts.imprint, geo, size, labelActive);
+    } else if (size >= CD_RIM_MIN) {
+      imprintSplat(ctx, geo, size, opts.splat || {}, labelActive, rimBand);
+    }
+
+    ctx.restore();  // remove disc clip
+
+    // --- Curved label (top) if the disc is big enough to read ---
+    if (labelActive) {
+      drawCdLabel(ctx, String(opts.label), geo,
+        opts.fontFamily || "-apple-system, Segoe UI, Roboto, sans-serif", labelFontPx);
+    }
+
+    // --- The round clamping hub + transparent spindle hole ---
+    // The hub is drawn before the rim text. resolveRim already places the text
+    // clear of it, and drawing the hub first means a hub turned up to its
+    // largest can never paint over the letters.
+    drawCdCenter(ctx, geo, size, opts.hub || {});
+
+    // --- Rim microtext, mirrored at top and bottom, or wrapped right around ---
+    if (rimBand) {
+      drawRimText(ctx, rimBand, geo, size, rimTextStyle(rimBand.px));
+    }
+
+    return ctx.getImageData(0, 0, size, size);
+  }
+
+  // Draw the CD's centre: the classic round clamping hub (grey gradient) with an
+  // outer ring, a faint inner ring, and a fully transparent round spindle hole.
+  // hub: { outerThickness, innerThickness } (hub/hole SIZE is applied to `geo`
+  // upstream in drawCdCover). The transparent hole is what the user meant by "the
+  // central whitespace treated as transparent".
+  function drawCdCenter(ctx, geo, size, hub) {
+    var outerW = size * (hub.outerThickness != null ? hub.outerThickness : 0.006);
+    var innerW = size * (hub.innerThickness != null ? hub.innerThickness : 0.004);
+
+    var grad = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHole, geo.cx, geo.cy, geo.rHub);
+    grad.addColorStop(0, "rgba(196,198,203,0.95)");
+    grad.addColorStop(0.72, "rgba(210,212,217,0.95)");
+    grad.addColorStop(1, "rgba(228,230,234,0.97)");
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHub, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.lineWidth = Math.max(1, outerW);
+    ctx.strokeStyle = "rgba(150,152,158,0.85)";
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHub * 0.62, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(1, innerW);
+    ctx.strokeStyle = "rgba(160,162,168,0.5)";
+    ctx.stroke();
+
+    // Punch the spindle hole fully transparent. The fill must be fully opaque
+    // (destination-out uses the SOURCE alpha), so use solid black.
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(geo.cx, geo.cy, geo.rHole, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Fine darkening dots across the disc surface - looks like a disc and helps
+  // hide the low-bit data embedding. Laid on an evenly-spaced (jittered) grid so
+  // the dots have a consistent size and separation. `labelBand`, when given,
+  // clears a buffer around the top label arc so the label reads cleanly.
+  function stippleSurface(ctx, geo, size, labelBand) {
+    var sep = Math.max(3, Math.round(size * 0.0105));   // ~2x the old density
+    var dotR = Math.max(0.7, size * 0.0035);            // consistent middle size
+    var jitter = sep * 0.34;
+    ctx.fillStyle = "rgba(20,20,24,0.032)";             // ~20% less opaque than before
+    for (var gy = -geo.rOuter; gy <= geo.rOuter; gy += sep) {
+      for (var gx = -geo.rOuter; gx <= geo.rOuter; gx += sep) {
+        var r = Math.sqrt(gx * gx + gy * gy);
+        if (r < geo.rHub || r > geo.rOuter) continue;
+        // Clear a buffer around the label arc (top sector, outer band).
+        if (labelBand && r >= labelBand.rIn) {
+          var ang = Math.atan2(gy, gx);
+          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          if (fromTop < labelBand.halfAngle) continue;
+        }
+        var jx = geo.cx + gx + (Math.random() - 0.5) * jitter * 2;
+        var jy = geo.cy + gy + (Math.random() - 0.5) * jitter * 2;
+        ctx.beginPath();
+        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Size + render a generated cover to hold a prepared body. Finds the smallest
+  // square (min 32, cap maxSize) whose OPAQUE pixels fit the data, growing when
+  // transparency (the CD's corners + hole) leaves too few.
+  //
+  // To add a new generated style (e.g. "blob", "floppy"): write a
+  // draw<Style>Cover(size, opts) that returns ImageData, add a branch here that
+  // renders + hardens it in the same grow loop, and add its radio option in the UI.
+  function fitGeneratedCover(style, prep, options) {
+    options = options || {};
+    if (style !== "cd") {
+      // Noise is fully opaque, so the square math is exact.
+      return generateNoiseImageData(chooseSize(prep.body.length, prep.widths, options));
+    }
+    if (!hasDOM()) fail("E10", "the CD cover requires a browser");
+
+    var minSize = options.minSize || MIN_SIZE;
+    var maxSize = options.maxSize || MAX_SIZE;
+    var needed = neededPixelsFor(prep);
+    var cdOpts = {
+      label: options.label,
+      rimText: options.rimText,
+      rimSize: options.rimSize,
+      rimSpacing: options.rimSpacing,
+      rimTwoSided: options.rimTwoSided,
+      fontFamily: options.fontFamily,
+      fontSize: options.fontSize,
+      imprint: options.imprintImg,       // a pre-loaded HTMLImageElement (see encode)
+      solidBackground: !!options.solidBackground,
+      hub: options.hub,                  // { size, holeSize, outerThickness, innerThickness }
+      splat: options.splat,              // default-imprint splat { points, curve, waviness, amplitude, seed, size }
+      info: prep.info                    // { size, type, name, encrypted } -> informational rim text
+    };
+
+    // First guess assumes ~72% of the square is opaque disc (or 100% if solid bg).
+    var fraction = options.solidBackground ? 0.98 : 0.72;
+    var size = options.size || Math.max(minSize, Math.ceil(Math.sqrt(needed / fraction)));
+    size = Math.min(size, maxSize);
+
+    for (var iter = 0; iter < 8; iter++) {
+      var imageData = drawCdCover(size, cdOpts);
+      hardenCover(imageData);
+      var opaque = opaquePixels(imageData.data, size, size).length;
+      if (opaque >= needed) return imageData;
+      if (size >= maxSize) break;
+      var grow = Math.sqrt(needed / Math.max(1, opaque)) * 1.06;
+      size = Math.min(maxSize, Math.max(size + 1, Math.ceil(size * grow)));
+    }
+    fail("E05", "the CD cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
+  }
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { reject(new PuttyPNGError("E10")); };
+      img.src = src;
+    });
+  }
+
+  // Convert any decode source into an ImageData object.
+  async function sourceToImageData(source) {
+    if (!hasDOM()) fail("E10", "no DOM available to read the image");
+
+    // Already ImageData-like.
+    if (source && source.data && typeof source.width === "number" && typeof source.height === "number") {
+      return source;
+    }
+
+    var img;
+    if (typeof source === "string") {
+      img = await loadImage(source);
+    } else if (typeof HTMLCanvasElement !== "undefined" && source instanceof HTMLCanvasElement) {
+      var cctx = source.getContext("2d", { willReadFrequently: true });
+      return cctx.getImageData(0, 0, source.width, source.height);
+    } else if (typeof HTMLImageElement !== "undefined" && source instanceof HTMLImageElement) {
+      img = source;
+    } else if (typeof Blob !== "undefined" && source instanceof Blob) {
+      img = await loadImage(URL.createObjectURL(source));
+    } else {
+      fail("E10", "unrecognized image source");
+    }
+
+    var canvas = makeCanvas(img.width, img.height);
+    var ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0, 0, img.width, img.height);
+  }
+
+  // Serialize an ImageData object to a lossless PNG (data URL + blob).
+  async function imageDataToPng(imageData) {
+    var canvas = makeCanvas(imageData.width, imageData.height);
+    var ctx = canvas.getContext("2d");
+    // imageData may be our plain {data,width,height}; wrap into a real ImageData.
+    var real = (typeof ImageData !== "undefined" && imageData instanceof ImageData)
+      ? imageData
+      : new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height);
+    ctx.putImageData(real, 0, 0);
+    var dataUrl = canvas.toDataURL("image/png");
+    var blob = await new Promise(function (resolve) {
+      if (canvas.toBlob) canvas.toBlob(resolve, "image/png");
+      else resolve(null);
+    });
+    return { dataUrl: dataUrl, blob: blob };
+  }
+
   // ===========================================================================
-  // SECTION 11 - Embed / extract (operate on an ImageData-like object)
+  // SECTION 8 - ENCODE / DECODE PIPELINE
+  //
+  // The orchestration. These functions take whatever a developer passed in,
+  // drive every section above in the right order, and hand back a result.
+  // Read this section to follow one byte from input to finished PNG.
+  //
+  // Turn whatever the developer handed us (text, an object, raw bytes, a File)
+  // into a common shape: { bytes, name, type, mime }.
+  // ===========================================================================
+
+  async function normalizeInput(input, options) {
+    options = options || {};
+    if (input == null) fail("E09", "no data to encode");
+
+    // A Blob or File (browser).
+    if (typeof Blob !== "undefined" && input instanceof Blob) {
+      var buf = new Uint8Array(await input.arrayBuffer());
+      return {
+        bytes: buf,
+        name: options.name || input.name || "",
+        type: "binary",
+        mime: options.mime || input.type || "application/octet-stream"
+      };
+    }
+    if (input instanceof Uint8Array) {
+      return {
+        bytes: input,
+        name: options.name || "",
+        type: "binary",
+        mime: options.mime || "application/octet-stream"
+      };
+    }
+    if (input instanceof ArrayBuffer) {
+      return {
+        bytes: new Uint8Array(input),
+        name: options.name || "",
+        type: "binary",
+        mime: options.mime || "application/octet-stream"
+      };
+    }
+    if (typeof input === "string") {
+      return {
+        bytes: textToBytes(input),
+        name: options.name || "",
+        type: "text",
+        mime: options.mime || "text/plain"
+      };
+    }
+    if (typeof input === "object") {
+      return {
+        bytes: textToBytes(JSON.stringify(input)),
+        name: options.name || "",
+        type: "json",
+        mime: "application/json"
+      };
+    }
+    fail("E09", "unsupported input type");
+  }
+
+  // ---- Embed and extract, operating on an ImageData-like object ----------------
   //
   // These are the heart of the protocol. They take { data, width, height } and
   // either write the header+body into it or read them back. Everything above
   // canvas/PNG serialization is expressed here, which is why the self-test can
   // prove a full round-trip with no DOM.
-  // ===========================================================================
 
   function embed(imageData, header, body, widths) {
     var px = imageData.data;
@@ -709,9 +1663,7 @@
     return bitsToBytes(bits).subarray(0, byteCount);
   }
 
-  // ===========================================================================
-  // SECTION 12 - Pack / unpack (protocol orchestration, still canvas-free)
-  // ===========================================================================
+  // ---- Pack and unpack: protocol orchestration, still canvas-free --------------
 
   // Turn the input + options into the exact bytes that will be embedded: the
   // 18-byte header and the body ([tag][outer metadata][payload]). This is where
@@ -894,10 +1846,10 @@
     return result;
   }
 
-  // ===========================================================================
-  // SECTION 13 - Browser layer (canvas <-> PNG). Guarded so the engine still
-  // loads and its logic still runs in a non-browser (Node) environment.
-  // ===========================================================================
+  // ---- The browser layer: canvas to PNG and back -------------------------------
+  //
+  // Guarded, so the engine still loads and its logic still runs in a
+  // non-browser environment such as Node.
 
   function hasDOM() { return typeof document !== "undefined"; }
 
@@ -942,7 +1894,7 @@
 
   // Size + fit a custom cover so it holds a prepared body. By default this
   // ignores the cover's own resolution and produces the smallest image that fits
-  // (floored at minSize, default 32), scaling UP past the source resolution if
+  // (floored at minSize, default 256), scaling UP past the source resolution if
   // the data needs the room. Because a cover may contain transparency (fewer
   // opaque pixels than its area), we fit, count the opaque pixels, and grow until
   // the data fits or we hit maxSize (E05).
@@ -983,716 +1935,10 @@
   }
 
   // ===========================================================================
-  // SECTION 13a - The "putty splat" silhouette (a reusable generative primitive)
+  // SECTION 9 - PUBLIC API AND SELF-TEST
   //
-  // A smooth, blobby, Gak-like closed shape. buildSplat() is pure math (points
-  // only) so it is deterministic and testable without a canvas; splatCurveTo()
-  // smooths those points into a closed curve on a 2D context. The same silhouette
-  // is meant to be reused across PuttyPNG's generative art (the CD's centre, a
-  // masked Noise blob, a floppy symbol, ...).
-  // ===========================================================================
-
-  // Seeded PRNG (mulberry32) so a given splat is reproducible.
-  function mulberry32(seed) {
-    var t = seed >>> 0;
-    return function () {
-      t = (t + 0x6d2b79f5) >>> 0;
-      var r = Math.imul(t ^ (t >>> 15), 1 | t);
-      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  // Boundary points of a splat around (cx, cy) with mean radius `radius`. Uses a
-  // smooth harmonic radius function so the lobes are ROUND (Gak-like), not spiky.
-  //   opts.points    - number of lobes (>= 3)
-  //   opts.amplitude - lobe depth (peaks out / valleys in), 0..1
-  //   opts.curve     - "curve length": low = round blobby lobes, high = longer,
-  //                    reachier lobes, 0..1
-  //   opts.waviness  - extra organic randomness, 0..1
-  //   opts.seed      - reproducible shape
-  // Densely sampled and returned in order. Scaling `radius` (same seed) yields
-  // exactly concentric splats.
-  function buildSplat(cx, cy, radius, opts) {
-    opts = opts || {};
-    var lobes = Math.max(3, Math.round(opts.points != null ? opts.points : 6));
-    var amp = clamp01(opts.amplitude != null ? opts.amplitude : 0.35);
-    var wav = clamp01(opts.waviness != null ? opts.waviness : 0.35);
-    var curve = clamp01(opts.curve != null ? opts.curve : 0.5);
-    var rand = mulberry32((opts.seed != null ? opts.seed : 1) >>> 0);
-
-    // Organic asymmetry: a random phase, a per-lobe strength, and two low
-    // harmonics of gentle noise.
-    var phase = rand() * Math.PI * 2;
-    var lobeStrength = [];
-    for (var L = 0; L < lobes; L++) lobeStrength.push(0.5 + rand() * 1.0);    // 0.5..1.5 (organic)
-    var h1f = 2 + Math.floor(rand() * 2), h1p = rand() * Math.PI * 2;
-    var h2f = 3 + Math.floor(rand() * 3), h2p = rand() * Math.PI * 2;
-    // Curve length -> lobe sharpness: 0 rounds the peaks, 1 stretches them out.
-    var sharp = 0.6 + curve * 1.6;
-
-    var samples = Math.max(60, lobes * 12);
-    var pts = [];
-    for (var i = 0; i < samples; i++) {
-      var th = (i / samples) * Math.PI * 2;
-      // Blend each sample toward its nearest lobe's strength for varied lobe sizes.
-      var lfrac = (th / (Math.PI * 2)) * lobes;
-      var li = Math.floor(lfrac) % lobes;
-      var ln = (li + 1) % lobes, mix = lfrac - Math.floor(lfrac);
-      var strength = lobeStrength[li] * (1 - mix) + lobeStrength[ln] * mix;
-      var lobe = Math.cos(lobes * th - phase);                 // -1..1, `lobes` rounded peaks
-      var shaped = (lobe < 0 ? -1 : 1) * Math.pow(Math.abs(lobe), sharp);
-      shaped *= (0.55 + 0.45 * strength);
-      var noise = wav * (0.6 * Math.sin(h1f * th + h1p) + 0.4 * Math.sin(h2f * th + h2p));
-      var rr = radius * (1 + amp * shaped + amp * 0.6 * noise);
-      if (rr < radius * 0.25) rr = radius * 0.25;              // keep it well-formed
-      pts.push({ x: cx + Math.cos(th) * rr, y: cy + Math.sin(th) * rr });
-    }
-    return pts;
-  }
-  function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
-
-  // Append a smooth CLOSED curve through the (dense) points to the current path,
-  // using a Catmull-Rom spline converted to cubic beziers.
-  function splatCurveTo(ctx, pts, tension) {
-    var n = pts.length;
-    if (n < 3) return;
-    var k = (tension != null ? tension : 0.5) / 3;
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (var i = 0; i < n; i++) {
-      var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-      var c1x = p1.x + (p2.x - p0.x) * k, c1y = p1.y + (p2.y - p0.y) * k;
-      var c2x = p2.x - (p3.x - p1.x) * k, c2y = p2.y - (p3.y - p1.y) * k;
-      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
-    }
-    ctx.closePath();
-  }
-
-  // Begin a fresh path shaped as a splat outline (for fill / stroke / clip).
-  function drawSplatPath(ctx, cx, cy, radius, opts) {
-    var pts = buildSplat(cx, cy, radius, opts);
-    ctx.beginPath();
-    splatCurveTo(ctx, pts, 0.5);
-    return pts;
-  }
-
-  // A standalone Path2D of a splat outline (for isPointInPath containment tests).
-  function splatPath2D(cx, cy, radius, opts) {
-    var path = new Path2D();
-    splatCurveTo(path, buildSplat(cx, cy, radius, opts), 0.5);
-    return path;
-  }
-
-  // ===========================================================================
-  // SECTION 13b - Generated cover: the CD
-  //
-  // A reflective disc drawn entirely in canvas - the flagship demonstration that
-  // a PuttyPNG cover can be generated in JavaScript. Transparent outside the disc
-  // by default (a soft-gradient background is optional), with a curved label and
-  // rim microtext. The anti-aliased rim is hardened to binary alpha so no data
-  // pixel borders transparency. Only runs in a browser (needs a canvas).
-  // ===========================================================================
-
-  var CD_LABEL_MIN = 96;    // draw the arc label only at/above this disc size
-  var CD_RIM_MIN = 128;     // draw the rim microtext only at/above this size
-
-  // Radii (in pixels) for a square CD of the given side length.
-  function cdGeometry(size) {
-    var c = size / 2;
-    return {
-      cx: c, cy: c,
-      rOuter: size * 0.48,   // disc edge
-      rSheen: size * 0.46,   // reflective surface extent
-      rLabel: size * 0.40,   // curved label arc radius
-      rRim: size * 0.235,    // rim microtext radius
-      rHub: size * 0.20,     // grey clamping hub
-      rHole: size * 0.075    // transparent spindle hole
-    };
-  }
-
-  // Draw a string centered on an arc around (cx, cy). `centerAngle` is where the
-  // middle of the text sits (radians; -PI/2 is the top, +PI/2 the bottom). Text
-  // on the bottom half is flipped so it stays upright to the viewer.
-  function drawTextOnArc(ctx, text, cx, cy, radius, centerAngle) {
-    var bottom = Math.sin(centerAngle) > 0;
-    var dir = bottom ? -1 : 1;                 // advance direction along the arc
-    var widths = [], total = 0, i;
-    for (i = 0; i < text.length; i++) { var w = ctx.measureText(text[i]).width; widths.push(w); total += w; }
-    var totalAngle = total / radius;
-    var angle = centerAngle - dir * totalAngle / 2;
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for (i = 0; i < text.length; i++) {
-      var charAngle = widths[i] / radius;
-      var a = angle + dir * charAngle / 2;
-      ctx.save();
-      ctx.translate(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
-      ctx.rotate(a + (bottom ? -Math.PI / 2 : Math.PI / 2));
-      ctx.fillText(text[i], 0, 0);
-      ctx.restore();
-      angle += dir * charAngle;
-    }
-    ctx.restore();
-  }
-
-  // Angular width (radians) the text would occupy at a given font + radius.
-  function arcTextAngle(ctx, text, radius, font) {
-    ctx.save(); ctx.font = font;
-    var total = 0;
-    for (var i = 0; i < text.length; i++) total += ctx.measureText(text[i]).width;
-    ctx.restore();
-    return total / radius;
-  }
-
-  // The curved top label: centered at 12 o'clock, shrinking the font to fit, then
-  // Resolve a label size to pixels, RESPONSIVE to the disc size. Accepts the
-  // named sizes "small" | "medium" | "large" | "xlarge" (each a fraction of the
-  // disc radius, so it scales with the image), or a raw pixel number (legacy).
-  var CD_LABEL_SCALE = { small: 0.11, medium: 0.145, large: 0.185, xlarge: 0.23 };
-  function resolveLabelFont(fontSize, geo) {
-    if (typeof fontSize === "number" && fontSize > 0) return Math.round(fontSize);
-    var mult = CD_LABEL_SCALE[fontSize] || CD_LABEL_SCALE.medium;
-    return Math.max(9, Math.round(geo.rOuter * mult));
-  }
-
-  // wrapping onto a second (inner) arc if it is still too long.
-  function drawCdLabel(ctx, label, geo, fontFamily, fontSizeOverride) {
-    var maxArc = Math.PI * 0.95;               // ~171 degrees of the top
-    // Start from the requested size (if any), else auto from the disc size.
-    var fontSize = fontSizeOverride ? Math.round(fontSizeOverride) : Math.max(9, Math.round(geo.rOuter * 0.16));
-    var minFont = 9;
-    var font;
-
-    // Shrink to fit one line if we can.
-    while (fontSize >= minFont) {
-      font = "600 " + fontSize + "px " + fontFamily;
-      if (arcTextAngle(ctx, label, geo.rLabel, font) <= maxArc) {
-        ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
-        drawTextOnArc(ctx, label, geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
-        return;
-      }
-      fontSize -= 1;
-    }
-
-    // Still too long at the minimum font: split into two lines on two arcs.
-    font = "600 " + minFont + "px " + fontFamily;
-    ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
-    var mid = splitInTwo(label);
-    var lineGap = minFont + 3;
-    drawTextOnArc(ctx, mid[0], geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
-    drawTextOnArc(ctx, mid[1], geo.cx, geo.cy, geo.rLabel - lineGap, -Math.PI / 2);
-  }
-
-  // "Burned-in" image imprint: render a grayscale stipple of a source image onto
-  // the disc annulus, the way a 90s laser labeller (LightScribe) etched discs.
-  // Darker areas of the source become denser, darker dots; light areas stay clear.
-  // Confined to the ring between the hub and the outer edge; drawn beneath the
-  // label so the text stays legible on top.
-  function imprintStipple(ctx, img, geo, size, labelActive) {
-    // Sample the source at disc resolution, cover-fit into the disc's square.
-    var d = Math.max(16, Math.ceil(geo.rOuter * 2));
-    var off = makeCanvas(d, d);
-    var octx = off.getContext("2d", { willReadFrequently: true });
-    octx.imageSmoothingEnabled = true;
-    octx.imageSmoothingQuality = "high";
-    var iw = img.width, ih = img.height;
-    var cover = Math.max(d / iw, d / ih);
-    var cw = iw * cover, ch = ih * cover;
-    octx.drawImage(img, (d - cw) / 2, (d - ch) / 2, cw, ch);
-    var src = octx.getImageData(0, 0, d, d).data;
-
-    var rIn = geo.rHub * 1.12;
-    var rOut = geo.rOuter * 0.94;
-    var step = Math.max(1.5, size / 240);                  // finer grid -> ~2x more dots
-    var dotR = Math.max(0.4, step * 0.34);                 // smaller, uniform dots
-
-    ctx.save();
-    ctx.fillStyle = "rgba(12,12,16,1)";
-    for (var y = -geo.rOuter; y < geo.rOuter; y += step) {
-      for (var x = -geo.rOuter; x < geo.rOuter; x += step) {
-        var r = Math.sqrt(x * x + y * y);
-        if (r < rIn || r > rOut) continue;                 // annulus only
-        var sx = (x + geo.rOuter) | 0, sy = (y + geo.rOuter) | 0;
-        if (sx < 0 || sy < 0 || sx >= d || sy >= d) continue;
-        var si = (sy * d + sx) * 4;
-        if (src[si + 3] < 128) continue;                   // transparent source -> skip
-        var lum = src[si] * 0.299 + src[si + 1] * 0.587 + src[si + 2] * 0.114;
-        var darkness = 1 - lum / 255;                      // 0 (white) .. 1 (black)
-        if (darkness < 0.12) continue;                     // leave light areas clear
-        // Thin the imprint out under the top label band so the label stays crisp.
-        if (labelActive && r > geo.rLabel * 0.78) {
-          var ang = Math.atan2(y, x);
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < 1.0 && Math.random() > darkness * 0.35) continue;
-        }
-        if (Math.random() > darkness * 1.2) continue;      // density by darkness
-        var jx = geo.cx + x + (Math.random() - 0.5) * step * 0.5;   // less jitter -> uniform
-        var jy = geo.cy + y + (Math.random() - 0.5) * step * 0.5;
-        ctx.globalAlpha = 0.35 + darkness * 0.4;
-        ctx.beginPath();
-        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  // The default PuttyPNG branding: our "putty splat" silhouette stippled into the
-  // disc surface as ink dots, centred and ~60% of the disc across. The grey hub is
-  // drawn on top afterwards, so the splat reads as putty behind the hub; dots
-  // inside the hub are skipped. splat: { points, curve, waviness, amplitude, seed,
-  // size } (size = fraction of the disc side; default 0.6).
-  var CD_SPLAT_DEFAULT = {
-    points: 5, curve: 0, waviness: 1, amplitude: 0.16, seed: 7, size: 0.6,
-    dotColor: "rainbowSoft"
-  };
-
-  // The fill style for a splat dot given the chosen palette and the dot's angle
-  // from centre (used for the rainbow palettes). Named palettes are solid colours.
-  function splatDotStyle(palette, angle) {
-    var hue = ((angle + Math.PI) / (Math.PI * 2)) * 360;   // 0..360
-    switch (palette) {
-      case "white": return "rgb(248,248,252)";
-      case "dkgray": return "rgb(58,60,66)";
-      case "ltgray": return "rgb(150,152,158)";
-      case "blue": return "rgb(46,92,178)";
-      case "red": return "rgb(178,44,48)";
-      case "orange": return "rgb(206,112,40)";
-      case "yellow": return "rgb(196,168,44)";
-      case "green": return "rgb(52,142,72)";
-      case "rainbowStrong": return "hsl(" + hue + ", 78%, 46%)";
-      case "rainbowSoft": return "hsl(" + hue + ", 42%, 40%)";   // soft, darker than the CD sheen
-      case "black":
-      default: return "rgb(14,14,18)";
-    }
-  }
-
-  function imprintSplat(ctx, geo, size, splat, labelActive) {
-    var s = {
-      points: splat.points != null ? splat.points : CD_SPLAT_DEFAULT.points,
-      curve: splat.curve != null ? splat.curve : CD_SPLAT_DEFAULT.curve,
-      waviness: splat.waviness != null ? splat.waviness : CD_SPLAT_DEFAULT.waviness,
-      amplitude: splat.amplitude != null ? splat.amplitude : CD_SPLAT_DEFAULT.amplitude,
-      seed: splat.seed != null ? splat.seed : CD_SPLAT_DEFAULT.seed
-    };
-    var frac = splat.size != null ? splat.size : CD_SPLAT_DEFAULT.size;
-    var radius = frac * size / 2;                         // "60% of the CD" -> radius 0.3*size
-
-    // Draw the splat at its natural size (no fit-scaling). We instead cull any dot
-    // that lands too close to the disc edge or the hub, so the imprint always keeps
-    // a clean margin from both without reshaping the splat.
-    var pts = buildSplat(geo.cx, geo.cy, radius, s);
-    var path = new Path2D();
-    splatCurveTo(path, pts, 0.5);
-    // The splat's lobes reach well PAST `radius` (~1.2-1.7x), so the dot-sampling grid
-    // must span the splat's TRUE extent, not `radius` -- otherwise the outer part of
-    // every lobe is never sampled and the shape gets sliced into a flat box.
-    var maxR = 0, mi;
-    for (mi = 0; mi < pts.length; mi++) {
-      var mdx = pts[mi].x - geo.cx, mdy = pts[mi].y - geo.cy;
-      var mrr = Math.sqrt(mdx * mdx + mdy * mdy);
-      if (mrr > maxR) maxR = mrr;
-    }
-
-    // Adjustable dot look (px). Defaults scale gently with the disc size.
-    var step = splat.separation != null ? Math.max(1, splat.separation) : Math.max(1.5, size / 240);
-    var dotMin = splat.dotMin != null ? splat.dotMin : Math.max(0.4, step * 0.28);
-    var dotMax = splat.dotMax != null ? splat.dotMax : Math.max(dotMin, step * 0.5);
-    var textBuf = splat.textBuffer != null ? splat.textBuffer : size * 0.032;
-    var palette = splat.dotColor || CD_SPLAT_DEFAULT.dotColor;
-    var rainbow = palette === "rainbowSoft" || palette === "rainbowStrong";
-    var rSkip = geo.rHub * 1.05;                          // stay 5% clear of the inner gray hub
-    var rEdge = geo.rOuter * 0.95;                        // stay 5% clear of the disc border
-    // Sample the full splat extent (dots past rEdge are culled below anyway), padded a
-    // touch for the spline bulge between sample points, and never beyond the disc.
-    var gridR = Math.min(maxR + step, geo.rOuter);
-
-    ctx.save();
-    if (!rainbow) ctx.fillStyle = splatDotStyle(palette, 0);
-    ctx.globalAlpha = 0.62;
-    for (var y = -gridR; y <= gridR; y += step) {
-      for (var x = -gridR; x <= gridR; x += step) {
-        var px = geo.cx + x, py = geo.cy + y;
-        var r = Math.sqrt(x * x + y * y);
-        if (r < rSkip || r > rEdge) continue;             // 5% clear of hub and edge
-        if (!ctx.isPointInPath(path, px, py)) continue;   // inside the splat only
-        var ang = Math.atan2(y, x);
-        // Thin out around the top label so it stays crisp.
-        if (labelActive && r > geo.rLabel - textBuf) {
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < 1.0 && Math.random() > 0.3) continue;
-        }
-        // Thin out around the informational rim text (top + bottom, near rRim).
-        if (Math.abs(r - geo.rRim) < textBuf) {
-          var fTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          var fBot = Math.abs(((ang - Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if ((fTop < 1.2 || fBot < 1.2) && Math.random() > 0.28) continue;
-        }
-        if (Math.random() > 0.9) continue;                // high, even fill (uniform)
-        var jx = px + (Math.random() - 0.5) * step * 0.5; // low jitter -> uniform
-        var jy = py + (Math.random() - 0.5) * step * 0.5;
-        var dr = dotMin + Math.random() * (dotMax - dotMin);
-        if (rainbow) ctx.fillStyle = splatDotStyle(palette, ang);
-        ctx.beginPath();
-        ctx.arc(jx, jy, dr, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  // The default informational rim text: "PuttyPNG | {size} | {contents|Secured}".
-  function buildInfoRim(info) {
-    info = info || {};
-    var sz = info.size != null ? formatSize(info.size) : "";
-    var contents;
-    if (info.encrypted) contents = "Secured";
-    else if (info.name) contents = info.name;
-    else if (info.type === "text") contents = "text";
-    else if (info.type === "json") contents = "JSON";
-    else contents = "binary";
-    return "PuttyPNG | " + sz + " | " + contents;
-  }
-
-  // Human-readable byte size.
-  function formatSize(bytes) {
-    if (bytes == null) return "";
-    if (bytes < 1024) return bytes + " bytes";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-  }
-
-  // Split a string into two roughly equal halves, preferring a space near the middle.
-  function splitInTwo(text) {
-    var target = Math.floor(text.length / 2);
-    var left = text.lastIndexOf(" ", target);
-    var right = text.indexOf(" ", target);
-    var at = -1;
-    if (left === -1 && right === -1) at = target;
-    else if (left === -1) at = right;
-    else if (right === -1) at = left;
-    else at = (target - left <= right - target) ? left : right;
-    return [text.slice(0, at).trim(), text.slice(at).trim()];
-  }
-
-  // Render a reflective CD of the given size. opts: { label, rimText, fontFamily,
-  // fontSize, solidBackground, imprint (a loaded HTMLImageElement) }. Returns
-  // ImageData (not yet hardened).
-  function drawCdCover(size, opts) {
-    opts = opts || {};
-    var geo = cdGeometry(size);
-    // Adjustable hub + hole sizes (fractions of the disc side).
-    var hubOpts = opts.hub || {};
-    if (hubOpts.size != null) geo.rHub = size * hubOpts.size;
-    if (hubOpts.holeSize != null) geo.rHole = size * hubOpts.holeSize;
-    var canvas = makeCanvas(size, size);
-    var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.clearRect(0, 0, size, size);
-
-    // Optional soft-gradient background (fills the corners -> more capacity).
-    if (opts.solidBackground) {
-      var bg = ctx.createRadialGradient(geo.cx, geo.cy, size * 0.1, geo.cx, geo.cy, size * 0.75);
-      bg.addColorStop(0, "#f4f4f6");
-      bg.addColorStop(1, "#d9d9de");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, size, size);
-    }
-
-    // --- Disc body: silver base ---
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(geo.cx, geo.cy, geo.rOuter, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-
-    var silver = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub * 0.8, geo.cx, geo.cy, geo.rOuter);
-    silver.addColorStop(0, "#d6d8dd");
-    silver.addColorStop(0.5, "#eef0f3");
-    silver.addColorStop(0.85, "#cccfd5");
-    silver.addColorStop(1, "#b6b9c1");
-    ctx.fillStyle = silver;
-    ctx.fillRect(0, 0, size, size);
-
-    // --- Rainbow diffraction sheen: a full conic sweep, weighted toward the rim ---
-    var sheen;
-    if (typeof ctx.createConicGradient === "function") {
-      sheen = ctx.createConicGradient(-Math.PI / 2, geo.cx, geo.cy);
-      sheen.addColorStop(0.00, "rgba(255,120,120,0.60)");
-      sheen.addColorStop(0.14, "rgba(255,180,90,0.60)");
-      sheen.addColorStop(0.28, "rgba(250,240,130,0.62)");
-      sheen.addColorStop(0.42, "rgba(150,235,170,0.58)");
-      sheen.addColorStop(0.56, "rgba(140,220,255,0.60)");
-      sheen.addColorStop(0.70, "rgba(150,170,255,0.58)");
-      sheen.addColorStop(0.84, "rgba(210,150,255,0.58)");
-      sheen.addColorStop(1.00, "rgba(255,120,120,0.60)");
-    } else {
-      // Fallback: a diagonal rainbow band.
-      sheen = ctx.createLinearGradient(0, 0, size, size);
-      sheen.addColorStop(0.15, "rgba(255,180,90,0.55)");
-      sheen.addColorStop(0.4, "rgba(250,240,130,0.6)");
-      sheen.addColorStop(0.6, "rgba(140,220,255,0.6)");
-      sheen.addColorStop(0.85, "rgba(210,150,255,0.5)");
-    }
-    ctx.fillStyle = sheen;
-    ctx.fillRect(0, 0, size, size);
-
-    // Wash silver back over the centre so the rainbow concentrates near the rim
-    // (real CD diffraction is strongest toward the outer edge).
-    var wash = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHub, geo.cx, geo.cy, geo.rOuter);
-    wash.addColorStop(0.00, "rgba(233,235,239,0.92)");
-    wash.addColorStop(0.50, "rgba(233,235,239,0.55)");
-    wash.addColorStop(0.80, "rgba(233,235,239,0.16)");
-    wash.addColorStop(1.00, "rgba(233,235,239,0)");
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, size, size);
-
-    // Bias the rainbow toward one side (silver on the left, spectrum on the
-    // right) so it reads like a disc catching the light rather than a full wheel.
-    var side = ctx.createLinearGradient(0, 0, size, 0);
-    side.addColorStop(0.00, "rgba(233,235,239,0.72)");
-    side.addColorStop(0.45, "rgba(233,235,239,0.22)");
-    side.addColorStop(1.00, "rgba(233,235,239,0)");
-    ctx.fillStyle = side;
-    ctx.fillRect(0, 0, size, size);
-
-    // Soft specular highlight (upper-left) for a reflective feel.
-    var hx = geo.cx - geo.rOuter * 0.34, hy = geo.cy - geo.rOuter * 0.34;
-    var spec = ctx.createRadialGradient(hx, hy, geo.rOuter * 0.08, hx, hy, geo.rOuter * 1.15);
-    spec.addColorStop(0, "rgba(255,255,255,0.34)");
-    spec.addColorStop(0.4, "rgba(255,255,255,0.08)");
-    spec.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = spec;
-    ctx.fillRect(0, 0, size, size);
-
-    // --- Concentric ring texture + fine stipple (also masks LSB embedding) ---
-    ctx.globalAlpha = 0.04;
-    ctx.strokeStyle = "#3a3a40";
-    var ringStep = Math.max(2, Math.round(size / 120));
-    for (var rr = geo.rHub; rr < geo.rOuter; rr += ringStep) {
-      ctx.beginPath();
-      ctx.arc(geo.cx, geo.cy, rr, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // Resolve the label up front so the stipple can clear a buffer around its arc.
-    var labelActive = !!(opts.label && size >= CD_LABEL_MIN);
-    var labelFontPx = resolveLabelFont(opts.fontSize, geo);
-    var labelBand = labelActive
-      ? { rIn: geo.rLabel - labelFontPx * 1.05, halfAngle: Math.PI * 0.52 }
-      : null;
-
-    stippleSurface(ctx, geo, size, labelBand);
-
-    // --- Imprint (beneath the label), still inside the disc clip ---
-    // A user-supplied image wins; otherwise the default PuttyPNG "putty splat"
-    // branding is stippled into the rainbow surface (the hub covers its middle).
-    if (opts.imprint) {
-      imprintStipple(ctx, opts.imprint, geo, size, labelActive);
-    } else if (size >= CD_RIM_MIN) {
-      imprintSplat(ctx, geo, size, opts.splat || {}, labelActive);
-    }
-
-    ctx.restore();  // remove disc clip
-
-    // --- Curved label (top) if the disc is big enough to read ---
-    if (labelActive) {
-      drawCdLabel(ctx, String(opts.label), geo,
-        opts.fontFamily || "-apple-system, Segoe UI, Roboto, sans-serif", labelFontPx);
-    }
-
-    // --- Rim microtext x2 (top + bottom of the inner rim), informational by default ---
-    var rim = opts.rimText != null && opts.rimText !== ""
-      ? String(opts.rimText)
-      : buildInfoRim(opts.info || {});
-    if (rim && size >= CD_RIM_MIN) {
-      ctx.font = "600 " + Math.max(7, Math.round(size * 0.027)) + "px -apple-system, Segoe UI, Roboto, sans-serif";
-      ctx.fillStyle = "rgba(28,28,34,0.9)";
-      drawTextOnArc(ctx, rim, geo.cx, geo.cy, geo.rRim, -Math.PI / 2);
-      drawTextOnArc(ctx, rim, geo.cx, geo.cy, geo.rRim, Math.PI / 2);
-    }
-
-    // --- The round clamping hub + transparent spindle hole ---
-    drawCdCenter(ctx, geo, size, opts.hub || {});
-
-    return ctx.getImageData(0, 0, size, size);
-  }
-
-  // Draw the CD's centre: the classic round clamping hub (grey gradient) with an
-  // outer ring, a faint inner ring, and a fully transparent round spindle hole.
-  // hub: { outerThickness, innerThickness } (hub/hole SIZE is applied to `geo`
-  // upstream in drawCdCover). The transparent hole is what the user meant by "the
-  // central whitespace treated as transparent".
-  function drawCdCenter(ctx, geo, size, hub) {
-    var outerW = size * (hub.outerThickness != null ? hub.outerThickness : 0.006);
-    var innerW = size * (hub.innerThickness != null ? hub.innerThickness : 0.004);
-
-    var grad = ctx.createRadialGradient(geo.cx, geo.cy, geo.rHole, geo.cx, geo.cy, geo.rHub);
-    grad.addColorStop(0, "rgba(196,198,203,0.95)");
-    grad.addColorStop(0.72, "rgba(210,212,217,0.95)");
-    grad.addColorStop(1, "rgba(228,230,234,0.97)");
-    ctx.beginPath();
-    ctx.arc(geo.cx, geo.cy, geo.rHub, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    ctx.lineWidth = Math.max(1, outerW);
-    ctx.strokeStyle = "rgba(150,152,158,0.85)";
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(geo.cx, geo.cy, geo.rHub * 0.62, 0, Math.PI * 2);
-    ctx.lineWidth = Math.max(1, innerW);
-    ctx.strokeStyle = "rgba(160,162,168,0.5)";
-    ctx.stroke();
-
-    // Punch the spindle hole fully transparent. The fill must be fully opaque
-    // (destination-out uses the SOURCE alpha), so use solid black.
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.fillStyle = "#000";
-    ctx.beginPath();
-    ctx.arc(geo.cx, geo.cy, geo.rHole, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Fine darkening dots across the disc surface - looks like a disc and helps
-  // hide the low-bit data embedding. Laid on an evenly-spaced (jittered) grid so
-  // the dots have a consistent size and separation. `labelBand`, when given,
-  // clears a buffer around the top label arc so the label reads cleanly.
-  function stippleSurface(ctx, geo, size, labelBand) {
-    var sep = Math.max(3, Math.round(size * 0.0105));   // ~2x the old density
-    var dotR = Math.max(0.7, size * 0.0035);            // consistent middle size
-    var jitter = sep * 0.34;
-    ctx.fillStyle = "rgba(20,20,24,0.032)";             // ~20% less opaque than before
-    for (var gy = -geo.rOuter; gy <= geo.rOuter; gy += sep) {
-      for (var gx = -geo.rOuter; gx <= geo.rOuter; gx += sep) {
-        var r = Math.sqrt(gx * gx + gy * gy);
-        if (r < geo.rHub || r > geo.rOuter) continue;
-        // Clear a buffer around the label arc (top sector, outer band).
-        if (labelBand && r >= labelBand.rIn) {
-          var ang = Math.atan2(gy, gx);
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < labelBand.halfAngle) continue;
-        }
-        var jx = geo.cx + gx + (Math.random() - 0.5) * jitter * 2;
-        var jy = geo.cy + gy + (Math.random() - 0.5) * jitter * 2;
-        ctx.beginPath();
-        ctx.arc(jx, jy, dotR, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  }
-
-  // Size + render a generated cover to hold a prepared body. Finds the smallest
-  // square (min 32, cap maxSize) whose OPAQUE pixels fit the data, growing when
-  // transparency (the CD's corners + hole) leaves too few.
-  //
-  // To add a new generated style (e.g. "blob", "floppy"): write a
-  // draw<Style>Cover(size, opts) that returns ImageData, add a branch here that
-  // renders + hardens it in the same grow loop, and add its radio option in the UI.
-  function fitGeneratedCover(style, prep, options) {
-    options = options || {};
-    if (style !== "cd") {
-      // Noise is fully opaque, so the square math is exact.
-      return generateNoiseImageData(chooseSize(prep.body.length, prep.widths, options));
-    }
-    if (!hasDOM()) fail("E10", "the CD cover requires a browser");
-
-    var minSize = options.minSize || MIN_SIZE;
-    var maxSize = options.maxSize || MAX_SIZE;
-    var needed = neededPixelsFor(prep);
-    var cdOpts = {
-      label: options.label,
-      rimText: options.rimText,
-      fontFamily: options.fontFamily,
-      fontSize: options.fontSize,
-      imprint: options.imprintImg,       // a pre-loaded HTMLImageElement (see encode)
-      solidBackground: !!options.solidBackground,
-      hub: options.hub,                  // { size, holeSize, outerThickness, innerThickness }
-      splat: options.splat,              // default-imprint splat { points, curve, waviness, amplitude, seed, size }
-      info: prep.info                    // { size, type, name, encrypted } -> informational rim text
-    };
-
-    // First guess assumes ~72% of the square is opaque disc (or 100% if solid bg).
-    var fraction = options.solidBackground ? 0.98 : 0.72;
-    var size = options.size || Math.max(minSize, Math.ceil(Math.sqrt(needed / fraction)));
-    size = Math.min(size, maxSize);
-
-    for (var iter = 0; iter < 8; iter++) {
-      var imageData = drawCdCover(size, cdOpts);
-      hardenCover(imageData);
-      var opaque = opaquePixels(imageData.data, size, size).length;
-      if (opaque >= needed) return imageData;
-      if (size >= maxSize) break;
-      var grow = Math.sqrt(needed / Math.max(1, opaque)) * 1.06;
-      size = Math.min(maxSize, Math.max(size + 1, Math.ceil(size * grow)));
-    }
-    fail("E05", "the CD cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
-  }
-
-  function loadImage(src) {
-    return new Promise(function (resolve, reject) {
-      var img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = function () { reject(new PuttyPNGError("E10")); };
-      img.src = src;
-    });
-  }
-
-  // Convert any decode source into an ImageData object.
-  async function sourceToImageData(source) {
-    if (!hasDOM()) fail("E10", "no DOM available to read the image");
-
-    // Already ImageData-like.
-    if (source && source.data && typeof source.width === "number" && typeof source.height === "number") {
-      return source;
-    }
-
-    var img;
-    if (typeof source === "string") {
-      img = await loadImage(source);
-    } else if (typeof HTMLCanvasElement !== "undefined" && source instanceof HTMLCanvasElement) {
-      var cctx = source.getContext("2d", { willReadFrequently: true });
-      return cctx.getImageData(0, 0, source.width, source.height);
-    } else if (typeof HTMLImageElement !== "undefined" && source instanceof HTMLImageElement) {
-      img = source;
-    } else if (typeof Blob !== "undefined" && source instanceof Blob) {
-      img = await loadImage(URL.createObjectURL(source));
-    } else {
-      fail("E10", "unrecognized image source");
-    }
-
-    var canvas = makeCanvas(img.width, img.height);
-    var ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, 0, 0);
-    return ctx.getImageData(0, 0, img.width, img.height);
-  }
-
-  // Serialize an ImageData object to a lossless PNG (data URL + blob).
-  async function imageDataToPng(imageData) {
-    var canvas = makeCanvas(imageData.width, imageData.height);
-    var ctx = canvas.getContext("2d");
-    // imageData may be our plain {data,width,height}; wrap into a real ImageData.
-    var real = (typeof ImageData !== "undefined" && imageData instanceof ImageData)
-      ? imageData
-      : new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height);
-    ctx.putImageData(real, 0, 0);
-    var dataUrl = canvas.toDataURL("image/png");
-    var blob = await new Promise(function (resolve) {
-      if (canvas.toBlob) canvas.toBlob(resolve, "image/png");
-      else resolve(null);
-    });
-    return { dataUrl: dataUrl, blob: blob };
-  }
-
-  // ===========================================================================
-  // SECTION 14 - Public API
+  // Everything a developer calls, and the suite that proves it works. The
+  // self-test runs in Node with no browser, and must report 33 passing.
   // ===========================================================================
 
   // Hide data inside a PNG. Returns { blob, dataUrl, width, height, ...stats }.
@@ -1857,13 +2103,11 @@
     DEPTH_SUBTLE: DEPTH_SUBTLE
   };
 
-  // ===========================================================================
-  // SECTION 15 - Self-test suite
+  // ---- The self-test suite -----------------------------------------------------
   //
   // Registers a battery of round-trip and failure-mode checks. Runs fully in a
   // browser or in Node (it works at the ImageData level; PNG serialization is
   // lossless so it need not be exercised to prove the protocol).
-  // ===========================================================================
 
   function assert(condition, message) {
     if (!condition) throw new Error(message || "assertion failed");
@@ -1999,7 +2243,7 @@
   test("auto-sized noise cover is 1:1 and within bounds", async function () {
     var packed = await pack("small", {}, null);
     assert(packed.width === packed.height, "cover not square");
-    assert(packed.width >= 32 && packed.width <= 4096, "cover out of bounds");
+    assert(packed.width >= MIN_SIZE && packed.width <= MAX_SIZE, "cover out of bounds");
   });
 
   test("hardenCover removes the semi-transparent fringe (binary alpha)", async function () {
@@ -2040,9 +2284,9 @@
     assert(r.text === "hole-y cover still works", "round-trip failed through hardened cover");
   });
 
-  test("coverDims: square auto is smallest-that-fits, floored at 32", async function () {
+  test("coverDims: square auto is smallest-that-fits, floored at MIN_SIZE", async function () {
     var tiny = coverDims(101, 1, {});                 // ~default text worth of pixels
-    assert(tiny.w === 32 && tiny.h === 32, "tiny should floor to 32x32, got " + tiny.w + "x" + tiny.h);
+    assert(tiny.w === 256 && tiny.h === 256, "tiny should floor to 256x256, got " + tiny.w + "x" + tiny.h);
     var big = coverDims(200000, 1, {});               // needs ~448px
     assert(big.w === big.h && big.w * big.h >= 200000, "big square must fit");
     assert(big.w >= 447 && big.w <= 460, "big square ~sqrt(200000), got " + big.w);
@@ -2057,7 +2301,7 @@
   test("coverDims: keepRatio preserves aspect ratio and floors short side", async function () {
     var d = coverDims(101, 2, { keepRatio: true });   // 2:1 landscape, tiny data
     assert(Math.abs(d.w / d.h - 2) < 0.15, "should keep ~2:1, got " + d.w + "x" + d.h);
-    assert(Math.min(d.w, d.h) >= 32, "short side floored at 32, got " + Math.min(d.w, d.h));
+    assert(Math.min(d.w, d.h) >= 256, "short side floored at 256, got " + Math.min(d.w, d.h));
   });
 
   test("coverDims: keepRatio scales UP to fit large data", async function () {
@@ -2070,6 +2314,20 @@
   test("coverDims: dev can override the floor via minSize", async function () {
     var d = coverDims(101, 1, { minSize: 128 });
     assert(d.w === 128 && d.h === 128, "minSize override should win, got " + d.w + "x" + d.h);
+  });
+
+  test("auto size floors at MIN_SIZE, which is 256", async function () {
+    assert(MIN_SIZE === 256, "MIN_SIZE should be 256, got " + MIN_SIZE);
+    var packed = await pack("hi", {}, null);
+    assert(packed.width === 256 && packed.height === 256,
+      "a tiny payload should still auto-size to 256x256, got " + packed.width + "x" + packed.height);
+  });
+
+  test("an explicit size is never raised to the minimum floor", async function () {
+    // The floor guards AUTO sizing only. A caller asking for 64 gets 64.
+    var packed = await pack("hi", { size: 64 }, null);
+    assert(packed.width === 64 && packed.height === 64,
+      "explicit size must win over the floor, got " + packed.width + "x" + packed.height);
   });
 
   test("buildSplat: densely sampled (>= 60 points, even)", async function () {
