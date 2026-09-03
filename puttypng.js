@@ -23,7 +23,7 @@
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
-  var ENGINE_VERSION = "1.0.0";
+  var ENGINE_VERSION = "2.0.0";   // 2.0.0 renamed every error code: breaking for callers
 
   // The public object. Everything a developer touches hangs off of this.
   var PuttyPNG = {
@@ -41,19 +41,23 @@
   // carries the code, so developers can react in code without parsing strings.
   // ===========================================================================
 
+  // Every code carries the PTY- family prefix and numbers from 00. A key holds
+  // a hyphen, so each one is quoted.
+  // PTY-E99 is the catch-all: an engine failure that was not classified.
   PuttyPNG.errors = {
-    E01: "Not a PuttyPNG (magic not found)",
-    E02: "Protocol version is newer than this engine can read",
-    E03: "Data is corrupted (checksum or structure mismatch)",
-    E04: "This browser cannot decompress (CompressionStream missing)",
-    E05: "Data is too large for the cover image or the size cap",
-    E06: "Wrong password, or the data could not be decrypted",
-    E07: "Encryption is not available (Web Crypto missing)",
-    E08: "A password is required but none was provided",
-    E09: "Invalid input or options",
-    E10: "The image could not be loaded or read",
-    E11: "The cover image has too few opaque pixels to use",
-    E12: "The developer tag is too long (max 65535 bytes)"
+    "PTY-E00": "Not a PuttyPNG (magic not found)",
+    "PTY-E01": "Protocol version is newer than this engine can read",
+    "PTY-E02": "Data is corrupted (checksum or structure mismatch)",
+    "PTY-E03": "This browser cannot decompress (CompressionStream missing)",
+    "PTY-E04": "Data is too large for the cover image or the size cap",
+    "PTY-E05": "Wrong password, or the data could not be decrypted",
+    "PTY-E06": "Encryption is not available (Web Crypto missing)",
+    "PTY-E07": "A password is required but none was provided",
+    "PTY-E08": "Invalid input or options",
+    "PTY-E09": "The image could not be loaded or read",
+    "PTY-E10": "The cover image has too few opaque pixels to use",
+    "PTY-E11": "The developer tag is too long (max 65535 bytes)",
+    "PTY-E99": "The engine failed in a way it did not classify"
   };
 
   function PuttyPNGError(code, detail) {
@@ -74,6 +78,24 @@
       console.error("PuttyPNG " + code + ": " + err.message);
     }
     throw err;
+  }
+
+  // Wrap a public entry point so an unclassified failure still arrives as a
+  // documented code. Without this a bug inside the engine reaches a caller as
+  // a raw TypeError, which no error table can explain.
+  //
+  // A PuttyPNGError passes through untouched, so a real code is never masked.
+  function classified(fn) {
+    return async function () {
+      try {
+        return await fn.apply(this, arguments);
+      } catch (err) {
+        if (err instanceof PuttyPNGError) throw err;
+        var wrapped = new PuttyPNGError("PTY-E99", (err && err.message) || String(err));
+        wrapped.cause = err;              // keep the original for a developer
+        throw wrapped;
+      }
+    };
   }
 
   // ===========================================================================
@@ -324,10 +346,10 @@
 
   function parseHeader(h) {
     for (var i = 0; i < MAGIC.length; i++) {
-      if (h[i] !== MAGIC[i]) fail("E01");
+      if (h[i] !== MAGIC[i]) fail("PTY-E00");
     }
     var version = h[4];
-    if (version > PROTOCOL_VERSION) fail("E02", "found v" + version);
+    if (version > PROTOCOL_VERSION) fail("PTY-E01", "found v" + version);
     return {
       version: version,
       flags: h[5],
@@ -354,14 +376,14 @@
   }
 
   function parseInnerContainer(bytes) {
-    if (bytes.length < 2) fail("E03", "inner container too short");
+    if (bytes.length < 2) fail("PTY-E02", "inner container too short");
     var metaLen = readUint16(bytes, 0);
-    if (2 + metaLen > bytes.length) fail("E03", "inner metadata length overflow");
+    if (2 + metaLen > bytes.length) fail("PTY-E02", "inner metadata length overflow");
     var meta;
     try {
       meta = JSON.parse(bytesToText(bytes.subarray(2, 2 + metaLen)));
     } catch (e) {
-      fail("E03", "inner metadata is not valid JSON");
+      fail("PTY-E02", "inner metadata is not valid JSON");
     }
     return { meta: meta, data: bytes.subarray(2 + metaLen) };
   }
@@ -375,7 +397,7 @@
   //
   // On encode we try gzip and keep it only when it makes the data smaller.
   // On decode we reverse it - and if this browser lacks DecompressionStream we
-  // fail cleanly with E04 rather than emit garbage.
+  // fail cleanly with PTY-E03 rather than emit garbage.
   // ===========================================================================
 
   function hasCompression() { return typeof CompressionStream !== "undefined"; }
@@ -399,11 +421,11 @@
     return streamThrough(new CompressionStream("gzip"), bytes);
   }
   async function gunzipBytes(bytes) {
-    if (!hasDecompression()) fail("E04");
+    if (!hasDecompression()) fail("PTY-E03");
     try {
       return await streamThrough(new DecompressionStream("gzip"), bytes);
     } catch (e) {
-      fail("E03", "decompression failed");
+      fail("PTY-E02", "decompression failed");
     }
   }
 
@@ -432,7 +454,7 @@
   var PBKDF2_ITERATIONS = 210000;
 
   function subtleCrypto() {
-    if (typeof crypto === "undefined" || !crypto.subtle) fail("E07");
+    if (typeof crypto === "undefined" || !crypto.subtle) fail("PTY-E06");
     return crypto.subtle;
   }
 
@@ -480,7 +502,7 @@
         await subtle.decrypt({ name: "AES-GCM", iv: iv }, key, cipher)
       );
     } catch (e) {
-      fail("E06");
+      fail("PTY-E05");
     }
   }
 
@@ -527,8 +549,8 @@
       if (options.sizeMode === "pow2") size = Math.max(nextPowerOfTwo(minSize), nextPowerOfTwo(size));
       if (size < minSize) size = minSize;
     }
-    if (size > maxSize) fail("E05", "needs " + neededPixels + "px, cap is " + maxSize + "x" + maxSize);
-    if (size * size < neededPixels) fail("E05", "cover " + size + "x" + size + " holds " + (size * size) + "px, need " + neededPixels);
+    if (size > maxSize) fail("PTY-E04", "needs " + neededPixels + "px, cap is " + maxSize + "x" + maxSize);
+    if (size * size < neededPixels) fail("PTY-E04", "cover " + size + "x" + size + " holds " + (size * size) + "px, need " + neededPixels);
     return size;
   }
 
@@ -1469,7 +1491,7 @@
       // Noise is fully opaque, so the square math is exact.
       return generateNoiseImageData(chooseSize(prep.body.length, prep.widths, options));
     }
-    if (!hasDOM()) fail("E10", "the CD cover requires a browser");
+    if (!hasDOM()) fail("PTY-E09", "the CD cover requires a browser");
 
     var minSize = options.minSize || MIN_SIZE;
     var maxSize = options.maxSize || MAX_SIZE;
@@ -1503,21 +1525,21 @@
       var grow = Math.sqrt(needed / Math.max(1, opaque)) * 1.06;
       size = Math.min(maxSize, Math.max(size + 1, Math.ceil(size * grow)));
     }
-    fail("E05", "the CD cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
+    fail("PTY-E04", "the CD cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
   }
 
   function loadImage(src) {
     return new Promise(function (resolve, reject) {
       var img = new Image();
       img.onload = function () { resolve(img); };
-      img.onerror = function () { reject(new PuttyPNGError("E10")); };
+      img.onerror = function () { reject(new PuttyPNGError("PTY-E09")); };
       img.src = src;
     });
   }
 
   // Convert any decode source into an ImageData object.
   async function sourceToImageData(source) {
-    if (!hasDOM()) fail("E10", "no DOM available to read the image");
+    if (!hasDOM()) fail("PTY-E09", "no DOM available to read the image");
 
     // Already ImageData-like.
     if (source && source.data && typeof source.width === "number" && typeof source.height === "number") {
@@ -1535,7 +1557,7 @@
     } else if (typeof Blob !== "undefined" && source instanceof Blob) {
       img = await loadImage(URL.createObjectURL(source));
     } else {
-      fail("E10", "unrecognized image source");
+      fail("PTY-E09", "unrecognized image source");
     }
 
     var canvas = makeCanvas(img.width, img.height);
@@ -1575,7 +1597,7 @@
 
   async function normalizeInput(input, options) {
     options = options || {};
-    if (input == null) fail("E09", "no data to encode");
+    if (input == null) fail("PTY-E08", "no data to encode");
 
     // A Blob or File (browser).
     if (typeof Blob !== "undefined" && input instanceof Blob) {
@@ -1619,7 +1641,7 @@
         mime: "application/json"
       };
     }
-    fail("E09", "unsupported input type");
+    fail("PTY-E08", "unsupported input type");
   }
 
   // ---- Embed and extract, operating on an ImageData-like object ----------------
@@ -1634,7 +1656,7 @@
     var eligible = opaquePixels(px, imageData.width, imageData.height);
     var bodyPixels = pixelsForBytes(body.length, widths);
     if (eligible.length < HEADER_PIXELS + bodyPixels) {
-      fail("E05", "cover holds " + eligible.length + " opaque pixels, need " + (HEADER_PIXELS + bodyPixels));
+      fail("PTY-E04", "cover holds " + eligible.length + " opaque pixels, need " + (HEADER_PIXELS + bodyPixels));
     }
     var afterHeader = writeBits(px, eligible, 0, HEADER_WIDTHS, bytesToBits(header));
     writeBits(px, eligible, afterHeader, widths, bytesToBits(body));
@@ -1646,7 +1668,7 @@
   function readHeader(imageData) {
     var px = imageData.data;
     var eligible = opaquePixels(px, imageData.width, imageData.height);
-    if (eligible.length < HEADER_PIXELS) fail("E01");
+    if (eligible.length < HEADER_PIXELS) fail("PTY-E00");
     var headerBits = readBits(px, eligible, 0, HEADER_WIDTHS, HEADER_PIXELS);
     var header = bitsToBytes(headerBits).subarray(0, HEADER_LENGTH);
     var fields = parseHeader(header);
@@ -1658,7 +1680,7 @@
   // Pull `byteCount` body bytes starting at the first body pixel.
   function readBody(imageData, eligible, widths, byteCount) {
     var bodyPixels = pixelsForBytes(byteCount, widths);
-    if (eligible.length < HEADER_PIXELS + bodyPixels) fail("E03", "image is truncated");
+    if (eligible.length < HEADER_PIXELS + bodyPixels) fail("PTY-E02", "image is truncated");
     var bits = readBits(imageData.data, eligible, HEADER_PIXELS, widths, bodyPixels);
     return bitsToBytes(bits).subarray(0, byteCount);
   }
@@ -1696,7 +1718,7 @@
     var widths = options.depth === "subtle" ? DEPTH_SUBTLE : DEPTH_STANDARD;
     if (options.depth === "subtle") flags |= FLAG_SUBTLE;
     var tagBytes = textToBytes(options.tag || "");
-    if (tagBytes.length > 65535) fail("E12");
+    if (tagBytes.length > 65535) fail("PTY-E11");
 
     // 5) header + body
     var payload = processed;
@@ -1795,7 +1817,7 @@
     var payload = body.subarray(fields.tagLen + fields.metaLen, bodyLen);
 
     // integrity first - fails before we ever ask for a password
-    if (crc32(payload) !== fields.crc) fail("E03");
+    if (crc32(payload) !== fields.crc) fail("PTY-E02");
 
     var processed = payload;
 
@@ -1805,13 +1827,13 @@
       try {
         params = JSON.parse(bytesToText(outerMetaBytes));
       } catch (e) {
-        fail("E03", "encryption metadata unreadable");
+        fail("PTY-E02", "encryption metadata unreadable");
       }
       var password = options.password;
       if (password == null && typeof PuttyPNG.passwordPrompt === "function") {
         password = await PuttyPNG.passwordPrompt({ message: "Enter password for this PuttyPNG:" });
       }
-      if (password == null || password === "") fail("E08");
+      if (password == null || password === "") fail("PTY-E07");
       processed = await decryptBytes(payload, password, params);
     }
 
@@ -1897,7 +1919,7 @@
   // (floored at minSize, default 256), scaling UP past the source resolution if
   // the data needs the room. Because a cover may contain transparency (fewer
   // opaque pixels than its area), we fit, count the opaque pixels, and grow until
-  // the data fits or we hit maxSize (E05).
+  // the data fits or we hit maxSize (PTY-E04).
   function autoFitCover(coverImg, prep, options) {
     options = options || {};
     var fit = options.coverFit || "crop";
@@ -1931,7 +1953,7 @@
       dimOpts.size = undefined; dimOpts.sizeMode = undefined;
       target = Math.ceil(target * (needed / Math.max(1, opaque)) * 1.08);
     }
-    fail("E05", "cover cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
+    fail("PTY-E04", "cover cannot hold " + needed + " opaque pixels even at " + maxSize + "px");
   }
 
   // ===========================================================================
@@ -1942,7 +1964,7 @@
   // ===========================================================================
 
   // Hide data inside a PNG. Returns { blob, dataUrl, width, height, ...stats }.
-  PuttyPNG.encode = async function encode(input, options) {
+  PuttyPNG.encode = classified(async function encode(input, options) {
     options = options || {};
     var style = options.coverStyle || "noise";
 
@@ -1957,7 +1979,7 @@
       // Custom cover: prepare the body first so we know how much room the data
       // needs, then size + fit the cover to the SMALLEST image that holds it
       // (ignoring the cover's own resolution), scaling up only if required.
-      if (!hasDOM()) fail("E10", "custom covers require a browser");
+      if (!hasDOM()) fail("PTY-E09", "custom covers require a browser");
       var coverImg = (typeof HTMLImageElement !== "undefined" && options.cover instanceof HTMLImageElement)
         ? options.cover
         : await loadImage(typeof options.cover === "string" ? options.cover : URL.createObjectURL(options.cover));
@@ -1965,7 +1987,7 @@
       var prep = await prepareBody(input, options);
       var coverImageData = autoFitCover(coverImg, prep, options);   // fits + hardens
       if (opaquePixels(coverImageData.data, coverImageData.width, coverImageData.height).length < HEADER_PIXELS + 1) {
-        fail("E11");
+        fail("PTY-E10");
       }
       packed = assemble(prep, coverImageData);
     } else if (style === "cd") {
@@ -1973,7 +1995,7 @@
       var cdPrep = await prepareBody(input, options);
       // Pre-load an imprint image (File/Blob/URL/Image) if one was supplied.
       if (options.imprint) {
-        if (!hasDOM()) fail("E10", "the CD imprint requires a browser");
+        if (!hasDOM()) fail("PTY-E09", "the CD imprint requires a browser");
         var imprintImg = (typeof HTMLImageElement !== "undefined" && options.imprint instanceof HTMLImageElement)
           ? options.imprint
           : await loadImage(typeof options.imprint === "string" ? options.imprint : URL.createObjectURL(options.imprint));
@@ -1981,7 +2003,7 @@
       }
       var cdImage = fitGeneratedCover("cd", cdPrep, options);       // fits + hardens
       if (opaquePixels(cdImage.data, cdImage.width, cdImage.height).length < HEADER_PIXELS + 1) {
-        fail("E11");
+        fail("PTY-E10");
       }
       packed = assemble(cdPrep, cdImage);
     } else {
@@ -2006,11 +2028,11 @@
       out.blob = png.blob;
     }
     return out;
-  };
+  });
 
   // Read data back out of a PNG. Returns a result object (see unpack). If the
   // payload is a binary file and options.autoDownload is true, also downloads it.
-  PuttyPNG.decode = async function decode(source, options) {
+  PuttyPNG.decode = classified(async function decode(source, options) {
     options = options || {};
     var imageData = await sourceToImageData(source);
     var result = await unpack(imageData, options);
@@ -2018,22 +2040,22 @@
       PuttyPNG.download(result);
     }
     return result;
-  };
+  });
 
   // Inspect a PuttyPNG without decrypting: version, flags, dev tag, size.
-  PuttyPNG.peek = async function peek(source) {
+  PuttyPNG.peek = classified(async function peek(source) {
     try {
       var imageData = await sourceToImageData(source);
       return unpackHeader(imageData);
     } catch (e) {
-      if (e && e.code === "E01") return { isPuttyPNG: false };
+      if (e && e.code === "PTY-E00") return { isPuttyPNG: false };
       throw e;
     }
-  };
+  });
 
   // Convenience: save a decoded result (or a raw blob) to the user's disk.
   PuttyPNG.download = function download(resultOrBlob, filename) {
-    if (!hasDOM()) fail("E10", "download requires a browser");
+    if (!hasDOM()) fail("PTY-E09", "download requires a browser");
     var blob, name;
     if (typeof Blob !== "undefined" && resultOrBlob instanceof Blob) {
       blob = resultOrBlob;
@@ -2175,12 +2197,12 @@
     assert(r.text === "top secret", "decrypted text mismatch");
   });
 
-  test("wrong password fails with E06", async function () {
+  test("wrong password fails with PTY-E05", async function () {
     var packed = await pack("top secret", { password: "right" }, null);
     var code = null;
     try { await unpack(packed.imageData, { password: "wrong" }); }
     catch (e) { code = e.code; }
-    assert(code === "E06", "expected E06, got " + code);
+    assert(code === "PTY-E05", "expected PTY-E05, got " + code);
   });
 
   test("encrypted PuttyPNG hides filename/type until decrypted", async function () {
@@ -2192,25 +2214,25 @@
     assert(JSON.stringify(peeked).indexOf("secret.bin") === -1, "filename leaked in peek");
   });
 
-  test("tampered payload fails CRC with E03", async function () {
+  test("tampered payload fails CRC with PTY-E02", async function () {
     var packed = await pack("integrity matters", {}, null);
     // Flip a low bit of a body pixel (pixel 60 is well past the header).
     packed.imageData.data[60 * 4] ^= 1;
     var code = null;
     try { await unpack(packed.imageData, {}); }
     catch (e) { code = e.code; }
-    assert(code === "E03", "expected E03, got " + code);
+    assert(code === "PTY-E02", "expected PTY-E02, got " + code);
   });
 
-  test("non-PuttyPNG image reports E01", async function () {
+  test("non-PuttyPNG image reports PTY-E00", async function () {
     var noise = generateNoiseImageData(64);
     var code = null;
     try { await unpack(noise, {}); }
     catch (e) { code = e.code; }
-    assert(code === "E01", "expected E01, got " + code);
+    assert(code === "PTY-E00", "expected PTY-E00, got " + code);
   });
 
-  test("future protocol version reports E02", async function () {
+  test("future protocol version reports PTY-E01", async function () {
     var packed = await pack("hi", {}, null);
     // Bump the version byte in the embedded header. Header is at subtle depth,
     // MSB-first: byte 4 (version) occupies header bits 32..39 => pixels 10..13.
@@ -2221,16 +2243,16 @@
     var code = null;
     try { await unpack(packed.imageData, {}); }
     catch (e) { code = e.code; }
-    assert(code === "E02", "expected E02, got " + code);
+    assert(code === "PTY-E01", "expected PTY-E01, got " + code);
   });
 
-  test("payload too large for a fixed size reports E05", async function () {
+  test("payload too large for a fixed size reports PTY-E04", async function () {
     // Incompressible random bytes with compression off, so it cannot shrink to fit.
     var big = crypto.getRandomValues(new Uint8Array(5000));
     var code = null;
     try { await pack(big, { size: 32, compress: false }, null); }   // 32x32 = 1024 px
     catch (e) { code = e.code; }
-    assert(code === "E05", "expected E05, got " + code);
+    assert(code === "PTY-E04", "expected PTY-E04, got " + code);
   });
 
   test("dev tag survives and is readable via peek (no decryption)", async function () {

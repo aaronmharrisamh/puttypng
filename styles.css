@@ -75,10 +75,12 @@ code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
    ========================================================================== */
 
 /* Header */
-header.masthead { text-align: center; padding: 60px 0 24px; }
+/* Padding and title are smaller than the first design. The module has to
+   clear the fold at 1366x768, which is the common laptop size. */
+header.masthead { text-align: center; padding: 28px 0 16px; }
 
 header.masthead h1 {
-  font-size: clamp(40px, 8vw, 68px);
+  font-size: clamp(32px, 6vw, 48px);
   letter-spacing: -0.035em;
   font-weight: 700;
 }
@@ -104,7 +106,7 @@ header.masthead .byline a {
 nav.tabs {
   display: flex; justify-content: center; gap: 2px; flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 36px; position: sticky; top: 0;
+  margin-bottom: 22px; position: sticky; top: 0;
   background: rgba(255,255,255,.9); backdrop-filter: saturate(1.4) blur(8px);
   padding-top: 6px; z-index: 10;
 }
@@ -123,6 +125,22 @@ nav.tabs button {
   border: 1px solid var(--line); border-radius: var(--radius);
   padding: 26px; margin: 20px 0; box-shadow: var(--shadow); background: #fff;
 }
+
+/* The one module. The wide column carries whichever step is showing and the
+   deck keeps its share of the row, so nothing moves sideways on a swap. */
+.module {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 20px;
+  align-items: start;
+  margin: 20px 0;
+}
+
+/* Without this a grid child refuses to shrink below its content width and
+   the deck gets squeezed out of the row. */
+.module-main { min-width: 0; }
+
+.module-deck { min-width: 0; }
 
 .section-title { margin: 44px 0 6px; letter-spacing: -0.02em; }
 
@@ -190,6 +208,9 @@ textarea, input[type="text"], input[type="password"], input[type="number"], sele
 
 textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 
+/* Room for the paperclip button in the top right corner. */
+#exportText { padding-right: 46px; }
+
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
 
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -213,14 +234,8 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
 
 /* Data input: text, drag-drop file, or attached-file chip */
+/* Holds the textarea, the file chip, and the paperclip button. */
 .data-drop { position: relative; }
-
-.drop-overlay {
-  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-  border: 2px dashed var(--clay); border-radius: var(--radius-sm);
-  background: rgba(201,111,82,.10); color: var(--clay-deep); font-weight: 600; font-size: 15px;
-  pointer-events: none;
-}
 
 .file-chip {
   display: flex; align-items: center; gap: 14px; min-height: 120px;
@@ -242,11 +257,6 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 }
 
 .input-meta { margin-top: 6px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-
-.linklike {
-  background: none; border: none; font: inherit; font-size: 13px; color: var(--clay-deep);
-  cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px;
-}
 
 .slider-row { display: flex; flex-direction: column; gap: 4px; }
 
@@ -323,6 +333,311 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .stat-row .v { font-weight: 600; }
 
 /* Dropzone */
+/* The page-wide drop overlay. It covers everything, so it sits above the
+   sticky tab bar and the toast has to stay above it in turn. */
+.drop-veil {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(255,255,255,.82);
+  backdrop-filter: saturate(1.2) blur(3px);
+  display: grid; place-items: center;
+  padding: 24px;
+}
+
+.drop-card {
+  border: 2px dashed var(--clay);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+  padding: 44px 56px;
+  text-align: center;
+  max-width: 460px;
+}
+
+.drop-icon { color: var(--clay); margin-bottom: 10px; }
+
+.drop-big {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.drop-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+/* A drop that could not mean anything. Quiet on purpose: the result it sits
+   under is the important thing on screen, and this must not compete with it. */
+.bad-drop {
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--bad);
+  border-radius: var(--radius-sm);
+  background: #fdf7f7;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+.bad-drop-head { font-weight: 700; font-size: 14px; color: var(--bad); }
+
+.bad-drop-msg { font-size: 14px; color: var(--ink-soft); margin-top: 3px; }
+
+/* The code is for a search box or a support message, not for reading first. */
+.bad-drop-code { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+/* A step is a card by another name. It is kept separate from .card so the
+   module can change padding and shadow without touching every card. */
+.step {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px; box-shadow: var(--shadow); background: var(--paper);
+}
+
+.step > h2 { margin-bottom: 2px; }
+
+/* Back sits above the result heading and reads as a control, not a link. */
+.back {
+  border: 1px solid var(--line-strong); background: var(--paper);
+  font: inherit; font-size: 13px; color: var(--muted);
+  padding: 5px 12px 5px 9px; border-radius: 999px; cursor: pointer;
+  margin-bottom: 14px; display: inline-flex; align-items: center; gap: 5px;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.back .back-ic { font-size: 16px; line-height: 1; }
+
+/* The deck. A square slot with a lip along the bottom edge. Phase 2 turns
+   the lip into the front of a machine and adds the eject motion. */
+/* The deck reads as a machine with a slot in it. Taller than wide, because
+   the lower third is the face the disc comes out of. */
+.slot {
+  position: relative;
+  aspect-ratio: 1 / 1.34;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: linear-gradient(180deg, #fbfbfb, #f4f4f4);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.05);
+  overflow: hidden;
+  perspective: 900px;          /* gives the tilt real depth */
+}
+
+/* Every transform lives on the holder. The image keeps the width and height
+   the page sets from the real PNG, so the two never fight. */
+.disc-holder {
+  position: absolute; left: 14px; right: 14px; top: 14px;
+  display: grid; place-items: center;
+  z-index: 1;
+  transform-origin: 50% 60%;
+  will-change: transform;
+}
+
+.slot .disc {
+  width: 100%; height: auto;
+  border-radius: 4px; display: block;
+  image-rendering: pixelated;   /* show the real pixels, not a smoothed guess */
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+
+/* The face. Opaque, so the disc is hidden behind it and not cut off. */
+.slot-face {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
+  z-index: 2;
+  background: linear-gradient(180deg, #f0f0f0, #e6e6e6);
+}
+
+/* The lip is the top edge of the face, and the line the disc rises through. */
+.slot .lip {
+  position: absolute; left: 0; right: 0; bottom: 30%;
+  height: 7px; z-index: 3;
+  background: linear-gradient(180deg, #cfcfcf, #dedede);
+  box-shadow: 0 2px 5px rgba(0,0,0,.13);
+}
+
+/* THE DRIVE.
+   A window in the face, a button that says what happens next, and a slim
+   footer that reads like the display on a real drive. */
+.glass {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  /* Sized from the face HEIGHT, not its width. Sizing by width made a circle
+     taller than the face, and it spilled out over the deck above. */
+  height: 74%; aspect-ratio: 1 / 1; width: auto;
+  border-radius: 999px;
+  background: #1d1d1f;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.7);
+  overflow: hidden;
+  opacity: 0;                       /* dark until a disc is loaded */
+  transition: opacity .25s ease;
+}
+
+.glass.lit { opacity: 1; }
+
+/* Everything drawn inside the window sits on top of the other. */
+.glass > * {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  transition: opacity .3s linear;
+}
+
+/* A pane of glass over the disc, so it reads as a window and not a hole. */
+.glass::after {
+  content: ""; position: absolute; inset: 0; border-radius: 999px;
+  background: linear-gradient(145deg, rgba(255,255,255,.42), rgba(255,255,255,0) 55%);
+  pointer-events: none;
+}
+
+.drive-btn {
+  display: block; width: 100%; margin-top: 10px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--paper); font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--ink); padding: 9px 10px; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.deck-foot {
+  margin-top: 8px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fafafa;
+  font-size: 11px; line-height: 1.55; color: var(--muted);
+}
+
+/* The same rows the make panel used, at display size. */
+.deck-foot .stat-row { font-size: 11px; padding: 3px 0; }
+
+.deck-foot .stat-row:last-child { border-bottom: 0; }
+
+/* Save and Copy live on the picture, because that is what they act on.
+   They cover a corner only, so the rest of the disc is still there to
+   right-click or press and hold. */
+.disc-tools {
+  position: absolute; right: 6px; bottom: 6px;
+  display: flex; gap: 6px;
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+.disc-btn {
+  width: 30px; height: 30px; border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.92);
+  color: var(--ink); cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  transition: color .15s ease, background .15s ease;
+}
+
+/* The drive as a sheet, on a phone only. Hidden on a wide screen. */
+.deck-handle {
+  display: none;
+  width: 100%; border: 0; background: none; padding: 10px 0 8px;
+  cursor: pointer;
+}
+
+.deck-handle .grip {
+  display: block; width: 42px; height: 4px; margin: 0 auto;
+  border-radius: 999px; background: var(--line-strong);
+}
+
+/* ADVANCED, IN SIX GROUPS.
+   One group on screen at a time. Every control is still one click away, and
+   the drawer no longer opens onto a column of forty five fields. */
+.subtabs {
+  display: flex; flex-wrap: wrap; gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.subtabs button {
+  border: none; background: none; font: inherit; font-size: 13px;
+  color: var(--muted); padding: 7px 11px; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .15s ease, border-color .15s ease;
+}
+
+.subpanel { min-height: 10px; }
+
+/* THE CELEBRATION.
+   Ribbons fall from the thing that was made. Above the page and the drop
+   overlay, below the toast, so a message is never hidden by a party. */
+.confetti-host {
+  position: fixed; inset: 0; z-index: 95;
+  pointer-events: none; overflow: hidden;
+}
+
+.ribbon {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+.ribbon svg { display: block; }
+
+/* The ripple is an animation on the path, not a redraw, so sixty ribbons cost
+   almost nothing. Each starts at its own point in the cycle. */
+.ribbon .rib {
+  transform-origin: 50% 50%;
+  animation: ribbon-ripple 620ms ease-in-out infinite;
+}
+
+@keyframes ribbon-ripple {
+  0%   { transform: rotate(-9deg) skewX(7deg); }
+  50%  { transform: rotate(9deg) skewX(-7deg); }
+  100% { transform: rotate(-9deg) skewX(7deg); }
+}
+
+/* Reduced motion: the ribbons appear and fade where they are. */
+.ribbon.fade-only .rib { animation: none; }
+
+/* THE SHOW.
+   Layers the animations draw into. All of them are added and removed by the
+   page, and none of them survive a finished animation.
+
+   z-index 1 puts them level with the disc and below the slot face, so a piece
+   that falls goes behind the face instead of over it. */
+/* Fixed and unclipped, so a kill crosses the whole page instead of stopping
+   at the edge of the deck. Above the drop overlay at 60, below the toast at
+   100 and the modal at 1000, both of which must stay on top. */
+.show-layer {
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none;
+}
+
+.kill-host {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+
+.kill-piece {
+  position: absolute;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border-radius: 4px;
+  will-change: transform, opacity;
+}
+
+.kill-canvas {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* The ones and zeros travel from the data box to the slot, so they sit above
+   the page rather than inside the deck. */
+.ingest-host {
+  position: fixed; inset: 0; z-index: 55;
+  pointer-events: none;
+}
+
+.bit {
+  position: absolute;
+  font: 700 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--clay-deep);
+  will-change: transform, opacity;
+}
+
+/* The paperclip sits inside the data box.
+   It is top right, not bottom right, because the textarea resize grip owns
+   the bottom right corner and the two would overlap. */
+.clip {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: rgba(255,255,255,.92);
+  color: var(--muted); cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+
 .dropzone {
   border: 2px dashed var(--line-strong); border-radius: var(--radius);
   padding: 30px 20px; text-align: center; cursor: pointer; background: #fcfcfc;
@@ -332,8 +647,6 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .dropzone .big { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
 
 .dropzone .hint { font-size: 13px; color: var(--muted); }
-
-.result-box { margin-top: 16px; }
 
 .result-text {
   width: 100%; min-height: 90px; font-size: 13px; background: #fafafa;
@@ -388,6 +701,43 @@ table.doc td.mono, table.doc td .mono { font-family: ui-monospace, SFMono-Regula
 
 .big-dl .lock { font-size: 40px; }
 
+/* Collapsible section, built on the browser's own details element. It needs no
+   script, so it still opens and closes if scripts.js fails to load. */
+details.sect { padding: 16px 18px; }
+
+details.sect > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Safari draws its own triangle unless this is removed. */
+details.sect > summary::-webkit-details-marker { display: none; }
+
+.sect-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.sect-sub { font-size: 14px; color: var(--muted); }
+
+.chev-d {
+  display: inline-block;
+  color: var(--clay);
+  font-weight: 700;
+  transition: transform .18s ease;
+}
+
+.sect-body { margin-top: 14px; }
+
+/* The moved sections carried their own card, which would nest a card inside a
+   card now that the details element is the card. */
+.sect-body > .card { border: 0; box-shadow: none; padding: 0; margin: 0; }
+
 /* ==========================================================================
    SECTION 6 - STATES AND INTERACTIONS
    Everywhere the page answers the user: hover, focus, press, check, drag,
@@ -432,22 +782,102 @@ textarea:focus, input:focus, select:focus {
 .seg-opt:focus-within { outline: 2px solid var(--clay); outline-offset: 2px; }
 
 /* Data input: text, drag-drop file, or attached-file chip */
-.data-drop.drag-over textarea { border-color: var(--clay); box-shadow: 0 0 0 3px rgba(201,111,82,.15); }
-
-.data-drop.drag-over .drop-overlay { display: flex; }
-
 .file-x:hover { border-color: var(--bad); color: var(--bad); }
 
 .file-x:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
-
-.linklike:hover { color: var(--ink); }
-
-.linklike:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 4px; }
 
 /* Advanced drawer */
 .drawer-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
 
 /* Dropzone */
+/* THE EJECT
+   One transition covers the whole move: the rise, the spin, and the tilt.
+   Order matters below, because several of these rules have equal weight and
+   the later one wins.
+
+   Transform only, so the browser can run it on the compositor and it stays
+   smooth on a weak machine. */
+/* Parked means fully inside. 104 per cent puts the top edge below the lip, so
+   nothing of the disc shows while the drive is holding it.
+
+   RULE: every state below lists the same three functions in the same order.
+   When the lists match, the browser interpolates them one by one. When they do
+   not, it falls back to decomposing a matrix, which yields NaN while the
+   holder still has no height. Do not drop a function from one of these. */
+.disc-holder {
+  transform: translateY(104%) rotateX(0deg) rotate(-360deg);
+  transition: transform 420ms cubic-bezier(.2, .8, .25, 1);
+}
+
+/* A cover that is not a CD is not a disc, so it does not spin. */
+.disc-holder.no-spin { transform: translateY(104%) rotateX(0deg) rotate(0deg); }
+
+/* Ejected, and tilted toward the viewer. */
+.disc-holder.out { transform: translateY(0%) rotateX(9deg) rotate(0deg); }
+
+/* Being drawn back in. Same place as parked, with no spin, because a disc
+   going into a machine does not need to be flung. */
+.disc-holder.loading { transform: translateY(104%) rotateX(0deg) rotate(0deg); }
+
+/* THE Z SWITCH.
+   The disc is BEHIND the face while it passes through the slot, which is what
+   makes it look like it comes out of a hole. It is ABOVE the face and the lip
+   at every other moment, because then it is an object in front of a machine.
+   The page adds this class once the disc is clear of the lip, where there is
+   no overlap, so the change cannot be seen. */
+.disc-holder.above { z-index: 4; }
+
+/* With animation off there is no move at all. The disc is already out. */
+.disc-holder.instant { transition: none; }
+
+.back:hover { color: var(--ink); border-color: var(--muted); }
+
+.back:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+/* THE TILT, IN FULL.
+   The pointer is over the deck, so the disc lies flat. The pointer is away, so
+   it leans. There is no third state and no script, which is why it cannot get
+   stuck.
+   The whole deck is the target, not only the picture, so it is easy to hit. */
+.slot:hover .disc-holder.out { transform: translateY(0%) rotateX(0deg) rotate(0deg); }
+
+/* A touch screen has no pointer to hover, so the disc never leans there.
+   It still rises out of the slot, and a CD still spins on the way. */
+@media (hover: none) {
+  .disc-holder.out { transform: translateY(0%) rotateX(0deg) rotate(0deg); }
+}
+
+/* The two disc buttons appear on hover. A touch screen has no hover, so they
+   stay visible there instead. */
+.slot:hover .disc-tools { opacity: 1; }
+
+@media (hover: none) {
+  .disc-tools { opacity: 1; }
+}
+
+.disc-btn:hover { background: #fff; color: var(--clay-deep); }
+
+.disc-btn:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+.subtabs button:hover { color: var(--ink); }
+
+.subtabs button.active { color: var(--clay-deep); border-bottom-color: var(--clay); font-weight: 600; }
+
+.subtabs button:focus-visible { outline: 2px solid var(--clay); outline-offset: -2px; border-radius: 4px; }
+
+/* A noise cover has no disc and no splat, so those two groups have nothing to
+   show. They are dimmed rather than removed, so the shape of Advanced does not
+   change under the person's hands. */
+.subtabs button[disabled] { opacity: .38; cursor: default; }
+
+.drive-btn:hover { border-color: var(--clay); color: var(--clay-deep); background: var(--clay-soft); }
+
+.drive-btn:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+.clip:hover { color: var(--clay-deep); border-color: var(--clay); background: var(--clay-soft); }
+
+.clip:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
 .dropzone:hover { border-color: var(--clay); background: var(--clay-soft); }
 
 .dropzone.drag-over { border-color: var(--clay); background: var(--clay-soft); box-shadow: 0 0 0 3px rgba(201,111,82,.12); }
@@ -469,6 +899,13 @@ header.masthead .byline a:hover { color: var(--ink); text-decoration-color: curr
 
 header.masthead .byline a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
 
+/* A collapsible section turns its chevron when the browser opens it. */
+details.sect[open] .chev-d { transform: rotate(90deg); }
+
+details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 6px; }
+
+details.sect > summary:hover .sect-title { color: var(--clay-deep); }
+
 /* ==========================================================================
    SECTION 7 - RESPONSIVE AND UTILITIES
    The one breakpoint, plus the small single-purpose helper classes.
@@ -478,6 +915,53 @@ header.masthead .byline a:focus-visible { outline: 2px solid var(--clay); outlin
 .muted { color: var(--muted); }
 
 .small { font-size: 13px; }
+
+/* Layout */
+/* Below this the deck cannot hold a readable disc beside the box, so it
+   moves under it and is capped so the disc does not fill the screen. */
+@media (max-width: 720px) {
+  .module { grid-template-columns: 1fr; }
+  .module-deck { max-width: 260px; margin: 0 auto; width: 100%; }
+  /* An empty deck under the box is dead space on a phone, so it waits until
+     it has something to hold. On a wide screen it stays, to reserve the room. */
+  .module-deck:not(.filled) { display: none; }
+}
+
+/* THE SHEET.
+   On a narrow screen the drive sits at the foot of the window instead of far
+   down the page. It is NOT a modal: there is no backdrop, and the page behind
+   it stays scrollable, because a person may want to edit their text while a
+   result is up. */
+@media (max-width: 640px) and (orientation: portrait) {
+  .module-deck.filled {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    max-width: none; width: auto; margin: 0;
+    padding: 0 18px 16px;
+    background: var(--paper);
+    border-top: 1px solid var(--line-strong);
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -6px 26px rgba(0,0,0,.16);
+    z-index: 70;
+    /* Tucked away, with only the handle showing. */
+    transform: translateY(calc(100% - 42px));
+    transition: transform .3s cubic-bezier(.2, .8, .25, 1);
+  }
+
+  /* The slot is capped, or a full width square would fill a phone screen and
+     the sheet would cover the page it is meant to sit beside. */
+  .module-deck.filled .slot { max-width: 170px; margin: 0 auto; }
+
+  .module-deck.filled .deck-foot { max-width: 320px; margin-left: auto; margin-right: auto; }
+
+  .module-deck.filled .drive-btn { max-width: 320px; margin-left: auto; margin-right: auto; }
+
+  .module-deck.filled.up { transform: translateY(0); }
+
+  .deck-handle { display: block; }
+
+  /* Room at the foot of the page so the sheet never covers the last control. */
+  .tab-panel { padding-bottom: 160px; }
+}
 
 /* Fields */
 @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }

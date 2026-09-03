@@ -41,7 +41,7 @@
     <nav class="tabs" id="tabs" role="tablist" aria-label="PuttyPNG sections">
       <button type="button" class="active" role="tab" aria-selected="true" aria-controls="tab-puttypng" id="tabbtn-puttypng" data-tab="puttypng">PuttyPNG</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="tab-docs" id="tabbtn-docs" data-tab="docs">Docs</button>
-      <button type="button" role="tab" aria-selected="false" aria-controls="tab-tutorial" id="tabbtn-tutorial" data-tab="tutorial">Tutorial</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-howitworks" id="tabbtn-howitworks" data-tab="howitworks">How it works</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="tab-download" id="tabbtn-download" data-tab="download">Download</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="tab-about" id="tabbtn-about" data-tab="about">About</button>
     </nav>
@@ -52,403 +52,423 @@
        ========================================================================== -->
     <section class="tab-panel active" id="tab-puttypng" role="tabpanel" aria-labelledby="tabbtn-puttypng">
 
-      <!-- EXPORT -->
-      <div class="card">
-        <h2>Make a PuttyPNG</h2>
-        <p class="small">Type or paste anything, then press it into a PNG you can hand to anyone.</p>
+      <!-- One module. Step one and step two share the wide column and only one
+           is ever visible. The deck keeps its width whatever is showing. -->
+      <div class="module">
+        <div class="module-main">
 
-        <div class="field" style="margin-top:14px;">
-          <label for="exportText">Your data</label>
-          <div class="data-drop" id="dataDrop">
-            <textarea id="exportText" placeholder="Type or paste text, JSON, anything...">Hello from PuttyPNG! Edit me, then press Make PuttyPNG.</textarea>
-            <div class="file-chip hidden" id="fileChip">
-              <span class="file-ic" aria-hidden="true">&#128196;</span>
-              <span class="file-meta">
-                <span class="fn" id="fileName"></span>
-                <span class="file-size" id="fileSize"></span>
-              </span>
-              <button type="button" class="file-x" id="fileClear" aria-label="Remove file and go back to text">&times;</button>
-            </div>
-            <div class="drop-overlay" id="dropOverlay" aria-hidden="true"><span>Drop a file to load it</span></div>
-          </div>
-          <div class="small muted input-meta">
-            <span id="inputSize">0 bytes</span>
-            <button type="button" class="linklike" id="attachBtn">or attach a file</button>
-            <input type="file" id="attachInput" class="hidden" aria-label="Attach a file to hide in the PuttyPNG">
-          </div>
-        </div>
+          <!-- STEP ONE - the single input box -->
+          <div class="step" id="stepInput">
+            <h2>What you'd like to encode</h2>
+            <p class="small">Type or paste anything, then press it into a PNG you can hand to anyone.</p>
 
-        <div class="row">
-          <button class="btn btn-primary" id="makeBtn" type="button">Make PuttyPNG</button>
-          <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
-            <span class="chev">&rsaquo;</span> Advanced
-          </button>
-        </div>
-
-        <!-- Advanced drawer -->
-        <div class="drawer" id="advDrawer">
-          <div class="drawer-inner">
-
-            <!-- Cover style (CD / Noise) + CD options -->
-            <div style="margin-bottom:16px;">
-              <div class="small" style="font-weight:600; margin-bottom:6px;">Cover style</div>
-              <div class="seg" role="radiogroup" aria-label="Cover style">
-                <label class="seg-opt">CD<input type="radio" name="coverStyle" value="cd" checked></label>
-                <label class="seg-opt">Noise<input type="radio" name="coverStyle" value="noise"></label>
+            <div class="field" style="margin-top:14px;">
+              <label for="exportText">Your data</label>
+              <div class="data-drop" id="dataDrop">
+                <textarea id="exportText" placeholder="Type or paste text, JSON, anything...">Hello from PuttyPNG! Edit me, then press Make PuttyPNG.</textarea>
+                <div class="file-chip hidden" id="fileChip">
+                  <span class="file-ic" aria-hidden="true">&#128196;</span>
+                  <span class="file-meta">
+                    <span class="fn" id="fileName"></span>
+                    <span class="file-size" id="fileSize"></span>
+                  </span>
+                  <button type="button" class="file-x" id="fileClear" aria-label="Remove file and go back to text">&times;</button>
+                </div>
+                <button type="button" class="clip" id="attachBtn" title="Attach a file" aria-label="Attach a file to hide inside the PuttyPNG">
+                  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false">
+                    <path d="M21 11.5l-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-8.9 8.9a1.8 1.8 0 0 1-2.6-2.6l8.1-8.1"
+                          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                  </div>
+              <div class="small muted input-meta">
+                <span id="inputSize">0 bytes</span>
+                <input type="file" id="attachInput" class="hidden" aria-label="Attach a file to hide in the PuttyPNG">
               </div>
-              <div id="cdControls" style="margin-top:12px;">
-                <div class="grid2">
-                  <div class="field" style="margin:0;">
-                    <label for="optLabel">CD label (optional)</label>
-                    <input type="text" id="optLabel" placeholder="e.g. My Mixtape">
-                  </div>
-                  <label class="switch" style="align-self:end; margin-bottom:8px;">
-                    <input type="checkbox" id="optSolidBg">
-                    <span class="track"></span> Solid background (smaller disc)
-                  </label>
-                </div>
-                <div class="field" style="margin:12px 0 0;">
-                  <label for="optImprint">Imprint an image on the disc (optional)</label>
-                  <input type="file" id="optImprint" accept="image/*">
-                  <div class="small muted" id="imprintInfo" style="margin-top:6px;"></div>
-                </div>
-                <div id="cdAdvanced" style="margin-top:12px;">
-                  <div class="grid2">
-                    <div class="field" style="margin:0;">
-                      <label for="optFontFamily">Label font</label>
-                      <select id="optFontFamily">
-                        <option value="-apple-system, Segoe UI, Roboto, sans-serif">Sans (system)</option>
-                        <option value="Georgia, 'Times New Roman', serif">Serif</option>
-                        <option value="ui-monospace, Menlo, Consolas, monospace">Monospace</option>
-                        <option value="'Comic Sans MS', 'Marker Felt', fantasy, cursive">Marker</option>
-                      </select>
-                    </div>
-                    <div class="field" style="margin:0;">
-                      <label for="optFontSize">Label size</label>
-                      <select id="optFontSize">
-                        <option value="small">Small</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="large">Large</option>
-                        <option value="xlarge">Extra large</option>
-                      </select>
-                    </div>
-                    <div class="field" style="margin:10px 0 0; grid-column:1 / -1;">
-                      <label for="optRimText">Rim microtext</label>
-                      <input type="text" id="optRimText" placeholder="Paste into PuttyPNG.com to decode!">
-                    </div>
-                    <div class="field slider-row" style="margin:10px 0 0; grid-column:1 / -1;">
-                      <label for="optRimSize">Rim microtext size (pt at 256px)</label>
-                      <div class="slider-pair">
-                        <input type="range" id="optRimSize" min="4" max="40" step="1" value="13">
-                        <input type="number" id="optRimSizeNum" min="4" max="40" step="1" value="13" aria-label="Rim microtext size in points">
-                      </div>
-                      <div class="small muted">Sized against a 256px disc and scaled from there, so a 512px disc draws it twice as large.</div>
-                    </div>
-                    <div class="field slider-row" style="margin:10px 0 0; grid-column:1 / -1;">
-                      <label for="optRimSpacing">Rim letter spacing (px at 256px)</label>
-                      <div class="slider-pair">
-                        <input type="range" id="optRimSpacing" min="-2" max="16" step="0.5" value="0.5">
-                        <input type="number" id="optRimSpacingNum" min="-2" max="16" step="0.5" value="0.5" aria-label="Rim letter spacing">
-                      </div>
-                    </div>
-                    <div class="field" style="margin:10px 0 0; grid-column:1 / -1;">
-                      <label class="switch">
-                        <input type="checkbox" id="optRimTwoSided">
-                        <span class="track"></span> Force two sided
-                      </label>
-                      <div class="small muted">Always print the text at the top and the bottom, shrinking it to fit each half. Off, long text wraps once around the rim.</div>
-                    </div>
-                  </div>
+            </div>
 
-                  <!-- Hub (the round center): sizes + ring thicknesses -->
-                  <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
-                    <div class="small" style="font-weight:600; margin-bottom:8px;">Hub</div>
-                    <div class="grid2">
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splHubSize">Hub size (%)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splHubSize" min="10" max="40" step="1" value="20">
-                          <input type="number" id="splHubSizeNum" min="10" max="40" step="1" value="20" aria-label="Hub size value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splHoleSize">Hole size (%)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splHoleSize" min="3" max="25" step="1" value="8">
-                          <input type="number" id="splHoleSizeNum" min="3" max="25" step="1" value="8" aria-label="Hole size value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splOuter">Gray outer thickness</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splOuter" min="1" max="20" step="1" value="6">
-                          <input type="number" id="splOuterNum" min="1" max="20" step="1" value="6" aria-label="Gray outer thickness value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splInner">Gray inner thickness</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splInner" min="1" max="20" step="1" value="4">
-                          <input type="number" id="splInnerNum" min="1" max="20" step="1" value="4" aria-label="Gray inner thickness value">
-                        </div>
-                      </div>
-                    </div>
+            <div class="row">
+              <button class="btn btn-primary" id="makeBtn" type="button">Make PuttyPNG</button>
+              <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
+                <span class="chev">&rsaquo;</span> Advanced
+              </button>
+            </div>
+
+            <!-- Advanced drawer -->
+            <div class="drawer" id="advDrawer">
+          <div class="drawer-inner">
+            <!-- Six groups, one on screen at a time. Forty five controls in a
+                 single column was the reason this was hard to read. -->
+            <div class="subtabs" role="tablist" aria-label="Advanced settings">
+              <button type="button" role="tab" data-sub="cover" aria-selected="true" class="active">Cover</button>
+              <button type="button" role="tab" data-sub="disc" aria-selected="false">Disc</button>
+              <button type="button" role="tab" data-sub="splat" aria-selected="false">Splat</button>
+              <button type="button" role="tab" data-sub="size" aria-selected="false">Size</button>
+              <button type="button" role="tab" data-sub="security" aria-selected="false">Security</button>
+              <button type="button" role="tab" data-sub="display" aria-selected="false">Display</button>
+            </div>
+            <div class="subpanel" data-sub="cover" role="tabpanel" aria-label="Cover">
+                <div style="margin-bottom:16px;">
+                  <div class="small" style="font-weight:600; margin-bottom:6px;">Cover style</div>
+                  <div class="seg" role="radiogroup" aria-label="Cover style">
+                    <label class="seg-opt">CD<input type="radio" name="coverStyle" value="cd" checked></label>
+                    <label class="seg-opt">Noise<input type="radio" name="coverStyle" value="noise"></label>
                   </div>
-
-                  <!-- Putty splat: the default branding imprint (used unless a custom imprint image is chosen) -->
-                  <div id="splatControls" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
-                    <div class="small" style="font-weight:600; margin-bottom:8px;">Putty splat (the default imprint)</div>
-                    <div class="grid2">
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splPoints">Points</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splPoints" min="3" max="12" step="1" value="5">
-                          <input type="number" id="splPointsNum" min="3" max="12" step="1" value="5" aria-label="Points value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splCurve">Curve length</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splCurve" min="0" max="100" step="1" value="0">
-                          <input type="number" id="splCurveNum" min="0" max="100" step="1" value="0" aria-label="Curve length value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splWaviness">Waviness</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splWaviness" min="0" max="100" step="1" value="100">
-                          <input type="number" id="splWavinessNum" min="0" max="100" step="1" value="100" aria-label="Waviness value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splAmplitude">Peaks &amp; valleys</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splAmplitude" min="0" max="100" step="1" value="16">
-                          <input type="number" id="splAmplitudeNum" min="0" max="100" step="1" value="16" aria-label="Peaks and valleys value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splSize">Splat size (%)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splSize" min="20" max="90" step="1" value="60">
-                          <input type="number" id="splSizeNum" min="20" max="90" step="1" value="60" aria-label="Splat size value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splSeed">Seed</label>
-                        <div class="slider-pair">
-                          <input type="number" id="splSeed" min="0" max="9999" step="1" value="7">
-                          <button type="button" class="btn btn-ghost btn-sm" id="splShuffle">Shuffle</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="small" style="font-weight:600; margin:14px 0 8px;">Dots</div>
+              </div>
+                  <div class="field">
+                    <label for="optCover">Cover image (optional PNG)</label>
+                    <input type="file" id="optCover" accept="image/png,image/jpeg">
+                  </div>
+                  <div class="field hidden" id="coverFitField">
+                    <label for="optCoverFit">Cover fit</label>
+                    <select id="optCoverFit">
+                      <option value="crop">Crop (fill the square)</option>
+                      <option value="keepRatio">Keep ratio (original shape)</option>
+                      <option value="scale">Scale (fit inside)</option>
+                      <option value="center">Center (no resize)</option>
+                      <option value="stretch">Stretch (distort to square)</option>
+                    </select>
+                  </div>
+            </div>
+            <div class="subpanel hidden" data-sub="disc" role="tabpanel" aria-label="Disc">
+                  <div id="cdControls" style="margin-top:12px;">
                     <div class="grid2">
                       <div class="field" style="margin:0;">
-                        <label for="splDotColor">Dot color</label>
-                        <select id="splDotColor">
-                          <option value="rainbowSoft" selected>Rainbow soft</option>
-                          <option value="rainbowStrong">Rainbow strong</option>
-                          <option value="black">Black</option>
-                          <option value="white">White</option>
-                          <option value="dkgray">Dark gray</option>
-                          <option value="ltgray">Light gray</option>
-                          <option value="blue">Blue</option>
-                          <option value="red">Red</option>
-                          <option value="orange">Orange</option>
-                          <option value="yellow">Yellow</option>
-                          <option value="green">Green</option>
-                        </select>
+                        <label for="optLabel">CD label (optional)</label>
+                        <input type="text" id="optLabel" placeholder="e.g. My Mixtape">
                       </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splDotSep">Dot separation (px)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splDotSep" min="1" max="8" step="0.5" value="1.5">
-                          <input type="number" id="splDotSepNum" min="1" max="8" step="0.1" value="1.5" aria-label="Dot separation value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splDotMin">Dot size min (px)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splDotMin" min="0.3" max="4" step="0.1" value="0.5">
-                          <input type="number" id="splDotMinNum" min="0.3" max="4" step="0.1" value="0.5" aria-label="Dot size min value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splDotMax">Dot size max (px)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splDotMax" min="0.3" max="5" step="0.1" value="0.8">
-                          <input type="number" id="splDotMaxNum" min="0.3" max="5" step="0.1" value="0.8" aria-label="Dot size max value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splTextBuffer">Dot buffer from text (px at 256px)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splTextBuffer" min="0" max="40" step="1" value="4">
-                          <input type="number" id="splTextBufferNum" min="0" max="40" step="1" value="4" aria-label="Dot buffer value">
-                        </div>
-                      </div>
-                      <div class="field slider-row" style="margin:0;">
-                        <label for="splTextClear">Dots cleared around text (%)</label>
-                        <div class="slider-pair">
-                          <input type="range" id="splTextClear" min="0" max="100" step="1" value="25">
-                          <input type="number" id="splTextClearNum" min="0" max="100" step="1" value="25" aria-label="Dots cleared around text">
-                        </div>
-                      </div>
+                      <label class="switch" style="align-self:end; margin-bottom:8px;">
+                        <input type="checkbox" id="optSolidBg">
+                        <span class="track"></span> Solid background (smaller disc)
+                      </label>
                     </div>
-                    <div class="small muted" id="splatDisabledNote" style="margin-top:8px; display:none;">Your imprint image is being used instead of the splat.</div>
+                    <div class="field" style="margin:12px 0 0;">
+                      <label for="optImprint">Imprint an image on the disc (optional)</label>
+                      <input type="file" id="optImprint" accept="image/*">
+                      <div class="small muted" id="imprintInfo" style="margin-top:6px;"></div>
+                    </div>
+                    <div id="cdAdvanced" style="margin-top:12px;">
+                      <div class="grid2">
+                        <div class="field" style="margin:0;">
+                          <label for="optFontFamily">Label font</label>
+                          <select id="optFontFamily">
+                            <option value="-apple-system, Segoe UI, Roboto, sans-serif">Sans (system)</option>
+                            <option value="Georgia, 'Times New Roman', serif">Serif</option>
+                            <option value="ui-monospace, Menlo, Consolas, monospace">Monospace</option>
+                            <option value="'Comic Sans MS', 'Marker Felt', fantasy, cursive">Marker</option>
+                          </select>
+                        </div>
+                        <div class="field" style="margin:0;">
+                          <label for="optFontSize">Label size</label>
+                          <select id="optFontSize">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                            <option value="xlarge">Extra large</option>
+                          </select>
+                        </div>
+                        <div class="field" style="margin:10px 0 0; grid-column:1 / -1;">
+                          <label for="optRimText">Rim microtext</label>
+                          <input type="text" id="optRimText" placeholder="Paste into PuttyPNG.com to decode!">
+                        </div>
+                        <div class="field slider-row" style="margin:10px 0 0; grid-column:1 / -1;">
+                          <label for="optRimSize">Rim microtext size (pt at 256px)</label>
+                          <div class="slider-pair">
+                            <input type="range" id="optRimSize" min="4" max="40" step="1" value="13">
+                            <input type="number" id="optRimSizeNum" min="4" max="40" step="1" value="13" aria-label="Rim microtext size in points">
+                          </div>
+                          <div class="small muted">Sized against a 256px disc and scaled from there, so a 512px disc draws it twice as large.</div>
+                        </div>
+                        <div class="field slider-row" style="margin:10px 0 0; grid-column:1 / -1;">
+                          <label for="optRimSpacing">Rim letter spacing (px at 256px)</label>
+                          <div class="slider-pair">
+                            <input type="range" id="optRimSpacing" min="-2" max="16" step="0.5" value="0.5">
+                            <input type="number" id="optRimSpacingNum" min="-2" max="16" step="0.5" value="0.5" aria-label="Rim letter spacing">
+                          </div>
+                        </div>
+                        <div class="field" style="margin:10px 0 0; grid-column:1 / -1;">
+                          <label class="switch">
+                            <input type="checkbox" id="optRimTwoSided">
+                            <span class="track"></span> Force two sided
+                          </label>
+                          <div class="small muted">Always print the text at the top and the bottom, shrinking it to fit each half. Off, long text wraps once around the rim.</div>
+                        </div>
+                      </div>
+
+                      <!-- Hub (the round center): sizes + ring thicknesses -->
+                      <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
+                        <div class="small" style="font-weight:600; margin-bottom:8px;">Hub</div>
+                        <div class="grid2">
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splHubSize">Hub size (%)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splHubSize" min="10" max="40" step="1" value="20">
+                              <input type="number" id="splHubSizeNum" min="10" max="40" step="1" value="20" aria-label="Hub size value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splHoleSize">Hole size (%)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splHoleSize" min="3" max="25" step="1" value="8">
+                              <input type="number" id="splHoleSizeNum" min="3" max="25" step="1" value="8" aria-label="Hole size value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splOuter">Gray outer thickness</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splOuter" min="1" max="20" step="1" value="6">
+                              <input type="number" id="splOuterNum" min="1" max="20" step="1" value="6" aria-label="Gray outer thickness value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splInner">Gray inner thickness</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splInner" min="1" max="20" step="1" value="4">
+                              <input type="number" id="splInnerNum" min="1" max="20" step="1" value="4" aria-label="Gray inner thickness value">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                   </div>
                 </div>
-              </div>
             </div>
+            <div class="subpanel hidden" data-sub="splat" role="tabpanel" aria-label="Splat">
+                      <!-- Putty splat: the default branding imprint (used unless a custom imprint image is chosen) -->
+                      <div id="splatControls" style="margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
+                        <div class="small" style="font-weight:600; margin-bottom:8px;">Putty splat (the default imprint)</div>
+                        <div class="grid2">
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splPoints">Points</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splPoints" min="3" max="12" step="1" value="5">
+                              <input type="number" id="splPointsNum" min="3" max="12" step="1" value="5" aria-label="Points value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splCurve">Curve length</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splCurve" min="0" max="100" step="1" value="0">
+                              <input type="number" id="splCurveNum" min="0" max="100" step="1" value="0" aria-label="Curve length value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splWaviness">Waviness</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splWaviness" min="0" max="100" step="1" value="100">
+                              <input type="number" id="splWavinessNum" min="0" max="100" step="1" value="100" aria-label="Waviness value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splAmplitude">Peaks &amp; valleys</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splAmplitude" min="0" max="100" step="1" value="16">
+                              <input type="number" id="splAmplitudeNum" min="0" max="100" step="1" value="16" aria-label="Peaks and valleys value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splSize">Splat size (%)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splSize" min="20" max="90" step="1" value="60">
+                              <input type="number" id="splSizeNum" min="20" max="90" step="1" value="60" aria-label="Splat size value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splSeed">Seed</label>
+                            <div class="slider-pair">
+                              <input type="number" id="splSeed" min="0" max="9999" step="1" value="7">
+                              <button type="button" class="btn btn-ghost btn-sm" id="splShuffle">Shuffle</button>
+                            </div>
+                          </div>
+                        </div>
 
-            <hr class="divider">
-
-            <div class="grid2">
-              <div class="field">
-                <label for="optPassword">Password (optional, encrypts with AES-256)</label>
-                <input type="password" id="optPassword" placeholder="leave blank for no encryption" autocomplete="new-password">
-              </div>
-              <div class="field">
-                <label for="optTag">Developer tag (plaintext, optional)</label>
-                <input type="text" id="optTag" placeholder="e.g. myapp v2">
-              </div>
-              <div class="field">
-                <label for="optDepth">Embed depth</label>
-                <select id="optDepth">
-                  <option value="standard">Standard - roomy (1 byte / pixel)</option>
-                  <option value="subtle">Subtle - invisible (3 bits / pixel)</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="optSizeMode">Image size</label>
-                <select id="optSizeMode">
-                  <option value="auto">Auto (smallest square that fits)</option>
-                  <option value="pow2">Power of two (32, 64, 128...)</option>
-                  <option value="fixed">Fixed size...</option>
-                </select>
-              </div>
-              <div class="field hidden" id="fixedSizeField">
-                <label for="optFixedSize">Fixed size (pixels, square)</label>
-                <input type="number" id="optFixedSize" min="32" max="4096" step="1" value="256">
-              </div>
-              <div class="field" id="minSizeField">
-                <label for="optMinSize">Minimum size (pixels, square)</label>
-                <input type="number" id="optMinSize" min="32" max="4096" step="1" value="256">
-                <div class="small muted">The smallest an auto-sized PuttyPNG can be. A fixed size ignores this.</div>
-              </div>
-              <div class="field">
-                <label for="optCover">Cover image (optional PNG)</label>
-                <input type="file" id="optCover" accept="image/png,image/jpeg">
-              </div>
-              <div class="field hidden" id="coverFitField">
-                <label for="optCoverFit">Cover fit</label>
-                <select id="optCoverFit">
-                  <option value="crop">Crop (fill the square)</option>
-                  <option value="keepRatio">Keep ratio (original shape)</option>
-                  <option value="scale">Scale (fit inside)</option>
-                  <option value="center">Center (no resize)</option>
-                  <option value="stretch">Stretch (distort to square)</option>
-                </select>
-              </div>
+                        <div class="small" style="font-weight:600; margin:14px 0 8px;">Dots</div>
+                        <div class="grid2">
+                          <div class="field" style="margin:0;">
+                            <label for="splDotColor">Dot color</label>
+                            <select id="splDotColor">
+                              <option value="rainbowSoft" selected>Rainbow soft</option>
+                              <option value="rainbowStrong">Rainbow strong</option>
+                              <option value="black">Black</option>
+                              <option value="white">White</option>
+                              <option value="dkgray">Dark gray</option>
+                              <option value="ltgray">Light gray</option>
+                              <option value="blue">Blue</option>
+                              <option value="red">Red</option>
+                              <option value="orange">Orange</option>
+                              <option value="yellow">Yellow</option>
+                              <option value="green">Green</option>
+                            </select>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splDotSep">Dot separation (px)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splDotSep" min="1" max="8" step="0.5" value="1.5">
+                              <input type="number" id="splDotSepNum" min="1" max="8" step="0.1" value="1.5" aria-label="Dot separation value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splDotMin">Dot size min (px)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splDotMin" min="0.3" max="4" step="0.1" value="0.5">
+                              <input type="number" id="splDotMinNum" min="0.3" max="4" step="0.1" value="0.5" aria-label="Dot size min value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splDotMax">Dot size max (px)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splDotMax" min="0.3" max="5" step="0.1" value="0.8">
+                              <input type="number" id="splDotMaxNum" min="0.3" max="5" step="0.1" value="0.8" aria-label="Dot size max value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splTextBuffer">Dot buffer from text (px at 256px)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splTextBuffer" min="0" max="40" step="1" value="4">
+                              <input type="number" id="splTextBufferNum" min="0" max="40" step="1" value="4" aria-label="Dot buffer value">
+                            </div>
+                          </div>
+                          <div class="field slider-row" style="margin:0;">
+                            <label for="splTextClear">Dots cleared around text (%)</label>
+                            <div class="slider-pair">
+                              <input type="range" id="splTextClear" min="0" max="100" step="1" value="25">
+                              <input type="number" id="splTextClearNum" min="0" max="100" step="1" value="25" aria-label="Dots cleared around text">
+                            </div>
+                          </div>
+                        </div>
+                        <div class="small muted" id="splatDisabledNote" style="margin-top:8px; display:none;">Your imprint image is being used instead of the splat.</div>
+                      </div>
             </div>
-
-            <div class="row" style="margin-top:4px; gap:20px;">
-              <label class="switch">
-                <input type="checkbox" id="optCompress" checked>
-                <span class="track"></span> Compress automatically
-              </label>
+            <div class="subpanel hidden" data-sub="size" role="tabpanel" aria-label="Size">
+                  <div class="field">
+                    <label for="optSizeMode">Image size</label>
+                    <select id="optSizeMode">
+                      <option value="auto">Auto (smallest square that fits)</option>
+                      <option value="pow2">Power of two (32, 64, 128...)</option>
+                      <option value="fixed">Fixed size...</option>
+                    </select>
+                  </div>
+                  <div class="field hidden" id="fixedSizeField">
+                    <label for="optFixedSize">Fixed size (pixels, square)</label>
+                    <input type="number" id="optFixedSize" min="32" max="4096" step="1" value="256">
+                  </div>
+                  <div class="field" id="minSizeField">
+                    <label for="optMinSize">Minimum size (pixels, square)</label>
+                    <input type="number" id="optMinSize" min="32" max="4096" step="1" value="256">
+                    <div class="small muted">The smallest an auto-sized PuttyPNG can be. A fixed size ignores this.</div>
+                  </div>
+                  <div class="field">
+                    <label for="optDepth">Embed depth</label>
+                    <select id="optDepth">
+                      <option value="standard">Standard - roomy (1 byte / pixel)</option>
+                      <option value="subtle">Subtle - invisible (3 bits / pixel)</option>
+                    </select>
+                  </div>
+                <div class="row" style="margin-top:4px; gap:20px;">
+                  <label class="switch">
+                    <input type="checkbox" id="optCompress" checked>
+                    <span class="track"></span> Compress automatically
+                  </label>
+                </div>
+            </div>
+            <div class="subpanel hidden" data-sub="security" role="tabpanel" aria-label="Security">
+                  <div class="field">
+                    <label for="optPassword">Password (optional, encrypts with AES-256)</label>
+                    <input type="password" id="optPassword" placeholder="leave blank for no encryption" autocomplete="new-password">
+                  </div>
+                  <div class="field">
+                    <label for="optTag">Developer tag (plaintext, optional)</label>
+                    <input type="text" id="optTag" placeholder="e.g. myapp v2">
+                  </div>
+            </div>
+            <div class="subpanel hidden" data-sub="display" role="tabpanel" aria-label="Display">
+                <!-- Display. Two separate switches: one for the motion, one
+                     for the celebration. A person may want one without the
+                     other, so neither controls the other. -->
+                <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:12px;">
+                  <div class="small" style="font-weight:600; margin-bottom:8px;">Display</div>
+                  <div class="row" style="gap:20px;">
+                    <label class="switch">
+                      <input type="checkbox" id="optAnimations" checked>
+                      <span class="track"></span> Animations
+                    </label>
+                    <label class="switch">
+                      <input type="checkbox" id="optCelebration" checked>
+                      <span class="track"></span> Celebration
+                    </label>
+                  </div>
+                  <div class="small muted" style="margin-top:6px;">Animations is the movement. Celebration is the confetti. Your choice is remembered on this device.</div>
+                </div>
             </div>
           </div>
+            </div>
+          </div>
+
+          <!-- STEP TWO - the result. Hidden until there is one. -->
+          <div class="step hidden" id="stepResult">
+            <h2>What was inside</h2>
+            <div class="badges" id="resultBadges"></div>
+            <div id="resultTextWrap">
+              <label class="small muted" for="resultText">Decoded contents</label>
+              <div class="result-text mono" id="resultText"></div>
+            </div>
+            <div class="row" id="resultActions" style="margin-top:12px;"></div>
+          </div>
+
+          <!-- A drop that could not mean anything. It sits below whichever
+               step is showing and never replaces it. -->
+          <div class="bad-drop hidden" id="badDrop" role="alert">
+            <div class="bad-drop-head">Bad drop</div>
+            <div class="bad-drop-msg" id="badDropMsg"></div>
+            <div class="bad-drop-code mono" id="badDropCode"></div>
+          </div>
+
         </div>
 
-        <!-- Output -->
-        <div id="output" class="hidden" style="margin-top:22px;">
-          <hr class="divider">
-          <div class="preview">
-            <div class="frame">
-              <img id="outImg" alt="Your generated PuttyPNG" width="200" height="200">
-            </div>
-            <div class="meta">
-              <div id="outStats"></div>
-              <div class="row" style="margin-top:14px;">
-                <button class="btn btn-clay btn-sm" id="saveBtn" type="button">Save PNG</button>
-                <button class="btn btn-ghost btn-sm" id="copyImgBtn" type="button">Copy image</button>
+        <!-- THE DRIVE.
+             Three states: empty, out, and in. The button always says what will
+             happen next, and the footer says what the drive is holding. -->
+        <div class="module-deck" id="deck">
+          <!-- On a phone the drive is a sheet at the foot of the screen. The
+               handle is what a person grabs to bring it up or tuck it away. -->
+          <button type="button" class="deck-handle" id="deckHandle" aria-label="Show or hide the drive">
+            <span class="grip" aria-hidden="true"></span>
+          </button>
+          <div class="slot" id="slot">
+            <!-- The holder carries every transform. The image inside keeps the
+                 shape the page sets from the real PNG. -->
+            <div class="disc-holder" id="discHolder">
+              <img id="outImg" class="disc hidden" alt="Your PuttyPNG" width="200" height="200">
+              <!-- These act on the picture, so they live on the picture.
+                   Right-click and press and hold still work: the disc is a
+                   real image and these two never cover all of it. -->
+              <div class="disc-tools hidden" id="discTools">
+                <button type="button" class="disc-btn" id="saveBtn" title="Save PNG" aria-label="Save this PuttyPNG as a file">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                    <path d="M12 3v11m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+                          fill="none" stroke="currentColor" stroke-width="2"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button type="button" class="disc-btn" id="copyImgBtn" title="Copy image" aria-label="Copy this PuttyPNG to the clipboard">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                    <rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path d="M5 15V6a2 2 0 0 1 2-2h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
               </div>
-              <p class="small muted" style="margin-top:12px;">Right-click the image to copy or save it too. Paste it into the reader below to prove the round-trip.</p>
             </div>
+            <!-- The face hides the lower part of the deck. The disc goes behind
+                 it rather than being cut off, so it reads as being inside a
+                 machine. The window shows the disc running while it is loaded. -->
+            <div class="slot-face" aria-hidden="true">
+              <div class="glass" id="glass"></div>
+            </div>
+            <div class="lip" aria-hidden="true"></div>
           </div>
+
+          <button type="button" class="drive-btn hidden" id="driveBtn">Decode PuttyPNG</button>
+          <div class="deck-foot hidden" id="deckFoot"></div>
         </div>
-      </div>
-
-      <!-- IMPORT -->
-      <div class="card">
-        <h2>Read a PuttyPNG</h2>
-        <p class="small">Drop, paste, or choose a PuttyPNG and see what is inside.</p>
-
-        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop, paste, or choose a PuttyPNG to read" style="margin-top:14px;">
-          <div class="big">Drop a PNG here</div>
-          <div class="hint">or paste with Ctrl/Cmd+V &middot; or <span style="color:var(--clay-deep); font-weight:600;">click to browse [...]</span></div>
-          <input type="file" id="importFile" accept="image/png" class="hidden" aria-label="Choose a PuttyPNG file to read">
-        </div>
-
-        <div class="result-box hidden" id="resultBox">
-          <div class="badges" id="resultBadges"></div>
-          <div id="resultTextWrap">
-            <label class="small muted" for="resultText">Decoded contents</label>
-            <div class="result-text mono" id="resultText"></div>
-          </div>
-          <div class="row" id="resultActions" style="margin-top:12px;"></div>
-        </div>
-      </div>
-
-      <!-- HOW IT WORKS -->
-      <h2 class="section-title">How it works</h2>
-      <p class="section-sub">No server and no magic. Clever use of an ordinary lossless PNG.</p>
-      <div class="card">
-        <p style="margin-bottom:12px;">A PNG stores its pixels <strong>losslessly</strong> - every color value survives a copy, a paste, even a trip through many chat apps. PuttyPNG hides your data in the lowest, least-visible bits of the red, green, and blue channels of the image's fully opaque pixels. Nudging those bits shifts each color by an amount your eye cannot see, but the bytes are perfectly recoverable.</p>
-        <div class="grid2">
-          <div>
-            <h3>The protocol</h3>
-            <p class="small">A tiny header (<span class="mono">PPNG</span> + version + a CRC32 checksum) marks the image and guarantees the data came out exactly as it went in. Descriptive details ride in a small JSON block; the version byte lets the format grow without ever misreading an old PuttyPNG.</p>
-          </div>
-          <div>
-            <h3>Compression &amp; encryption</h3>
-            <p class="small">Data is gzip-compressed automatically whenever that helps. Add a password and it is sealed with AES-256-GCM (a key stretched from your password with PBKDF2) - the filename and type are hidden too, so an encrypted PuttyPNG reveals nothing until it is opened.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- DROP-IN 1-2-3 -->
-      <h2 class="section-title">Drop it into your own project</h2>
-      <p class="section-sub">Three copy-paste steps. No build tools, no dependencies, works offline.</p>
-
-      <div class="snippet">
-        <div class="snippet-head">
-          <span class="n"><span class="num">1</span> The Engine</span>
-          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="engineCode">Copy engine</button>
-        </div>
-        <pre id="engineCode" aria-label="PuttyPNG engine source">Loading engine source...</pre>
-        <div class="cap">Save as <span class="mono">puttypng.js</span> and include it, or paste the whole thing into a <span class="mono">&lt;script&gt;</span> tag. This is the entire protocol - the only file you truly need. <a class="btn btn-ghost btn-sm" href="puttypng.js" download style="margin-left:6px;">Download puttypng.js</a></div>
-      </div>
-
-      <div class="snippet">
-        <div class="snippet-head">
-          <span class="n"><span class="num">2</span> The Importer</span>
-          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="importerCode">Copy importer</button>
-        </div>
-        <pre id="importerCode"></pre>
-        <div class="cap">A drop / paste / browse zone. Everything decoded is handed to your <span class="mono">onData</span> callback - your form, game, or app decides what to do with it.</div>
-      </div>
-
-      <div class="snippet">
-        <div class="snippet-head">
-          <span class="n"><span class="num">3</span> The Exporter</span>
-          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="exporterCode">Copy exporter</button>
-        </div>
-        <pre id="exporterCode"></pre>
-        <div class="cap">A box and a button that turns whatever the user types into a downloadable PuttyPNG. See the Docs tab for encryption, custom covers, and calling the engine directly.</div>
       </div>
 
     </section>
@@ -549,7 +569,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             <tbody>
               <tr><td class="mono">PuttyPNG.version</td><td>Engine version string (e.g. <span class="mono">"1.0.0"</span>).</td></tr>
               <tr><td class="mono">PuttyPNG.protocolVersion</td><td>Protocol version number (<span class="mono">1</span>).</td></tr>
-              <tr><td class="mono">PuttyPNG.errors</td><td>The <span class="mono">{ E01: "...", ... }</span> code table (see below).</td></tr>
+              <tr><td class="mono">PuttyPNG.errors</td><td>The <span class="mono">{ "PTY-E00": "...", ... }</span> code table (see below).</td></tr>
               <tr><td class="mono">PuttyPNG.selfTest()</td><td>Runs the built-in test battery; returns <span class="mono">{ passed, failed, results }</span>.</td></tr>
             </tbody>
           </table></div>
@@ -566,7 +586,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             <thead><tr><th>Offset</th><th>Size</th><th>Field</th></tr></thead>
             <tbody>
               <tr><td class="mono">0</td><td>4</td><td>Magic <span class="mono">PPNG</span></td></tr>
-              <tr><td class="mono">4</td><td>1</td><td>Protocol version (decoders reject a higher number &rarr; E02)</td></tr>
+              <tr><td class="mono">4</td><td>1</td><td>Protocol version (decoders reject a higher number &rarr; PTY-E01)</td></tr>
               <tr><td class="mono">5</td><td>1</td><td>Flags: bit0 compressed, bit1 encrypted, bit2 subtle depth</td></tr>
               <tr><td class="mono">6</td><td>2</td><td>Developer-tag length</td></tr>
               <tr><td class="mono">8</td><td>2</td><td>Outer-metadata length</td></tr>
@@ -588,7 +608,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
           <h3 style="margin-top:16px;">Order of operations</h3>
           <p class="small">Encode: build inner container &rarr; gzip (if it helps) &rarr; encrypt (if a password is given) &rarr; CRC32 &rarr; embed. Decode reverses it, and the CRC is checked <em>before</em> any password is requested.</p>
           <h3 style="margin-top:16px;">Versioning</h3>
-          <p class="small">The version <em>byte</em> bumps only on a breaking byte-layout change. An old engine refuses a newer PuttyPNG (E02) instead of emitting garbage. Backwards-compatible growth happens by adding optional keys to the metadata JSON, which old decoders ignore.</p>
+          <p class="small">The version <em>byte</em> bumps only on a breaking byte-layout change. An old engine refuses a newer PuttyPNG (PTY-E01) instead of emitting garbage. Backwards-compatible growth happens by adding optional keys to the metadata JSON, which old decoders ignore.</p>
         </div>
       </div>
 
@@ -615,10 +635,27 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
       <!-- ERRORS -->
       <div class="doc-section" id="docs-errors">
         <h2>Error codes</h2>
-        <p>Every failure is one short, documented <span class="mono">E##</span> code, logged to the console and thrown as a <span class="mono">PuttyPNGError</span> whose <span class="mono">.code</span> you can branch on. This table is generated live from <span class="mono">PuttyPNG.errors</span>, so it always matches the engine on the page.</p>
+        <p>Every failure is one short, documented code, logged to the console and thrown as a <span class="mono">PuttyPNGError</span> whose <span class="mono">.code</span> you can branch on. There are two families, and one event always has exactly one code.</p>
+
+        <h3>Engine errors: <span class="mono">PTY-</span></h3>
+        <p class="small">Thrown by the engine. This table is generated live from <span class="mono">PuttyPNG.errors</span>, so it always matches the engine on the page.</p>
         <div class="card"><div class="tablewrap"><table class="doc" id="errorTable">
           <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
           <tbody id="errorTableBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+        </table></div></div>
+
+        <h3>Page errors: <span class="mono">DRP-</span></h3>
+        <p class="small">Raised by the page, not the engine, when a drop cannot mean anything. These never reach your code if you call the engine yourself. They stop before a file is handed over, which is why a bad drop cannot disturb a result already on screen.</p>
+        <div class="card"><div class="tablewrap"><table class="doc">
+          <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+          <tbody id="dropTableBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+        </table></div></div>
+
+        <h3>Moving from 1.0.0</h3>
+        <p class="small">Engine 2.0.0 renamed every code. The protocol did not change, so <strong>every PuttyPNG made with 1.0.0 still decodes</strong>. Only code that compared <span class="mono">err.code</span> to an old value needs an edit. The number shifted as well as gaining the prefix, so read this table by <em>meaning</em>, not by number: old <span class="mono">E06</span> is not new <span class="mono">PTY-E06</span>.</p>
+        <div class="card"><div class="tablewrap"><table class="doc">
+          <thead><tr><th>1.0.0</th><th>2.0.0</th><th>Meaning</th></tr></thead>
+          <tbody id="migrateTableBody"><tr><td colspan="3" class="muted">Loading...</td></tr></tbody>
         </table></div></div>
       </div>
 
@@ -748,7 +785,8 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
           <div class="tablewrap"><table class="doc">
             <thead><tr><th>Version</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td class="mono">Engine 1.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with version byte + CRC32; standard &amp; subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM + PBKDF2-SHA-256 encryption (private by default); plaintext developer tag with <span class="mono">peek()</span>; noise or custom covers; <span class="mono">E01</span> to <span class="mono">E12</span> error codes.</td></tr>
+              <tr><td class="mono">Engine 2.0.0<br>Protocol 1</td><td><strong>Breaking API change.</strong> Every engine error code gained the <span class="mono">PTY-</span> prefix and renumbered from <span class="mono">00</span>: old <span class="mono">E01</span> is now <span class="mono">PTY-E00</span>, through to <span class="mono">E12</span>, now <span class="mono">PTY-E11</span>. Added <span class="mono">PTY-E99</span> for a failure the engine did not classify. Page-level drop failures use the separate <span class="mono">DRP-</span> family. <strong>The protocol and the byte layout did not change, so every existing PuttyPNG still decodes.</strong> Code that compared <span class="mono">err.code</span> to an old value must be updated: see the migration table below.</td></tr>
+              <tr><td class="mono">Engine 1.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with version byte + CRC32; standard &amp; subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM + PBKDF2-SHA-256 encryption (private by default); plaintext developer tag with <span class="mono">peek()</span>; noise or custom covers; <span class="mono">E01</span> to <span class="mono">E12</span> error codes (renamed in 2.0.0, see below).</td></tr>
             </tbody>
           </table></div>
         </div>
@@ -759,9 +797,9 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
        SECTION 6 - TUTORIAL AND DOWNLOAD
        The walkthrough, and the page that says how to get the four files.
        ========================================================================== -->
-    <section class="tab-panel" id="tab-tutorial" role="tabpanel" aria-labelledby="tabbtn-tutorial">
-      <h2>Tutorial</h2>
-      <p class="lede">From "what is this?" to "it's in my project" in a few minutes.</p>
+    <section class="tab-panel" id="tab-howitworks" role="tabpanel" aria-labelledby="tabbtn-howitworks">
+      <h2>How it works</h2>
+      <p class="lede">From "what is this?" to "it is in my project" in a few minutes.</p>
 
       <div class="card">
         <h3>1. What a PuttyPNG is</h3>
@@ -786,15 +824,79 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
       </div>
 
       <div class="card">
-        <h3>3. Drop it into your project</h3>
-        <p>Three copy-paste steps, no build tools:</p>
-        <ol style="margin:8px 0 8px 20px; color:var(--ink-soft); font-size:15px;">
-          <li style="margin:4px 0;"><strong>The Engine</strong>: save <span class="mono">puttypng.js</span> and include it.</li>
-          <li style="margin:4px 0;"><strong>The Importer</strong>: a drop/paste/browse zone that hands decoded data to your callback.</li>
-          <li style="margin:4px 0;"><strong>The Exporter</strong>: a box and a button that make a PuttyPNG.</li>
-        </ol>
-        <p class="small">All three, ready to copy, are on the <a href="#" data-gototab="puttypng">PuttyPNG tab</a>.</p>
+        <h3>3. A whole page, or one zone</h3>
+        <p class="small">A drop target can be the entire page or a single bounded area. The box below is a bounded one. Drop a PuttyPNG on it, or click it to browse, and the result opens on the PuttyPNG tab.</p>
+
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Drop, paste, or choose a PuttyPNG to read" style="margin-top:14px;">
+          <div class="big">Drop a PNG here</div>
+          <div class="hint">or paste with Ctrl/Cmd+V &middot; or <span style="color:var(--clay-deep); font-weight:600;">click to browse [...]</span></div>
+          <input type="file" id="importFile" accept="image/png" class="hidden" aria-label="Choose a PuttyPNG file to read">
+        </div>
       </div>
+
+
+      <details class="sect card">
+        <summary>
+          <span class="sect-title"><span class="chev-d">&rsaquo;</span> Under the hood</span>
+          <span class="sect-sub">No server and no magic. Clever use of an ordinary lossless PNG.</span>
+        </summary>
+        <div class="sect-body">
+          <div class="card">
+            <p style="margin-bottom:12px;">A PNG stores its pixels <strong>losslessly</strong> - every color value survives a copy, a paste, even a trip through many chat apps. PuttyPNG hides your data in the lowest, least-visible bits of the red, green, and blue channels of the image's fully opaque pixels. Nudging those bits shifts each color by an amount your eye cannot see, but the bytes are perfectly recoverable.</p>
+            <div class="grid2">
+              <div>
+                <h3>The protocol</h3>
+                <p class="small">A tiny header (<span class="mono">PPNG</span> + version + a CRC32 checksum) marks the image and guarantees the data came out exactly as it went in. Descriptive details ride in a small JSON block; the version byte lets the format grow without ever misreading an old PuttyPNG.</p>
+              </div>
+              <div>
+                <h3>Compression &amp; encryption</h3>
+                <p class="small">Data is gzip-compressed automatically whenever that helps. Add a password and it is sealed with AES-256-GCM (a key stretched from your password with PBKDF2) - the filename and type are hidden too, so an encrypted PuttyPNG reveals nothing until it is opened.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="sect card">
+        <summary>
+          <span class="sect-title"><span class="chev-d">&rsaquo;</span> 4. Drop it into your own project</span>
+          <span class="sect-sub">Three copy-paste steps. No build tools, no dependencies, works offline.</span>
+        </summary>
+        <div class="sect-body">
+            <ol style="margin:8px 0 8px 20px; color:var(--ink-soft); font-size:15px;">
+              <li style="margin:4px 0;"><strong>The Engine</strong>: save <span class="mono">puttypng.js</span> and include it.</li>
+              <li style="margin:4px 0;"><strong>The Importer</strong>: a drop/paste/browse zone that hands decoded data to your callback.</li>
+              <li style="margin:4px 0;"><strong>The Exporter</strong>: a box and a button that make a PuttyPNG.</li>
+            </ol>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <span class="n"><span class="num">1</span> The Engine</span>
+              <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="engineCode">Copy engine</button>
+            </div>
+            <pre id="engineCode" aria-label="PuttyPNG engine source">Loading engine source...</pre>
+            <div class="cap">Save as <span class="mono">puttypng.js</span> and include it, or paste the whole thing into a <span class="mono">&lt;script&gt;</span> tag. This is the entire protocol - the only file you truly need. <a class="btn btn-ghost btn-sm" href="puttypng.js" download style="margin-left:6px;">Download puttypng.js</a></div>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <span class="n"><span class="num">2</span> The Importer</span>
+              <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="importerCode">Copy importer</button>
+            </div>
+            <pre id="importerCode"></pre>
+            <div class="cap">A drop / paste / browse zone. Everything decoded is handed to your <span class="mono">onData</span> callback - your form, game, or app decides what to do with it.</div>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <span class="n"><span class="num">3</span> The Exporter</span>
+              <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="exporterCode">Copy exporter</button>
+            </div>
+            <pre id="exporterCode"></pre>
+            <div class="cap">A box and a button that turns whatever the user types into a downloadable PuttyPNG. See the Docs tab for encryption, custom covers, and calling the engine directly.</div>
+          </div>
+        </div>
+      </details>
 
       <div class="card">
         <h3>Going further</h3>
@@ -838,6 +940,29 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
 
     <div class="foot">PuttyPNG &middot; Protocol v1 &middot; MIT &copy; 2026 Aaron Michael Harris</div>
   </div>
+
+  <!-- The page-wide drop target. One overlay for the whole window, raised
+       while a file is over the page. Hidden until then. -->
+  <div class="drop-veil hidden" id="dropVeil" aria-hidden="true">
+    <div class="drop-card">
+      <div class="drop-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="44" height="44" focusable="false">
+          <path d="M24 32V10m0 0l-8 8m8-8l8 8M8 32v4a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-4"
+                fill="none" stroke="currentColor" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="drop-big" id="dropBig">Drop it anywhere</div>
+      <div class="drop-sub" id="dropSub">A PuttyPNG decodes. Any other file attaches.</div>
+    </div>
+  </div>
+
+  <!-- Where the kill animations and an arriving disc are drawn. It is fixed
+       and unclipped, so pieces fly across the whole page. -->
+  <div class="show-layer" id="showLayer" aria-hidden="true"></div>
+
+  <!-- Where the ribbons fall. Emptied after every burst. -->
+  <div class="confetti-host" id="confettiHost" aria-hidden="true"></div>
 
   <div id="toast" role="status" aria-live="polite"></div>
 
