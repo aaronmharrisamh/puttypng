@@ -45,11 +45,20 @@
   // Each rung keeps its own colour, so the finished bands read as a record of
   // the climb. The ladder steps gray, yellow, orange, hot orange, so a change
   // of rung is a change of hue and not only a change of shade.
+  /* WHAT FITS, MEASURED FROM THE ENGINE.
+     cap is with the jewel case behind the disc, which makes every pixel of the
+     square opaque. clear is the bare disc, whose corners carry nothing.
+
+     Each number is the opaque pixel count less 111 bytes, which is what the
+     header costs. It is the same 111 at every size and either way, and it was
+     found by encoding against a pinned ceiling: a fixed size on its own is
+     where the engine starts, not where it stops, so a search that does not pin
+     maxSize measures nothing but the engine's willingness to grow. */
   var RUNGS = [
-    { px: 256,  cap: 46698,   color: [124, 124, 132] },
-    { px: 512,  cap: 186032,  color: [226, 183,  47] },
-    { px: 1024, cap: 742231,  color: [231, 130,  30] },
-    { px: 2048, cap: 2965695, color: [226,  85,  26] }
+    { px: 256,  cap: 65425,   clear: 46635,   color: [124, 124, 132] },
+    { px: 512,  cap: 262033,  clear: 185969,  color: [226, 183,  47] },
+    { px: 1024, cap: 1048465, clear: 742168,  color: [231, 130,  30] },
+    { px: 2048, cap: 4194193, clear: 2965632, color: [226,  85,  26] }
   ];
 
   // Past the largest disc there is no rung, only a warning.
@@ -393,8 +402,15 @@
     return sel && sel.value === "subtle" ? 3 / 8 : 1;
   }
 
+  // Leaving the background out costs about three tenths of the square.
+  function backgroundIsSolid() {
+    var box = $("optSolidBg");
+    return !box || box.checked;
+  }
+
   function capOf(i) {
-    return Math.round(RUNGS[i].cap * depthFactor());
+    var base = backgroundIsSolid() ? RUNGS[i].cap : RUNGS[i].clear;
+    return Math.round(base * depthFactor());
   }
 
   // Which rung holds this many packed bytes, or one past the end when none does.
@@ -409,6 +425,8 @@
   function bandsFor(k) {
     if (k === 0) return [{ i: 0, r0: R_IN, r1: R_OUT }];
     var out = [], innerT = BAND_SPAN * 0.34, outerT = BAND_SPAN * 0.66, w = [], sum = 0, i;
+    // Always the same number, so the rings keep their widths when the
+    // background is switched. Only how full they are should change.
     for (i = 0; i < k; i++) { var v = Math.sqrt(RUNGS[i].cap); w.push(v); sum += v; }
     var r = R_IN;
     for (i = 0; i < k; i++) {
@@ -1254,6 +1272,24 @@
     // The reading depends on the depth, so a change of depth redraws it.
     var depth = $("optDepth");
     if (depth) depth.addEventListener("change", function () { updateHomeMeter(true); });
+
+    /* ONE SETTING, TWO CONTROLS. The switch under the button and the one in
+       Advanced are the same thing said two ways round, so each follows the
+       other and the reading is redrawn whichever was used. */
+    var clear = $("clearBg"), solid = $("optSolidBg");
+    if (clear && solid) {
+      clear.checked = !solid.checked;
+      clear.addEventListener("change", function () {
+        solid.checked = !clear.checked;
+        if (homeDiscOut) tossDisc();
+        updateHomeMeter(true);
+      });
+      solid.addEventListener("change", function () {
+        clear.checked = !solid.checked;
+        if (homeDiscOut) tossDisc();
+        updateHomeMeter(true);
+      });
+    }
 
     $("homeMakeBtn").addEventListener("click", pressHomeDisc);
   }

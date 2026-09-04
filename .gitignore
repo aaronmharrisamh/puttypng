@@ -17,6 +17,7 @@
 
 # Local-only developer tooling. Scratch scripts, one-off utilities, helpers.
 /.devtools/
+/.claude/
 
 # AI agent instruction files. Deliberately NOT root-anchored, so a nested
 # CLAUDE.md or AGENTS.md in any subfolder is ignored too.
@@ -47,3 +48,5 @@ Desktop.ini
 npm-debug.log*
 .env
 .env.local
+
+.claude/claude.hooks.system/claude.hooks.signals/

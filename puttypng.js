@@ -1278,13 +1278,14 @@
     var ctx = canvas.getContext("2d", { willReadFrequently: true });
     ctx.clearRect(0, 0, size, size);
 
-    // Optional soft-gradient background (fills the corners -> more capacity).
+    /* THE CASE MAKES ROOM FOR ITSELF. A disc lying in a jewel case does not
+       reach the edge of it, so the whole disc is drawn a little smaller when
+       the case is behind it. This costs no capacity: the case is opaque, so
+       whatever the disc gives up the case takes back. */
     if (opts.solidBackground) {
-      var bg = ctx.createRadialGradient(geo.cx, geo.cy, size * 0.1, geo.cx, geo.cy, size * 0.75);
-      bg.addColorStop(0, "#f4f4f6");
-      bg.addColorStop(1, "#d9d9de");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, size, size);
+      var inset = CASE_DISC_SCALE;
+      geo.rOuter *= inset; geo.rSheen *= inset; geo.rLabel *= inset;
+      geo.rRim *= inset; geo.rHub *= inset; geo.rHole *= inset;
     }
 
     // --- Disc body: silver base ---
@@ -1408,8 +1409,158 @@
       drawRimText(ctx, rimBand, geo, size, rimTextStyle(rimBand.px));
     }
 
+    /* THE CASE GOES IN BEHIND, LAST. Drawing it under the finished disc with
+       destination-over does three things at once: it fills the corners, it
+       fills the spindle hole that was punched clean through, and it keeps the
+       gloss off the disc without any clipping. Every pixel of the square ends
+       up opaque, which is the whole point of the solid background. */
+    if (opts.solidBackground) {
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.drawImage(makeJewelCase(size), 0, 0);
+      ctx.restore();
+    }
+
     return ctx.getImageData(0, 0, size, size);
   }
+
+  /* ==========================================================================
+     THE JEWEL CASE
+     A light grey case lying on white paper. It is not transparent anywhere:
+     every pixel of the square is fully opaque, which is what lets a PuttyPNG
+     survive being flattened onto a background. The look does the rest.
+     ========================================================================== */
+
+  // How much of its size the disc gives up to sit inside the case.
+  var CASE_DISC_SCALE = 0.885;
+
+  // Built on its own canvas and composited in one go. Painting it straight on
+  // with destination-over would let the paper cover the case, because after
+  // the first fill nothing underneath is transparent any more.
+  function makeJewelCase(size) {
+    var c = makeCanvas(size, size);
+    var g = c.getContext("2d", { willReadFrequently: true });
+
+    /* THE PAPER. White, edge to edge, so the corners are white and every
+       pixel of the square carries data. It is a shade off pure white on
+       purpose: at the standard depth three bits can only take 255 downward,
+       and a one-sided change on a flat white field is the visible kind. */
+    g.fillStyle = "#fbfbfc";
+    g.fillRect(0, 0, size, size);
+
+    /* THE CASE. A rounded slab of light grey, held in from the edge so the
+       paper shows around it, with a soft shadow so it lies on the page rather
+       than being painted onto it. */
+    var pad = Math.max(2, Math.round(size * 0.035));
+    var round = size * 0.055;
+    var body = g.createLinearGradient(pad, pad, size * 0.35, size - pad);
+    body.addColorStop(0.00, "#eef0f4");
+    body.addColorStop(0.45, "#dcdee4");
+    body.addColorStop(1.00, "#c7cad2");
+
+    g.save();
+    g.shadowColor = "rgba(24,26,34,0.20)";
+    g.shadowBlur = Math.max(2, size * 0.030);
+    g.shadowOffsetY = Math.max(1, size * 0.008);
+    g.fillStyle = body;
+    roundRectPath(g, pad, pad, size - pad * 2, size - pad * 2, round);
+    g.fill();
+    g.restore();
+
+    /* Everything below is kept inside the case, so none of it touches the
+       paper at the corners. */
+    g.save();
+    roundRectPath(g, pad, pad, size - pad * 2, size - pad * 2, round);
+    g.clip();
+
+    // A pool of light where the disc will sit, which reads as depth under the
+    // lid and is only a lighter patch of solid colour.
+    var pool = g.createRadialGradient(size * 0.5, size * 0.46, size * 0.05,
+                                      size * 0.5, size * 0.5, size * 0.60);
+    pool.addColorStop(0, "rgba(255,255,255,0.55)");
+    pool.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = pool;
+    g.fillRect(0, 0, size, size);
+
+    /* THE GLOSS. One long highlight falling across the upper left, the way a
+       window lands on a hard shiny surface. It is on the case only: the disc
+       is composited over the top of it afterwards. */
+    var gloss = g.createLinearGradient(0, 0, size * 0.8, size * 0.8);
+    gloss.addColorStop(0.00, "rgba(255,255,255,0.92)");
+    gloss.addColorStop(0.45, "rgba(255,255,255,0.30)");
+    gloss.addColorStop(0.66, "rgba(255,255,255,0)");
+    g.save();
+    g.beginPath();
+    // A wide, shallow arc: the bright half of an ellipse leaning off the corner.
+    g.ellipse(size * 0.28, size * -0.12, size * 0.95, size * 0.62, -0.5, 0, Math.PI * 2);
+    g.clip();
+    g.fillStyle = gloss;
+    g.fillRect(0, 0, size, size);
+    g.restore();
+
+    // The moulded lip, brighter along the top where the light is.
+    var edge = g.createLinearGradient(0, pad, 0, size - pad);
+    edge.addColorStop(0, "rgba(255,255,255,0.95)");
+    edge.addColorStop(0.5, "rgba(255,255,255,0.35)");
+    edge.addColorStop(1, "rgba(255,255,255,0.55)");
+    g.strokeStyle = edge;
+    g.lineWidth = Math.max(1, size * 0.006);
+    roundRectPath(g, pad, pad, size - pad * 2, size - pad * 2, round);
+    g.stroke();
+    g.restore();
+
+    // And the thickness of the plastic, drawn outside the clip so the line
+    // sits on the case edge rather than being cut in half by it.
+    g.strokeStyle = "rgba(40,44,56,0.30)";
+    g.lineWidth = Math.max(1, size * 0.004);
+    roundRectPath(g, pad, pad, size - pad * 2, size - pad * 2, round);
+    g.stroke();
+
+    /* GRAIN, WHICH IS NOT DECORATION. A flat field is the worst place to hide
+       data: at the standard depth three bits of red move a pixel by a step
+       that shows. A little moulding texture gives those bits somewhere to
+       sit, on the paper as much as on the case. */
+    caseGrain(g, size);
+    return c;
+  }
+
+  // A rounded rectangle, since not every canvas has roundRect.
+  function roundRectPath(g, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + w - r, y);
+    g.quadraticCurveTo(x + w, y, x + w, y + r);
+    g.lineTo(x + w, y + h - r);
+    g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    g.lineTo(x + r, y + h);
+    g.quadraticCurveTo(x, y + h, x, y + h - r);
+    g.lineTo(x, y + r);
+    g.quadraticCurveTo(x, y, x + r, y);
+    g.closePath();
+  }
+
+  // Fine speckle, laid down from a fixed sequence so the same size always
+  // gives the same case. Nothing here depends on Math.random.
+  function caseGrain(g, size) {
+    var img = g.getImageData(0, 0, size, size);
+    var px = img.data;
+    var seed = 0x9e3779b9;
+    for (var i = 0; i < px.length; i += 4) {
+      seed ^= seed << 13; seed >>>= 0;
+      seed ^= seed >>> 17;
+      seed ^= seed << 5;  seed >>>= 0;
+      // Plus or minus three levels, which is under one step of the standard
+      // depth and enough to break up a flat field.
+      var n = (seed % 7) - 3;
+      px[i] = clamp255(px[i] + n);
+      px[i + 1] = clamp255(px[i + 1] + n);
+      px[i + 2] = clamp255(px[i + 2] + n);
+    }
+    g.putImageData(img, 0, 0);
+  }
+
+  function clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
 
   // Draw the CD's centre: the classic round clamping hub (grey gradient) with an
   // outer ring, a faint inner ring, and a fully transparent round spindle hole.
@@ -1511,8 +1662,9 @@
       info: prep.info                    // { size, type, name, encrypted } -> informational rim text
     };
 
-    // First guess assumes ~72% of the square is opaque disc (or 100% if solid bg).
-    var fraction = options.solidBackground ? 0.98 : 0.72;
+    // First guess. The case fills the square, so all of it carries data. On
+    // its own the disc covers a little under three quarters.
+    var fraction = options.solidBackground ? 1 : 0.72;
     var size = options.size || Math.max(minSize, Math.ceil(Math.sqrt(needed / fraction)));
     size = Math.min(size, maxSize);
 

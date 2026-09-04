@@ -957,8 +957,11 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .thumb { position: relative; width: 76px; }
 
+/* A SQUARE, NOT A CIRCLE. A disc in its case is a square picture, and
+   clipping that to a circle cut the corners off the case. A bare disc has
+   transparent corners, so it still reads as round in the same box. */
 .got img {
-  width: 76px; height: 76px; border-radius: 50%; display: block;
+  width: 76px; height: 76px; border-radius: 10px; display: block;
   filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
 }
 

@@ -142,6 +142,14 @@
             <!-- Advanced sits in the one cell the action bar leaves empty,
                  under the button and hard against its right edge. -->
             <div class="row adv-row">
+              <!-- OFF BY DEFAULT, AND THAT IS THE POINT. A solid PuttyPNG can be
+                   flattened onto a background and still decode. A transparent
+                   one cannot, so fewer places will carry it safely. -->
+              <label class="switch" id="clearWrap"
+                     title="Leave the background out. Only do this where the picture keeps its alpha.">
+                <input type="checkbox" id="clearBg">
+                <span class="track"></span> Transparent
+              </label>
               <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
                 <span class="chev">&rsaquo;</span> Advanced
               </button>
@@ -247,8 +255,8 @@
                       <input type="text" id="optLabel" placeholder="e.g. My Mixtape">
                     </div>
                     <label class="switch" style="align-self:end; margin-bottom:8px;">
-                      <input type="checkbox" id="optSolidBg">
-                      <span class="track"></span> Solid background (smaller disc)
+                      <input type="checkbox" id="optSolidBg" checked>
+                      <span class="track"></span> Solid background (a jewel case)
                     </label>
                   </div>
                   <div class="field" style="margin:12px 0 0;">
@@ -583,7 +591,7 @@
               <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
               <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
               <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
-              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: fill the corners with a soft gradient instead of leaving them transparent. Fully opaque &rarr; smaller disc and survives being flattened onto a background.</td></tr>
+              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: set the disc in a glossy black jewel case instead of leaving the corners transparent. Every pixel opaque &rarr; the whole square carries data, and it survives being flattened onto a background. The page turns this on by default.</td></tr>
               <tr><td class="mono">imprint</td><td class="mono">none</td><td>CD only: an image (File/Blob/URL/Image) etched onto the disc as a grayscale stipple, beneath the label.</td></tr>
               <tr><td class="mono">fontFamily</td><td class="mono">system</td><td>CD only: the label font.</td></tr>
               <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: label size: <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span> (each scales with the disc size; still shrinks/wraps to fit).</td></tr>
@@ -696,7 +704,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             </div>
           </div>
           <h3 style="margin-top:16px;">Transparent vs solid, and a flattening caveat</h3>
-          <p class="small">By default the CD's corners are <strong>transparent</strong>, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> to fill them with a soft gradient. That makes the disc fully opaque, which both <strong>shrinks it</strong> (more room for data) and makes it <strong>survive being flattened</strong>. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
+          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a glossy black jewel case instead. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Transparent switch under the Make button turns it off. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
         </div>
       </div>
 
