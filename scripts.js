@@ -28,6 +28,14 @@
      decision. These are the names everything else refers to.
      ========================================================================== */
 
+  /* THE PAGE'S OWN VERSION, which is not the engine's.
+     This one moves with the site: the layout, the wording, the board. The
+     engine carries its own in puttypng.js and the protocol carries a third,
+     and all three are shown apart in the footer so nobody has to guess which
+     number a bug report is about.
+     RULE: this is the version the commit carries. Move it with the release. */
+  var PAGE_VERSION = "2.4.0";
+
   // Timings, in milliseconds.
   var TOAST_MS = 2600;
   var COPY_FEEDBACK_MS = 1400;
@@ -1167,6 +1175,36 @@
     body.innerHTML = rows;
   }
 
+  /* The footer. Written here rather than in the markup, so each number has one
+     source and the page can never disagree with the engine it loaded. */
+  function renderFoot() {
+    var foot = $("foot");
+    if (!foot) return;
+
+    var flag = '<svg class="flag" width="19" height="10" viewBox="0 0 38 20" ' +
+               'role="img" aria-label="The flag of the United States of America">' +
+               '<use href="#usflag"/></svg>';
+
+    function line(parts) {
+      return '<div class="line">' +
+        parts.join('<span class="sep" aria-hidden="true">&middot;</span>') + "</div>";
+    }
+
+    foot.innerHTML =
+      line([
+        "<b>PuttyPNG</b>",
+        "Page v" + PAGE_VERSION,
+        "Engine v" + (window.PuttyPNG ? PuttyPNG.version : "?"),
+        "Protocol v" + (window.PuttyPNG ? PuttyPNG.protocolVersion : "?"),
+        "MIT License"
+      ]) +
+      line([
+        "<span>" + flag + "Made in USA</span>",
+        "Absolutely 0% of your data is collected.",
+        "&copy; 2026 Aaron Michael Harris"
+      ]);
+  }
+
   function renderLicense() {
     var el = document.getElementById("licenseText");
     if (el) el.textContent = MIT_LICENSE;
@@ -2227,6 +2265,7 @@
     renderDropTable();
     renderMigrationTable();
     renderLicense();
+    renderFoot();
     wireTutorial();
     wirePromptDemo();
   }

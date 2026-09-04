@@ -81,7 +81,9 @@ body {
   padding: 0 20px;
 }
 
-.wrap { max-width: 920px; margin: 0 auto; }
+/* Positioned, because the corner note is taken out of the flow and hung from
+   the top right of it. */
+.wrap { max-width: 920px; margin: 0 auto; position: relative; }
 
 h2 { font-size: 24px; letter-spacing: -0.02em; }
 
@@ -103,6 +105,28 @@ code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
 /* Padding and title are smaller than the first design. The module has to
    clear the fold at 1366x768, which is the common laptop size. */
 header.masthead { text-align: center; padding: 28px 0 16px; }
+
+/* THE CORNER NOTE. Out of the flow, so the name stays centred on the page and
+   not on whatever space the note leaves it. */
+.made {
+  position: absolute; right: 0; top: 14px; z-index: 3;
+  width: min(250px, 30vw);
+  text-align: right;
+}
+
+.made-mark {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .01em; color: var(--ink);
+}
+
+/* A hairline, because the white stripes and the page are the same white and
+   the flag would otherwise lose its edge. */
+.made .flag {
+  flex: none; border-radius: 2px; display: block;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.16), 0 1px 3px rgba(0,0,0,.14);
+}
+
+.made-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
 
 /* The name is two different materials. Putty takes the display face and the
    clay; PNG stays the body face in black. It leads the page, so it is set
@@ -170,7 +194,21 @@ nav.tabs button {
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* Snippets */
+/* Two lines: what the page is, and what it does not do. The separators are
+   spans rather than text, so a line can wrap without leaving a dot stranded
+   at the start of the next one. */
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 60px; }
+
+.foot .line { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 10px; }
+
+.foot .line + .line { margin-top: 6px; }
+
+.foot .sep { color: var(--line-strong); }
+
+.foot .flag { vertical-align: -2px; margin-right: 5px; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.16); }
+
+.foot b { font-weight: 600; color: var(--ink-soft); }
 
 
 /* Docs */
@@ -742,9 +780,15 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .readbox { grid-area: bytes; text-align: center; }
 
-/* Under the button, hard against its right edge. It takes the one cell the
-   action bar would otherwise leave empty. */
-.actbar .adv-row { grid-area: adv; }
+/* Under the button, hard against its right edge, one control to a row. They
+   take the one cell the action bar would otherwise leave empty. Stacked
+   rather than side by side, so neither reads as a qualifier of the other. */
+.actbar .adv-row {
+  grid-area: adv;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
 
 /* THE LABEL GROWS AS THE BUTTON SHRINKS, WHICH IS THE JOKE.
    The donut takes more of the row at every rung, so the button has to give
@@ -1315,6 +1359,16 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 /* THE HOME BOARD, ON A NARROW SCREEN.
    Make and its deck come first as one block, then Load under them, so a
    column can never be separated from the heading that names it. */
+/* Below this there is no corner to sit in: the note would land on the title.
+   It goes back into the flow, above the name, centred like everything else. */
+@media (max-width: 820px) {
+  .made {
+    position: static; width: auto; max-width: 420px;
+    margin: 0 auto 14px; text-align: center;
+  }
+  .made-mark { justify-content: center; }
+}
+
 @media (max-width: 760px) {
   .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "ad" "sm" "hl" "cl"; }
 

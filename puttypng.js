@@ -1454,9 +1454,9 @@
     var pad = Math.max(2, Math.round(size * 0.035));
     var round = size * 0.055;
     var body = g.createLinearGradient(pad, pad, size * 0.35, size - pad);
-    body.addColorStop(0.00, "#eef0f4");
-    body.addColorStop(0.45, "#dcdee4");
-    body.addColorStop(1.00, "#c7cad2");
+    body.addColorStop(0.00, "#e6e9ef");
+    body.addColorStop(0.45, "#d5d8e0");
+    body.addColorStop(1.00, "#bfc3cd");
 
     g.save();
     g.shadowColor = "rgba(24,26,34,0.20)";
@@ -1486,8 +1486,8 @@
        window lands on a hard shiny surface. It is on the case only: the disc
        is composited over the top of it afterwards. */
     var gloss = g.createLinearGradient(0, 0, size * 0.8, size * 0.8);
-    gloss.addColorStop(0.00, "rgba(255,255,255,0.92)");
-    gloss.addColorStop(0.45, "rgba(255,255,255,0.30)");
+    gloss.addColorStop(0.00, "rgba(255,255,255,0.62)");
+    gloss.addColorStop(0.45, "rgba(255,255,255,0.20)");
     gloss.addColorStop(0.66, "rgba(255,255,255,0)");
     g.save();
     g.beginPath();

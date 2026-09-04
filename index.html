@@ -47,6 +47,60 @@
        The page's title block.
        ========================================================================== -->
     <header class="masthead">
+
+      <!-- A corner note, not a claim on the title. It is taken out of the flow
+           so the name stays centred on the page, and put back into it on a
+           narrow screen where a floating corner would sit on the title. -->
+      <aside class="made">
+        <p class="made-mark">
+          <!-- ONE FLAG, DRAWN ONCE. The footer borrows this same symbol, so the
+               two can never drift apart. -->
+          <svg class="flag" viewBox="0 0 38 20" width="34" height="18" role="img"
+               aria-label="The flag of the United States of America">
+            <defs>
+              <path id="usstar" fill="#ffffff"
+                    d="M0 -1.15 L0.34 -0.36 L1.09 -0.36 L0.49 0.14 L0.72 0.93 L0 0.46 L-0.72 0.93 L-0.49 0.14 L-1.09 -0.36 L-0.34 -0.36 Z"/>
+              <symbol id="usflag" viewBox="0 0 38 20">
+            <rect width="38" height="20" fill="#ffffff"/>
+            <g fill="#b22234">
+            <rect y="0" width="38" height="1.538"/>
+            <rect y="3.077" width="38" height="1.538"/>
+            <rect y="6.154" width="38" height="1.538"/>
+            <rect y="9.231" width="38" height="1.538"/>
+            <rect y="12.308" width="38" height="1.538"/>
+            <rect y="15.385" width="38" height="1.538"/>
+            <rect y="18.462" width="38" height="1.538"/>
+            </g>
+            <rect width="15.2" height="10.769" fill="#3c3b6e"/>
+            <g>
+            <use href="#usstar" x="0" y="0" transform="translate(2.533 2.154) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(5.067 2.154) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(7.6 2.154) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(10.133 2.154) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(12.667 2.154) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(4.56 4.308) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(7.6 4.308) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(10.64 4.308) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(13.68 4.308) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(2.533 6.462) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(5.067 6.462) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(7.6 6.462) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(10.133 6.462) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(12.667 6.462) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(4.56 8.615) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(7.6 8.615) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(10.64 8.615) scale(0.62)"/>
+            <use href="#usstar" x="0" y="0" transform="translate(13.68 8.615) scale(0.62)"/>
+            </g>
+              </symbol>
+            </defs>
+            <use href="#usflag"/>
+          </svg>
+          <span>Made in USA</span>
+        </p>
+        <p class="made-note">Absolutely 0% of your data is collected. This is a free MIT
+          license project for fun. Enjoy! -- AMH</p>
+      </aside>
       <h1>Putty<span class="png">PNG</span></h1>
       <div class="subtitle">Press your data into a PNG. Hand it to anyone.</div>
       <p class="byline">Designed by <a href="https://aaronmichaelharris.com/" target="_blank" rel="noreferrer">Aaron M. Harris</a></p>
@@ -591,7 +645,7 @@
               <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
               <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
               <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
-              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: set the disc in a glossy black jewel case instead of leaving the corners transparent. Every pixel opaque &rarr; the whole square carries data, and it survives being flattened onto a background. The page turns this on by default.</td></tr>
+              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: set the disc in a light grey jewel case, lying on white, instead of leaving the corners transparent. Every pixel opaque &rarr; the whole square carries data, and it survives being flattened onto a background. The page turns this on by default.</td></tr>
               <tr><td class="mono">imprint</td><td class="mono">none</td><td>CD only: an image (File/Blob/URL/Image) etched onto the disc as a grayscale stipple, beneath the label.</td></tr>
               <tr><td class="mono">fontFamily</td><td class="mono">system</td><td>CD only: the label font.</td></tr>
               <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: label size: <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span> (each scales with the disc size; still shrinks/wraps to fit).</td></tr>
@@ -704,7 +758,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             </div>
           </div>
           <h3 style="margin-top:16px;">Transparent vs solid, and a flattening caveat</h3>
-          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a glossy black jewel case instead. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Transparent switch under the Make button turns it off. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
+          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a light grey jewel case instead, lying on white paper that runs to the corners. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Transparent switch under the Make button turns it off. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
         </div>
       </div>
 
@@ -1014,7 +1068,9 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
       </div>
     </section>
 
-    <div class="foot">PuttyPNG &middot; Protocol v1 &middot; MIT &copy; 2026 Aaron Michael Harris</div>
+    <!-- Filled by scripts.js, so the two version numbers have one source
+         each and the page can never disagree with the engine. -->
+    <div class="foot" id="foot"></div>
   </div>
 
   <!-- The page-wide drop target. One overlay for the whole window, raised
