@@ -25,6 +25,10 @@ way, but the engine source card on the page can only fill itself over HTTP.
 | `scripts.js` | All page behavior. Seven sections. |
 | `puttypng.js` | The engine. Nine sections. |
 
+Beside them sits `fonts/`, which holds the one display face the page sets its
+name and its two column headings in. It is served from the folder and never
+over a network. Delete it and the page falls back to a system face.
+
 No build step and no dependencies. Drop the folder on any static host and it
 runs.
 

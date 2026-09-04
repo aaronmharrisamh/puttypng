@@ -11,8 +11,9 @@
 
 /* ==========================================================================
    SECTION 1 - HEADER / SETUP
-   No imports and no font files. The page uses system fonts on purpose, so it
-   renders instantly and works with no network.
+   No imports. The body copy is set in system fonts on purpose, so it renders
+   instantly. The one display face is served from fonts/ and never over a
+   network, and index.html links that sheet before this one.
    ========================================================================== */
 
 /* ==========================================================================
@@ -38,6 +39,30 @@
   --shadow: 0 1px 2px rgba(0,0,0,.04), 0 10px 30px rgba(0,0,0,.05);
   --shadow-lift: 0 2px 6px rgba(0,0,0,.06), 0 18px 46px rgba(0,0,0,.09);
   --space: 16px;
+
+  /* THE HOME BOARD.
+     One token owns the meter column. The action bar and the deck under it
+     both read it, so the slot can never drift away from the donut the disc
+     comes out of. scripts.js sets it in pixels from the measured card, never
+     as a per cent, because those two rows are different widths and a per cent
+     would resolve differently in each of them. */
+  --meter-col: 116px;
+  --card-pad: 18px;
+  --slot-w: calc(2 * var(--card-pad) + var(--meter-col));
+
+  /* How long the board takes to answer a change of disc size. Everything that
+     grows with the donut borrows this, so they all move together. */
+  --grow: 520ms cubic-bezier(.3, 0, .2, 1);
+
+  /* The display face, served from fonts/. It carries the name and the two
+     column headings and nothing else. */
+  --display-font: 'Lobster';
+  --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Softer than the logo's clay, and still over the 3 to 1 a large heading
+     needs against white. It measures 3.21 to 1. */
+  --clay-soft-ink: #cd7a5c;
+  --soft-red: #d9605a;
 }
 
 /* ==========================================================================
@@ -79,13 +104,23 @@ code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
    clear the fold at 1366x768, which is the common laptop size. */
 header.masthead { text-align: center; padding: 28px 0 16px; }
 
+/* The name is two different materials. Putty takes the display face and the
+   clay; PNG stays the body face in black. It leads the page, so it is set
+   well above the two column headings under it rather than beside them. */
 header.masthead h1 {
-  font-size: clamp(32px, 6vw, 48px);
-  letter-spacing: -0.035em;
-  font-weight: 700;
+  font-family: var(--display-font), cursive;
+  font-size: clamp(40px, 7.2vw, 62px);
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--clay);
 }
 
-header.masthead h1 .png { color: var(--clay); }
+header.masthead h1 .png {
+  font-family: var(--body-font);
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  color: var(--ink);
+}
 
 header.masthead .subtitle {
   font-size: clamp(16px, 2.6vw, 21px);
@@ -172,6 +207,54 @@ nav.tabs button {
 .doc-section { scroll-margin-top: 70px; margin-bottom: 10px; }
 
 .doc-section > h2 { margin: 40px 0 4px; }
+
+/* THE HOME BOARD.
+   One grid holds the two headings, the two columns, and the deck, so a
+   heading can never be separated from the column it names. */
+.board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  row-gap: 8px;
+  grid-template-areas: "hm hl" "cm cl" "sm sl";
+  align-items: stretch;
+}
+
+.head.hm { grid-area: hm; }
+.head.hl { grid-area: hl; }
+.col.make { grid-area: cm; }
+.col.load { grid-area: cl; }
+.deckrow { grid-area: sm; }
+
+.head { display: flex; align-items: baseline; gap: 12px; }
+
+.head h2 {
+  font-family: var(--display-font), cursive;
+  font-size: clamp(27px, 4.5vw, 41px);
+  font-weight: 400;
+  letter-spacing: 0;
+  margin: 0;
+  line-height: 1.15;
+  padding-left: 2px;
+  color: var(--clay-soft-ink);
+}
+
+/* The line marks are kept for a change of mind. Nothing shows them today. */
+.head .mark { display: none; color: var(--clay); flex: none; }
+
+/* The two columns are always the same height, whatever either one holds. */
+.col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: var(--card-pad);
+}
+
+.col > .body { flex: 1; display: flex; flex-direction: column; min-height: 250px; }
 
 /* ==========================================================================
    SECTION 5 - COMPONENTS
@@ -982,6 +1065,384 @@ details.sect > summary::-webkit-details-marker { display: none; }
 .sect-body > .card { border: 0; box-shadow: none; padding: 0; margin: 0; }
 
 /* ==========================================================================
+   HOME - MAKE
+   ========================================================================== */
+
+/* THE INVITATION LIVES INSIDE THE BOX. Anywhere else it interrupts the read
+   down the column. It rests as an icon in the corner and opens leftward under
+   the pointer to say what it is. */
+.makebox { position: relative; flex: 1; display: flex; min-height: 0; }
+
+#makeText { flex: 1; resize: none; min-height: 0; padding-bottom: 44px; }
+
+/* The answer to a file held over the box. It matches what the Load zone does
+   with a disc, so the two sides of the page behave alike. */
+.makeveil {
+  position: absolute; inset: 0; z-index: 6;
+  display: grid; place-content: center; justify-items: center; gap: 6px;
+  text-align: center; pointer-events: none;
+  opacity: 0; transition: opacity .15s;
+  border-radius: var(--radius-sm);
+}
+
+.makeveil svg { color: var(--clay); }
+
+.makeveil .big { font-size: 18px; font-weight: 700; letter-spacing: -.02em; color: var(--clay-deep); }
+
+/* ONE GHOST TREATMENT. It never fills in. The ground stays white and only the
+   outline and the mark darken, so a quiet control answers without becoming
+   the loudest thing on the card. The attach button and the bin both wear it. */
+.ghost {
+  background: #fff;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, transform .12s;
+}
+
+/* Held clear of the scrollbar, which appears as soon as the box fills. */
+.attach {
+  position: absolute; right: 24px; bottom: 12px;
+  display: flex; align-items: center; gap: 0;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  border-radius: 999px; padding: 6px 8px; overflow: hidden;
+}
+
+.attach svg { flex: none; }
+
+.attach .say {
+  max-width: 0; overflow: hidden; white-space: nowrap;
+  opacity: 0; margin-left: 0;
+  transition: max-width .28s cubic-bezier(.3,0,.2,1), margin-left .28s, opacity .2s;
+}
+
+/* An attachment covers the box, because it IS what will be pressed. The whole
+   panel is the button, and pressing it puts the box back. */
+.attached {
+  position: absolute; inset: 0;
+  display: none; place-items: center; padding: 16px;
+  background: #fff; border-radius: var(--radius-sm);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--ink); background: #fff; cursor: pointer;
+  border: 1px solid var(--line-strong); border-radius: 999px; padding: 6px 13px;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.chip svg { flex: none; }
+
+/* EVERY CHIP IS A WHOLE BUTTON. Nothing here asks the pointer to find a small
+   target inside a larger one. */
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; font-size: 12.5px;
+  color: var(--ink); background: #fff; cursor: pointer; text-align: left;
+  border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 14px;
+  min-width: 0; max-width: 100%; position: relative;
+  transition: color .15s, border-color .15s, background .15s, transform .12s;
+}
+
+/* A class that sets display outranks the browser's own rule for the hidden
+   attribute, so the chip needs this to be able to hide at all. */
+.pill[hidden] { display: none; }
+
+.pill .ic { flex: none; color: var(--clay-deep); display: grid; }
+.pill span.nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.pill .sz { color: var(--muted); flex: none; }
+.pill .act-ic { flex: none; display: grid; color: var(--muted); }
+.pill button { border: 0; background: none; font: inherit; color: var(--muted); cursor: pointer; padding: 0 4px; }
+
+/* ==========================================================================
+   HOME - THE ACTION BAR AND THE METER
+   ========================================================================== */
+
+/* The donut and the button share a row and are centred against each other.
+   The reading drops to a row of its own beneath the donut, so nothing pushes
+   the button off centre. */
+.actbar {
+  display: grid;
+  grid-template-columns: var(--meter-col) 1fr;
+  column-gap: 12px; row-gap: 4px;
+  grid-template-areas: "donut make" "bytes .";
+  align-items: center;
+  margin-top: 14px;
+  transition: grid-template-columns var(--grow);
+}
+
+.readbox { grid-area: bytes; text-align: center; }
+
+/* THE LABEL GROWS AS THE BUTTON SHRINKS, WHICH IS THE JOKE.
+   The donut takes more of the row at every rung, so the button has to give
+   the width up. It wraps rather than overflows, and at the tightest rung it
+   comes apart to one word a line, which is the point being made. */
+.act {
+  grid-area: make; align-self: center;
+  font: inherit; font-weight: 700; font-size: clamp(12.5px, 1.05vw + 3px, 15px);
+  line-height: 1.25; padding: 12px 14px; border-radius: 999px; min-width: 0;
+  border: 1px solid transparent; background: var(--ink); color: #fff; cursor: pointer;
+  overflow-wrap: anywhere; text-wrap: balance;
+  transition: background .15s, transform .08s;
+}
+
+.act em {
+  font-family: var(--display-font), cursive; font-style: italic;
+  font-size: 1.3em; font-weight: 400; letter-spacing: .01em; padding: 0 1px;
+}
+
+.meterwrap {
+  grid-area: donut; position: relative; text-align: center; align-self: center;
+}
+
+#meter { width: 100%; height: auto; aspect-ratio: 1 / 1; display: block; margin: 0 auto; }
+
+.usage {
+  font: 700 11px/1.25 ui-monospace, Consolas, monospace;
+  color: var(--ink); margin-top: 1px;
+  transition: font-size var(--grow);
+}
+
+.usage i { display: block; font-style: normal; font-weight: 400; color: var(--ink-soft); }
+
+.rungno { font: 400 10px/1.3 ui-monospace, Consolas, monospace; color: #a6a6ad; letter-spacing: .06em; }
+
+/* ==========================================================================
+   HOME - THE DECK AND THE DISC
+   ========================================================================== */
+
+/* Everything here is worked out from the one token, so the slot and the disc
+   grow at the same moment and the same rate as the donut above them. */
+.deckrow { position: relative; height: calc(var(--slot-w) + 34px); transition: height var(--grow); }
+
+.tray {
+  position: absolute; left: 0; top: 0;
+  width: var(--slot-w); height: calc(var(--slot-w) + 28px);
+  /* Only the TOP of this clip matters: it is what hides the disc above the
+     slot. The other three sides are held wide so nothing inside is ever cut,
+     including the two chips when they sit under the disc on a narrow screen. */
+  clip-path: inset(0 -320px -220px -40px);
+  transition: width var(--grow), height var(--grow);
+}
+
+.lip {
+  position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 6;
+  background: #0b0b0e; border-radius: 3px; box-shadow: 0 2px 7px rgba(0,0,0,.30);
+}
+
+.lip::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 4px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(180deg, #f4f4f6, #dedee1 55%, #c4c4ca);
+}
+
+.cd {
+  position: absolute; left: 0; top: 9px;
+  width: var(--slot-w); height: var(--slot-w);
+  cursor: grab; touch-action: none; z-index: 8;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.30));
+  transform: translateY(calc(-1 * (var(--slot-w) + 20px)));
+  opacity: 0;
+  transition: transform 620ms cubic-bezier(.2,.85,.25,1), opacity .2s ease,
+              width var(--grow), height var(--grow);
+}
+
+/* The pair is centred on the disc, but the two chips align to each other so
+   their marks form one column rather than drifting under words of different
+   lengths. */
+.cdtools {
+  position: absolute; left: 0; width: var(--slot-w);
+  top: calc(var(--slot-w) * 0.66); z-index: 9;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s, width var(--grow), top var(--grow);
+}
+
+.cdtools button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 10.5px; font-weight: 700; color: #fff; cursor: pointer;
+  background: rgba(20,20,24,.88); border: 0; border-radius: 999px; padding: 5px 11px;
+  min-width: 96px;
+}
+
+.cdtools button svg { flex: none; }
+
+/* THE TWO THINGS YOU CAN DO WITH A FRESH DISC, STACKED BESIDE IT.
+   The arrow points at the invitation only. The bin sits beneath it, indented
+   past the arrow so the two chips line up. */
+.cdtip {
+  position: absolute;
+  left: calc(var(--slot-w) + 14px); top: calc(var(--slot-w) * 0.32); z-index: 8;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  opacity: 0; transform: translateX(-8px); pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease, left var(--grow), top var(--grow);
+}
+
+.tiprow { display: flex; align-items: center; gap: 6px; }
+
+.cdtip .arrow { color: var(--clay); flex: none; }
+
+.cdtip .say {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap;
+  border: 0; cursor: pointer;
+  background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 999px;
+  transition: background .15s, transform .12s;
+}
+
+/* Its right edge lines up with the invitation's, so the stack reads as one
+   block rather than two chips that happen to be near each other. */
+.bin {
+  align-self: flex-end;
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap;
+  padding: 8px 14px; border-radius: 999px;
+}
+
+.bin svg { flex: none; }
+
+/* ==========================================================================
+   HOME - LOAD
+   ========================================================================== */
+
+/* The whole body of the column is the target, and it carries its own
+   instructions rather than putting them anywhere else. */
+.zone {
+  position: relative;
+  border: 2px dashed var(--line-strong); border-radius: var(--radius);
+  background: #fcfcfc;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+
+/* An invisible field over the whole zone, so a paste lands here without
+   asking anyone to click first. */
+.sink {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border: 0; background: transparent; resize: none; outline: none;
+  color: transparent; caret-color: var(--clay);
+  font: inherit; padding: 10px; border-radius: inherit;
+}
+
+/* Named for what it is rather than "hint", which the tutorial drop zone
+   already uses for something else. */
+.dropnote {
+  position: absolute; inset: 0;
+  display: grid; place-content: center; justify-items: center; gap: 5px;
+  text-align: center; padding: 14px; pointer-events: none; color: var(--muted);
+}
+
+.dropnote svg.dropmark { color: var(--clay); }
+.dropnote .big { font-size: 16px; font-weight: 600; color: var(--ink); }
+.dropnote .sub { font-size: 13px; }
+
+.dropnote .chips {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  margin-top: 10px; pointer-events: auto;
+}
+
+.veil {
+  position: absolute; inset: 0;
+  display: grid; place-content: center; text-align: center;
+  opacity: 0; transition: opacity .15s; pointer-events: none;
+}
+
+.veil .big { font-size: 21px; font-weight: 700; letter-spacing: -.02em; color: var(--clay-deep); }
+
+/* THREE BANDS. The disc and its name take a row of their own, anything that
+   came out as a file takes the next, and the text owns everything below with
+   room to breathe before the dashes. */
+.got {
+  position: absolute; inset: 0; display: none; padding: 18px 18px 30px;
+  grid-template-rows: auto minmax(0, 1fr); gap: 12px;
+}
+
+.gotrow { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: center; }
+
+/* Files and text share the space under the heading row. With only files there
+   they sit in the middle of it. With text as well they step aside and the text
+   takes everything, so a whole book can be read here. */
+.gotbody { display: flex; flex-direction: column; min-height: 0; gap: 10px; }
+
+.gotfiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.gotfiles:empty { display: none; }
+
+.got .nm { font-weight: 600; font-size: 14px; word-break: break-all; }
+.got .sz { font-size: 12.5px; color: var(--muted); }
+
+/* NO CEILING ON THE TEXT. It fills whatever the panel gives it and scrolls. */
+.got pre {
+  margin: 0; font-size: 12.5px; background: #fafafa;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+  overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+
+/* It can be selected and corrected. Nothing is done with the change: the disc
+   that was read is untouched, and this is a place to fix a line before taking
+   it away by hand. */
+#gotText { margin: 0; flex: 1; min-height: 0; overflow: auto; cursor: text; }
+#gotText:empty { display: none; }
+
+.thumb { position: relative; width: 76px; }
+
+.got img {
+  width: 76px; height: 76px; border-radius: 50%; display: block;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
+}
+
+/* Two icons and no words, so the picture is not buried under labels. */
+.thumbtools {
+  position: absolute; left: 0; right: 0; bottom: -6px;
+  display: flex; justify-content: center; gap: 5px;
+  opacity: 0; transition: opacity .15s;
+}
+
+.thumbtools button {
+  width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0;
+  display: grid; place-items: center; cursor: pointer;
+  color: #fff; background: rgba(20,20,24,.88);
+}
+
+/* THE SURROUND STAYS DASHED WHEN LOADED, AND THE DASHES BREAK TWICE.
+   A CSS dashed border cannot open a gap, so the label and the button each
+   carry a solid backdrop in the panel colour and punch through it. */
+.again {
+  position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%);
+  background: #fff; padding: 0 12px;
+  font-size: 13px; font-weight: 700; color: #85858d;
+  letter-spacing: .01em; white-space: nowrap; display: none;
+}
+
+.xbtn {
+  position: absolute; right: 0; top: 0; transform: translate(50%, -50%);
+  width: 26px; height: 26px; border-radius: 50%; padding: 0; cursor: pointer;
+  border: 3px solid #fff; background: var(--soft-red); place-items: center;
+  display: none; transition: background .15s, transform .12s;
+}
+
+/* The same generated button, smaller, on the attached file chip. */
+.pill .xbtn { position: static; transform: none; width: 18px; height: 18px; border-width: 2px; display: grid; }
+
+/* Reading a big one takes a moment, and says so. */
+.decoding {
+  position: absolute; inset: 0; z-index: 12; display: none;
+  place-content: center; justify-items: center; gap: 12px; text-align: center;
+  background: rgba(255,255,255,.97); backdrop-filter: blur(2px);
+  border-radius: var(--radius);
+}
+
+.decoding .word { font-size: 15px; font-weight: 600; color: var(--ink); }
+.decoding .word i { font-style: normal; color: var(--clay); animation: dot 1.2s infinite; }
+.decoding .word i:nth-child(2) { animation-delay: .16s; }
+.decoding .word i:nth-child(3) { animation-delay: .32s; }
+.decoding .spin { animation: turn 1.15s linear infinite; transform-origin: 50% 50%; }
+.decoding .pulse { animation: pulse 1.6s ease-in-out infinite; transform-origin: 50% 50%; }
+
+@keyframes dot { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+@keyframes turn { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: .35; r: 9; } 50% { opacity: .9; r: 13; } }
+
+/* ==========================================================================
    SECTION 6 - STATES AND INTERACTIONS
    Everywhere the page answers the user: hover, focus, press, check, drag,
    and the classes that scripts.js switches on and off.
@@ -1220,6 +1681,137 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 
 /* ==========================================================================
+   HOME - MAKE
+   ========================================================================== */
+
+/* A file held over the box. */
+.makebox.over #makeText {
+  border-color: var(--clay); background: var(--clay-soft);
+  box-shadow: 0 0 0 4px rgba(201,111,82,.14);
+}
+
+.makebox.over .makeveil { opacity: 1; }
+
+/* The invitation steps aside while the answer to the drop is showing. */
+.makebox.over .attach { opacity: 0; }
+
+/* An attachment is what will be pressed, so it takes the box over. */
+.makebox.has .attached { display: grid; }
+.makebox.has #makeText, .makebox.has .attach { visibility: hidden; }
+
+.ghost:hover, .ghost:focus-visible { color: var(--ink); border-color: var(--ink); }
+.ghost:active { transform: scale(.97); }
+
+.attach:hover .say, .attach:focus-visible .say { max-width: 190px; opacity: 1; margin-left: 7px; }
+
+.chip:hover { color: var(--clay-deep); border-color: var(--clay); background: var(--clay-soft); }
+
+/* On the Make side the chip takes the attachment off, so it warns in red. */
+.pill:hover { border-color: var(--soft-red); background: #fdf0ef; }
+.pill:hover .act-ic { color: var(--soft-red); }
+.pill:active { transform: scale(.985); }
+
+/* The Load side removes nothing, it hands the file over. */
+.gotfiles .pill:hover { border-color: var(--clay); background: var(--clay-soft); }
+.gotfiles .pill:hover .act-ic { color: var(--clay-deep); }
+
+/* ==========================================================================
+   HOME - THE METER
+   ========================================================================== */
+
+.act:hover { background: #000; }
+.act:active { transform: scale(.99); }
+.act[disabled] { opacity: .45; cursor: not-allowed; }
+
+.meterwrap.over .usage { color: var(--bad); }
+.meterwrap.over .rungno { color: var(--bad); }
+
+/* Past the largest disc the reading shudders, so a number that cannot work
+   does not sit there looking calm. */
+.meterwrap.judder { animation: judder .34s linear; }
+
+@keyframes judder {
+  0%,100% { transform: translate(0,0) }
+  15% { transform: translate(-2px,1px) } 30% { transform: translate(2px,-1px) }
+  45% { transform: translate(-2px,-1px) } 60% { transform: translate(2px,1px) }
+  75% { transform: translate(-1px,0) }
+}
+
+/* The cut rests as a dark line and is thrown back to full white by any input.
+   The flash carries no transition of its own, so it lands on the frame the
+   key was pressed and then fades on the rule above it. */
+#cut { transition: stroke .60s ease; }
+#cut.flash { stroke: #ffffff !important; transition: none; }
+
+/* A big arrival washes the whole ring, not the line alone. */
+#ringflash { transition: opacity .58s ease; }
+#ringflash.on { opacity: 1; transition: none; }
+
+/* ==========================================================================
+   HOME - THE DISC
+   ========================================================================== */
+
+.cd.out { transform: translateY(0); opacity: 1; }
+.cd.gone { transform: translateY(0) scale(.3); opacity: 0; transition: transform .34s ease-in, opacity .3s ease-in; }
+
+/* While one is being carried, what is left in the slot is only a trace of it. */
+.cd.lifted { opacity: .25; }
+
+/* The copy that follows the pointer. It is fixed to the window, so it is put
+   on the body and cannot be scoped to the panel. */
+.cd.ghost {
+  position: fixed; z-index: 100; pointer-events: none;
+  transition: none; opacity: 1;
+  filter: drop-shadow(0 16px 26px rgba(0,0,0,.38));
+}
+
+.cd.out ~ .cdtools { pointer-events: auto; }
+.tray:hover .cd.out ~ .cdtools { opacity: 1; }
+.cdtools button:hover { background: var(--clay-deep); }
+.cdtools button.done { background: var(--ok); }
+
+.cd.out ~ .cdtip { opacity: 1; transform: none; pointer-events: auto; }
+
+/* THE WHOLE STACK CLEARS WHILE THE DISC IS IN HAND. Neither chip is a place
+   to drop any more, so there is nothing for them to do until the disc is set
+   down again, and both come back if it returns to its slot. */
+.cd.lifted ~ .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
+
+.cdtip .say:hover { background: var(--clay-deep); }
+.cdtip .say:active { transform: scale(.97); }
+.cdtip .say.done { background: var(--ok); }
+
+.bin:hover { color: var(--bad); border-color: var(--bad); }
+
+/* ==========================================================================
+   HOME - LOAD
+   ========================================================================== */
+
+.zone.over { border-color: var(--clay); background: var(--clay-soft); box-shadow: 0 0 0 4px rgba(201,111,82,.14); }
+.zone.over .veil { opacity: 1; }
+
+/* Whatever is being said stands down once there is something to show, or once
+   a disc is over the zone and the answer is the only thing that matters. */
+.zone.over .dropnote, .zone.has .dropnote, .zone.has .sink { opacity: 0; pointer-events: none; }
+
+.zone.has { border-color: #cfcfd4; background: #fff; }
+.zone.has .got { display: grid; }
+.zone.has .again { display: block; }
+.zone.has .xbtn { display: grid; }
+
+.gotbody.filesonly { justify-content: center; align-items: center; }
+
+#gotText:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
+
+.thumb:hover .thumbtools { opacity: 1; }
+.thumbtools button:hover { background: var(--clay-deep); }
+
+.xbtn:hover { background: #c1443e; transform: translate(50%, -50%) scale(1.09); }
+.pill .xbtn:hover { transform: scale(1.12); }
+
+.zone.reading .decoding { display: grid; }
+
+/* ==========================================================================
    SECTION 7 - RESPONSIVE AND UTILITIES
    The one breakpoint, plus the small single-purpose helper classes.
    ========================================================================== */
@@ -1294,3 +1886,25 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 .tablewrap { overflow-x: auto; }
 
 .lede { font-size: 17px; color: var(--ink-soft); }
+
+/* THE HOME BOARD, ON A NARROW SCREEN.
+   Make and its deck come first as one block, then Load under them, so a
+   column can never be separated from the heading that names it. */
+@media (max-width: 760px) {
+  .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "sm" "hl" "cl"; }
+
+  /* Beside the disc there is no room, so the two chips go under it instead of
+     disappearing, which would take the bin away with them. */
+  .deckrow { height: calc(var(--slot-w) + 116px); }
+  .cdtip { left: 0; top: calc(var(--slot-w) + 20px); }
+  .cdtip .arrow { display: none; }
+  .bin { align-self: flex-start; }
+}
+
+/* A TEST AID. It stops every transition and animation so a rendered page is
+   the same every time it is measured. Nothing on the page adds this class:
+   only a headless run does. */
+body.pose *, body.pose *::before, body.pose *::after {
+  transition: none !important;
+  animation: none !important;
+}

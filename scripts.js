@@ -33,6 +33,74 @@
   var COPY_FEEDBACK_MS = 1400;
   var SCROLL_DELAY_MS = 40;
 
+  /* ==========================================================================
+     THE HOME BOARD
+     Make and Load, the two columns a first visitor sees. The playground on the
+     OldPuttyPNG tab keeps its own constants below.
+     ========================================================================== */
+
+  // THE RUNGS. Capacities measured from the engine at the deeper depth, which
+  // is 3/2/3 bits and so one byte for every opaque pixel of the CD cover.
+  // Each rung keeps its own colour, so the finished bands read as a record of
+  // the climb. The ladder steps gray, yellow, orange, hot orange, so a change
+  // of rung is a change of hue and not only a change of shade.
+  var RUNGS = [
+    { px: 256,  cap: 46698,   color: [124, 124, 132] },
+    { px: 512,  cap: 186032,  color: [226, 183,  47] },
+    { px: 1024, cap: 742231,  color: [231, 130,  30] },
+    { px: 2048, cap: 2965695, color: [226,  85,  26] }
+  ];
+
+  // Past the largest disc there is no rung, only a warning.
+  var RUNG_OVER_COLOR = [198, 40, 40];
+
+  // The donut, in the meter's own 100 by 100 co-ordinates.
+  var R_OUT = 45;
+  var R_IN = 21;
+  var BAND_SPAN = R_OUT - R_IN;
+  var MIN_BAND = 2.2;        // no finished ring may be thinner than this
+  var HANDOFF = 0.75;        // where a rung starts fading into the next one
+  var WARN_AT = 0.65;        // where the dotted line sits, ahead of that fade
+
+  // The label grows exactly as the button shrinks, which is the joke.
+  var RUNG_LABELS = [
+    "Make a PuttyPNG",
+    "Make a <em>BIG</em> PuttyPNG",
+    "Make a <em>GIGANTIC</em> PuttyPNG",
+    "Make a <em>VERY MASSIVE</em> PuttyPNG"
+  ];
+  var RUNG_LABEL_OVER = "<em>TOO MUCH</em>";
+
+  // What share of the Make column the donut takes at each rung, and the pixel
+  // width it can never drop below.
+  var RUNG_SHARE = [0.28, 0.39, 0.50, 0.60];
+  var METER_MIN_PX = 104;
+
+  // Timings for the home board, in milliseconds.
+  var RUNG_MOVE_MS = 460;      // one rung sliding inward as the next grows out
+  var DISSOLVE_MS = 250;       // a deleted stretch of band coming apart
+  var DISSOLVE_BITS = 40;      // how many pieces it comes apart into
+  var HOME_SETTLE_MS = 110;    // how long typing settles before the meter redraws
+  var READING_DELAY_MS = 130;  // how long a decode runs before it says it is working
+  var HOME_FLASH_MS = 30;      // long enough for one painted frame of white
+  var HOME_CONFIRM_MS = 1500;  // how long a control says it did its job
+  var DISC_TOSS_MS = 360;      // a disc shrinking away
+  var DISC_EJECT_MS = 20;      // the pause before a fresh disc is told to come out
+  var DISC_DRAG_MS = 300;      // the carried copy fading after it is let go
+  var DISC_SLACK_PX = 5;       // movement before a press counts as a drag
+  var HOME_SAVE_MS = 4000;     // how long a download URL is kept alive
+
+  // The line art the home board draws for itself. One shape serves every place
+  // that needs it, so a mark can never drift between two copies of itself.
+  var D_COPY = "M9.5 9.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z" +
+               "M15.5 6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2";
+  var D_DOWN = "M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4.5 20h15";
+  var D_X = "M7.5 7.5l9 9M16.5 7.5l-9 9";
+  var D_FILE = "M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5zM13.5 3v5.5H19";
+  var D_TICK = "M5 12.5l4.5 4.5L19 7.5";
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
   // Engine error codes translated for a reader. The E## code stays visible so
   // a message can still be matched against the error table in the Docs tab.
   // Plain wording for the engine codes a person is most likely to meet.
@@ -305,10 +373,46 @@
   var lastIsDisc = false;    // whether the loaded cover is really a CD
   var tutLast = null;        // the same, for the Tutorial tab
 
+  // The home board's own state. It is kept apart from the playground's above,
+  // because the two panels hold different things and neither may read the
+  // other's. Both are on the page at once while OldPuttyPNG exists.
+  var homeAttached = null;   // when set, Make presses this file instead of the text
+  var homeLastBlob = null;   // the disc in the tray, for Copy, Save, and Load
+  var homeLoadedBlob = null; // the disc showing in Load, for its own Copy and Save
+  var homeDiscOut = false;   // a disc is sitting in the tray
+  var homePressing = false;  // a press is running, and a second must wait
+  var homeDrag = null;       // the disc being carried, or null
+  var homeSettleTimer = 0;   // the wait after a keystroke before the meter redraws
+  var homeRunToken = 0;      // which meter run is current, so a stale one cannot paint
+  var homeReadTimer = 0;     // the wait before a decode says it is working
+  var homeReadDepth = 0;     // how many decodes are running, so two cannot race
+  var homeShownRung = 0;     // the rung the column width is currently set for
+  var homeShownBands = null; // the ring layout on screen, which a change eases away from
+  var homeShownFrac = 0;
+  var homeMoveTimer = 0;
+  var homeCurBand = { r0: R_IN, r1: R_OUT };  // the outer ring, where the cut is drawn
+  var homeLastPacked = 0;    // the last measured packed size, to tell a delete from an add
+  var homeLastDeg = 0;       // where the cut stood, so a delete knows what it is eating
+  var homeLastRaw = 0;       // the raw size on the last keystroke, before compression
+  var homeLastRung = 0;
+  var homeEncoder = new TextEncoder();
+
   /* ==========================================================================
      SECTION 3 - HELPER FUNCTIONS
      Small, single-purpose functions with no knowledge of the page's flow.
      ========================================================================== */
+
+  // The home board reaches for a lot of small pieces by name, so it asks for
+  // them one at a time rather than holding a handle to each.
+  function $(id) { return document.getElementById(id); }
+
+  // Whether the home board is the panel on screen. The page-wide drop overlay
+  // and the page-wide paste both stand down while it is, because the board
+  // carries two targets of its own and would otherwise read a file twice.
+  function homeIsShowing() {
+    var panel = $("tab-puttypng");
+    return !!panel && panel.classList.contains("active");
+  }
 
   // Show a short message at the bottom of the screen. kind is "ok" or "bad".
   function toast(message, kind) {
@@ -343,6 +447,140 @@
     var t = document.createElement("textarea");
     t.innerHTML = s;
     return t.value;
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - DRAWING AND MEASURING
+     ========================================================================== */
+
+  // One line-art mark, built rather than written into the markup, so the same
+  // shape serves every control that needs it.
+  function homeIcon(d, size, stroke) {
+    return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" aria-hidden="true">' +
+           '<path d="' + d + '" fill="none" stroke="' + (stroke || "currentColor") +
+           '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  // A control that has done its job says so, then goes quiet again.
+  function confirmDone(el, word) {
+    if (el.dataset.busy) return;
+    el.dataset.busy = "1";
+    var was = el.innerHTML;
+    el.classList.add("done");
+    el.innerHTML = homeIcon(D_TICK, el.classList.contains("say") ? 15 : 13, "#ffffff") +
+                   (word ? "<span>" + word + "</span>" : "");
+    setTimeout(function () {
+      el.innerHTML = was;
+      el.classList.remove("done");
+      delete el.dataset.busy;
+    }, HOME_CONFIRM_MS);
+  }
+
+  // One round X, in the softer red, with a white cross. The loaded panel and
+  // the attached file chip both wear it.
+  function makeXButton(label, extraClass) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "xbtn" + (extraClass ? " " + extraClass : "");
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
+      '<path d="' + D_X + '" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg>';
+    return b;
+  }
+
+  function rgb(c) { return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"; }
+
+  function mixColor(a, b, t) {
+    return rgb([0, 1, 2].map(function (i) { return Math.round(a[i] + (b[i] - a[i]) * t); }));
+  }
+
+  // A point on the donut, measured clockwise from the top.
+  function polar(deg, r) {
+    var a = (deg - 90) * Math.PI / 180;
+    return { x: 50 + r * Math.cos(a), y: 50 + r * Math.sin(a) };
+  }
+
+  function setRadialLine(el, deg, r0, r1) {
+    var p0 = polar(deg, r0), p1 = polar(deg, r1);
+    el.setAttribute("x1", p0.x); el.setAttribute("y1", p0.y);
+    el.setAttribute("x2", p1.x); el.setAttribute("y2", p1.y);
+  }
+
+  // Which rung holds this many packed bytes, or one past the end when none does.
+  function rungFor(bytes) {
+    for (var i = 0; i < RUNGS.length; i++) if (bytes <= RUNGS[i].cap) return i;
+    return RUNGS.length;
+  }
+
+  // The outer band is the rung you are on. Finished rungs share the inner
+  // third, split by the square root of their capacity so the innermost stays
+  // visible. A straight capacity split would make the 256 ring a hairline.
+  function bandsFor(k) {
+    if (k === 0) return [{ i: 0, r0: R_IN, r1: R_OUT }];
+    var out = [], innerT = BAND_SPAN * 0.34, outerT = BAND_SPAN * 0.66, w = [], sum = 0, i;
+    for (i = 0; i < k; i++) { var v = Math.sqrt(RUNGS[i].cap); w.push(v); sum += v; }
+    var r = R_IN;
+    for (i = 0; i < k; i++) {
+      var t = Math.max(MIN_BAND, innerT * w[i] / sum);
+      out.push({ i: i, r0: r, r1: r + t, done: true });
+      r += t;
+    }
+    out.push({ i: k, r0: R_OUT - outerT, r1: R_OUT });
+    return out;
+  }
+
+  // A rung rests at its own colour, then hands over to the next one from three
+  // quarters, so you arrive at a boundary already wearing where you are going.
+  function colorFor(k, frac) {
+    if (k >= RUNGS.length) return rgb(RUNG_OVER_COLOR);
+    var base = RUNGS[k].color;
+    var next = (k + 1 < RUNGS.length) ? RUNGS[k + 1].color : RUNG_OVER_COLOR;
+    if (frac <= HANDOFF) return rgb(base);
+    return mixColor(base, next, Math.min(1, (frac - HANDOFF) / (1 - HANDOFF)));
+  }
+
+  // The shorter of two ring layouts is padded with bands of no width. That is
+  // where a new ring is born and where a lost one goes.
+  function padBands(layout, len) {
+    var out = layout.slice();
+    while (out.length < len) out.push({ i: out.length, r0: R_OUT, r1: R_OUT, done: true });
+    return out;
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // The home board's own sizes. Short, because they sit under a small donut.
+  function homeFmt(n) {
+    if (n >= 1048576) return (n / 1048576).toFixed(2) + " MB";
+    if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
+    return n + " bytes";
+  }
+
+  // What the meter measures. The engine compresses before it fills a disc, so
+  // the honest number is the packed size and not what was typed.
+  async function packedSize(bytes) {
+    if (typeof CompressionStream === "undefined") return bytes.byteLength;
+    var cs = new CompressionStream("deflate-raw");
+    var blob = new Blob([bytes]);
+    var packed = await new Response(blob.stream().pipeThrough(cs)).blob();
+    return Math.min(packed.size, bytes.byteLength);
+  }
+
+  function pointerInside(el, e) {
+    var r = el.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  }
+
+  // Save bytes to disk under a name. Used by every download the home offers.
+  function saveBytes(href, name, revoke) {
+    var a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (revoke) setTimeout(function () { URL.revokeObjectURL(href); }, HOME_SAVE_MS);
   }
 
   // What is being dragged, from the little a browser reveals mid-drag.
@@ -1228,22 +1466,27 @@
   // overlay is driven by a depth counter, never by a boolean. A boolean is
   // wrong the moment the pointer crosses a nested element.
   function wirePageDrop() {
+    // THE OVERLAY BELONGS TO THE PLAYGROUND. The home board carries two
+    // targets of its own and answers on each of them, so the overlay only
+    // offers itself while the playground is the panel on screen. Its handlers
+    // still run at the window, below the board's, which stop what they take.
     window.addEventListener("dragenter", function (e) {
-      if (!dragHasFiles(e)) return;
+      if (homeIsShowing() || !dragHasFiles(e)) return;
       e.preventDefault();
       veilDepth++;
       showDropVeil(classifyDrag(e));
     });
 
     // Without preventDefault here the browser opens the dropped file and the
-    // page is lost. This one line is what keeps the page on screen.
+    // page is lost. This one line is what keeps the page on screen, so it runs
+    // whichever panel is showing.
     window.addEventListener("dragover", function (e) {
       if (!dragHasFiles(e)) return;
       e.preventDefault();
     });
 
     window.addEventListener("dragleave", function (e) {
-      if (!dragHasFiles(e)) return;
+      if (homeIsShowing() || !dragHasFiles(e)) return;
       veilDepth--;
       if (veilDepth <= 0) hideDropVeil();
     });
@@ -1251,6 +1494,7 @@
     window.addEventListener("drop", function (e) {
       if (!dragHasFiles(e)) return;
       e.preventDefault();
+      if (homeIsShowing()) return;
       hideDropVeil();
       handleDrop(e);
     });
@@ -1518,10 +1762,19 @@
       if (f.type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
       readSource(f);
     });
-    // Pasting an image anywhere on the page reads it.
+    /* Pasting an image anywhere on the page reads it. There is one such
+       listener, and it hands the picture to whichever panel is showing, so a
+       paste is never read twice. */
     document.addEventListener("paste", function (e) {
       var items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
+      if (homeIsShowing()) {
+        // Typing into the Make box is not an attempt to load a disc.
+        if (e.target === $("makeText")) return;
+        var png = pngFrom(items);
+        if (png) { e.preventDefault(); readHomeFile(png); }
+        return;
+      }
       for (var i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image/") === 0) {
           if (items[i].type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
@@ -1652,6 +1905,198 @@
         ? "Cancelled - the promise resolved to null."
         : ("Resolved with a password of length " + pw.length + " (nothing is stored).");
     });
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD
+     Every listener the two columns and the deck need, in one place.
+     ========================================================================== */
+
+  function wireHome() {
+    wireHomeMake();
+    wireHomeDisc();
+    wireHomeLoad();
+
+    // The first paint. force skips the settle wait and the two effects, so an
+    // empty box starts at a drawn ring rather than a blank one.
+    setMeterWidth(0);
+    updateHomeMeter(true);
+    window.addEventListener("resize", function () { setMeterWidth(homeShownRung); });
+  }
+
+  function wireHomeMake() {
+    $("makeText").addEventListener("input", function () { noteHomeInput(); updateHomeMeter(); });
+
+    $("homeAttachBtn").addEventListener("click", function () { $("attachIn").click(); });
+    $("attachIn").addEventListener("change", function () {
+      var f = this.files[0];
+      this.value = "";
+      takeHomeAttachment(f);
+    });
+
+    // The whole chip is the button, so there is no small target to find in it.
+    $("filePill").addEventListener("click", dropHomeAttachment);
+    $("filePill").title = "Press to take this attachment off";
+
+    /* THE MAKE BOX TAKES A FILE THE SAME WAY THE LOAD ZONE TAKES A DISC.
+       A count is kept rather than a flag, because dragging across a child
+       fires leave for the parent and the veil would flicker on every inner
+       edge. Each handler stops the event, so the page-wide overlay above the
+       board never sees it. */
+    var mb = $("makeBox"), depth = 0;
+    function showVeil(on) {
+      mb.classList.toggle("over", on);
+      if (!on) depth = 0;
+    }
+    mb.addEventListener("dragenter", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      depth++;
+      showVeil(true);
+    });
+    mb.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); });
+    mb.addEventListener("dragleave", function (e) {
+      e.stopPropagation();
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) showVeil(false);
+    });
+    mb.addEventListener("drop", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      showVeil(false);
+      takeHomeAttachment(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+
+    $("homeMakeBtn").addEventListener("click", pressHomeDisc);
+  }
+
+  function wireHomeDisc() {
+    var cd = $("cd");
+
+    // The tip is a button too, so the invitation and the act are one thing.
+    $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
+    $("cdCopy").innerHTML = homeIcon(D_COPY, 13) + "<span>Copy</span>";
+    $("cdSave").innerHTML = homeIcon(D_DOWN, 13) + "<span>Download</span>";
+
+    $("cdCopy").addEventListener("click", function () { copyHomeDisc(this, "Copied!"); });
+    $("cdTipCopy").addEventListener("click", function () { copyHomeDisc(this, "Copied!"); });
+    $("cdSave").addEventListener("click", function () {
+      if (!homeLastBlob) return;
+      saveBytes(URL.createObjectURL(homeLastBlob), "puttypng.png", true);
+      confirmDone(this, "Saved!");
+    });
+
+    // The disc going takes its two chips with it, because the tip only shows
+    // while the disc is out. Nothing else has to be cleared by hand.
+    $("bin").addEventListener("click", function () { tossDisc(); });
+
+    cd.addEventListener("pointerdown", function (e) {
+      if (!homeDiscOut || e.button !== 0) return;
+      e.preventDefault();
+      homeDrag = { x: e.clientX, y: e.clientY, live: false, ghost: null, r: cd.getBoundingClientRect() };
+    });
+
+    document.addEventListener("pointermove", function (e) {
+      if (!homeDrag) return;
+      var dx = e.clientX - homeDrag.x, dy = e.clientY - homeDrag.y;
+      if (!homeDrag.live) {
+        // A press is not a drag until it has moved, so a click on the disc
+        // does not throw a copy of it across the page.
+        if (Math.abs(dx) + Math.abs(dy) < DISC_SLACK_PX) return;
+        homeDrag.live = true;
+        var g = cd.cloneNode(true);
+        g.removeAttribute("id");
+        g.className = "cd ghost";
+        g.style.left = homeDrag.r.left + "px";
+        g.style.top = homeDrag.r.top + "px";
+        g.style.width = homeDrag.r.width + "px";
+        g.style.height = homeDrag.r.height + "px";
+        document.body.appendChild(g);
+        homeDrag.ghost = g;
+        cd.classList.add("lifted");
+      }
+      homeDrag.ghost.style.transform = "translate(" + dx + "px," + dy + "px)";
+      $("zone").classList.toggle("over", pointerInside($("zone"), e));
+    });
+
+    document.addEventListener("pointerup", endDiscDrag);
+    document.addEventListener("pointercancel", function () { endDiscDrag(null); });
+  }
+
+  function wireHomeLoad() {
+    var zone = $("zone");
+
+    ["dragenter", "dragover"].forEach(function (n) {
+      zone.addEventListener(n, function (e) {
+        e.preventDefault(); e.stopPropagation();
+        zone.classList.add("over");
+      });
+    });
+    zone.addEventListener("dragleave", function (e) {
+      if (!zone.contains(e.relatedTarget)) zone.classList.remove("over");
+    });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      zone.classList.remove("over");
+      readHomeFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+
+    $("openBtn").addEventListener("click", function () { $("openIn").click(); });
+    $("openIn").addEventListener("change", function () {
+      readHomeFile(this.files[0]);
+      this.value = "";
+    });
+
+    /* A page cannot fake a paste, so asking for the clipboard needs the
+       permission API and is not offered by every browser. Ctrl+V is
+       always there, and it lands on the invisible field over the zone. */
+    $("pasteBtn").addEventListener("click", async function () {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        toast("This browser will not hand a page the clipboard. Press Ctrl+V instead.", "bad");
+        return;
+      }
+      try {
+        var items = await navigator.clipboard.read();
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].types.indexOf("image/png") >= 0) {
+            var blob = await items[i].getType("image/png");
+            readHomeFile(new File([blob], "from the clipboard.png", { type: "image/png" }));
+            return;
+          }
+        }
+        toast("There is no picture on the clipboard.", "bad");
+      } catch (err) {
+        toast("The clipboard was not shared. Press Ctrl+V instead.", "bad");
+      }
+    });
+
+    // Two marks and no words, sitting on the picture only while it is hovered.
+    var tools = $("thumbTools");
+    function tool(d, label, run) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      b.innerHTML = homeIcon(d, 13);
+      b.addEventListener("click", run);
+      tools.appendChild(b);
+    }
+    tool(D_COPY, "Copy this PuttyPNG", async function () {
+      if (!homeLoadedBlob) { toast("This one came from a link, so it cannot be copied.", "bad"); return; }
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": homeLoadedBlob })]);
+        confirmDone(this);
+      } catch (err) {
+        toast("This browser would not let the page copy it.", "bad");
+      }
+    });
+    tool(D_DOWN, "Download this PuttyPNG", function () {
+      var href = homeLoadedBlob ? URL.createObjectURL(homeLoadedBlob) : $("gotImg").src;
+      saveBytes(href, ($("gotName").textContent || "puttypng") + ".png", !!homeLoadedBlob);
+      confirmDone(this);
+    });
+
+    var x = makeXButton("Remove this PuttyPNG");
+    x.addEventListener("click", clearHomeLoaded);
+    zone.appendChild(x);
   }
 
   /* ==========================================================================
@@ -2466,8 +2911,9 @@
       document.getElementById("resultText").textContent = result.text || "";
     }
     // A decode can start from the How it works tab, so bring the person back
-    // to where the result is shown.
-    switchTab("puttypng");
+    // to where the result is shown. That is the playground, not the home: the
+    // home reads a disc in its own Load column and never uses this path.
+    switchTab("oldputtypng");
     showStep("read");
     toast("PuttyPNG decoded", "ok");
   }
@@ -2561,6 +3007,506 @@
   function claimDiscUrl(url) {
     if (discUrl && discUrl !== url) URL.revokeObjectURL(discUrl);
     discUrl = url;
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - THE METER
+     A donut that fills clockwise as data is added. Each finished rung keeps
+     its own ring, pushed inward by the one after it, so the picture is a
+     record of the climb rather than a single bar.
+     ========================================================================== */
+
+  /* THE SQUEEZE. Each rung gives the donut a larger share of the card, and the
+     button gives that width up. The share is turned into pixels from the
+     MEASURED card, because the action bar and the deck below it are different
+     widths and a per cent would resolve differently in each of them.
+     One token drives the donut, the slot, the disc, and the deck together. */
+  function setMeterWidth(k) {
+    homeShownRung = Math.min(k, RUNG_SHARE.length - 1);
+    var col = document.querySelector(".col.make");
+    if (!col) return;
+    var pad = parseFloat(getComputedStyle(col).paddingLeft) || 0;
+    var inner = col.clientWidth - pad * 2;
+    if (inner <= 0) return;
+    var px = Math.max(METER_MIN_PX, Math.round(inner * RUNG_SHARE[homeShownRung]));
+    // The token is set on the root, because that is where every rule that
+    // reads it resolves. Setting it on the column would leave the deck behind.
+    document.documentElement.style.setProperty("--meter-col", px + "px");
+  }
+
+  // Draw one ring layout. Returns where the cut ended up, in degrees, so a
+  // later delete knows what stretch of band it has to eat.
+  function paintMeter(bands, k, frac, over) {
+    var g = $("bands");
+    g.textContent = "";
+    bands.forEach(function (b) {
+      var mid = (b.r0 + b.r1) / 2, w = b.r1 - b.r0, C = 2 * Math.PI * mid;
+      var track = document.createElementNS(SVG_NS, "circle");
+      track.setAttribute("cx", 50); track.setAttribute("cy", 50); track.setAttribute("r", mid);
+      track.setAttribute("fill", "none"); track.setAttribute("stroke", "#e9e9ee");
+      track.setAttribute("stroke-width", w);
+      g.appendChild(track);
+
+      if (!b.done) homeCurBand = { r0: b.r0, r1: b.r1 };
+      if (b.r1 - b.r0 < 0.01) return;
+      var f = b.done || over ? 1 : frac;
+      if (f <= 0) return;
+      var arc = document.createElementNS(SVG_NS, "circle");
+      arc.setAttribute("cx", 50); arc.setAttribute("cy", 50); arc.setAttribute("r", mid);
+      arc.setAttribute("fill", "none");
+      arc.setAttribute("stroke", b.done ? rgb(RUNGS[Math.min(b.i, RUNGS.length - 1)].color)
+                                        : colorFor(k, frac));
+      arc.setAttribute("stroke-width", w);
+      arc.setAttribute("stroke-dasharray", (C * f) + " " + C);
+      arc.setAttribute("transform", "rotate(-90 50 50)");
+      g.appendChild(arc);
+    });
+
+    /* The two lines are held under four rendered pixels however large the
+       donut grows. The viewBox is 100 across, so one unit is worth the
+       meter's measured width divided by a hundred. */
+    var px = $("meter").getBoundingClientRect().width || 100;
+    var ceiling = 400 / px;
+    $("cut").setAttribute("stroke-width", Math.min(0.8, ceiling));
+    $("mark65").setAttribute("stroke-width", Math.min(0.65, ceiling));
+
+    var deg = over ? 359.9 : frac * 360;
+    setRadialLine($("cut"), deg, homeCurBand.r0, homeCurBand.r1);
+    $("cut").setAttribute("opacity", frac > 0 || over ? 1 : 0);
+
+    /* The dotted line marks the point on this rung where things start to get
+       interesting, a little ahead of the colour handoff. */
+    setRadialLine($("mark65"), WARN_AT * 360, homeCurBand.r0 - 1.5, homeCurBand.r1 + 1.5);
+    $("mark65").setAttribute("opacity", over ? 0 : 1);
+
+    $("meterwrap").classList.toggle("over", over);
+    return deg;
+  }
+
+  /* GAINING A RUNG IS A MOVE, NOT A JUMP. The old bands slide inward and thin
+     while the new outer ring grows out of nothing, so the change can be
+     watched rather than merely noticed. A timer drives it, not a frame
+     callback, because a frame callback does not run in a headless test. */
+  function drawMeter(k, frac) {
+    var over = k >= RUNGS.length;
+    var target = bandsFor(over ? RUNGS.length - 1 : k);
+    clearTimeout(homeMoveTimer);
+
+    if (!homeShownBands || homeShownBands.length === target.length) {
+      homeShownBands = target;
+      homeShownFrac = frac;
+      return paintMeter(target, k, frac, over);
+    }
+
+    var len = Math.max(homeShownBands.length, target.length);
+    var from = padBands(homeShownBands, len), to = padBands(target, len);
+    var f0 = homeShownFrac, start = Date.now(), deg = paintMeter(to, k, frac, over);
+    homeShownBands = target;
+    homeShownFrac = frac;
+
+    (function step() {
+      var t = Math.min(1, (Date.now() - start) / RUNG_MOVE_MS);
+      var e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      var mid = to.map(function (b, i) {
+        return { i: b.i, done: b.done, r0: lerp(from[i].r0, b.r0, e), r1: lerp(from[i].r1, b.r1, e) };
+      });
+      paintMeter(mid, k, lerp(f0, frac, e), over);
+      if (t < 1) homeMoveTimer = setTimeout(step, 16);
+    })();
+    return deg;
+  }
+
+  /* A large arrival washes the whole ring rather than only the line. It is
+     fired from the raw byte change so it lands on the same frame as the
+     keystroke, and again when a rung is gained. */
+  function flashRing() {
+    var f = $("ringflash");
+    f.classList.remove("on");
+    void f.getBoundingClientRect();
+    f.classList.add("on");
+    setTimeout(function () { f.classList.remove("on"); }, HOME_FLASH_MS);
+  }
+
+  /* Any input throws the cut back to full white, wherever its fade had
+     reached. This is called from the input itself and not from the update, so
+     the first painted frame is already white and nothing waits on the
+     compression to finish. */
+  function flashCut() {
+    var cut = $("cut");
+    cut.classList.remove("flash");
+    void cut.getBoundingClientRect();
+    cut.classList.add("flash");
+    setTimeout(function () { cut.classList.remove("flash"); }, HOME_FLASH_MS);
+  }
+
+  /* THE DELETION LAYER. A delete takes the stretch of band that is going away
+     and pulls it apart bit by bit. Every bit starts fully solid and reaches
+     nothing exactly at the end of the window, so the whole effect is a clean
+     hundred to zero. The stagger only decides when each one sets off. */
+  function dissolveArc(fromDeg, toDeg) {
+    var g = $("dissolve");
+    g.textContent = "";
+    // A tiny delete still has to be visible, so it is given a little arc to eat.
+    if (Math.abs(fromDeg - toDeg) < 5) fromDeg = toDeg + 5;
+    var bits = [], i;
+    for (i = 0; i < DISSOLVE_BITS; i++) {
+      var t = Math.random();
+      var p = polar(toDeg + (fromDeg - toDeg) * t,
+                    homeCurBand.r0 + Math.random() * (homeCurBand.r1 - homeCurBand.r0));
+      var el = document.createElementNS(SVG_NS, "rect");
+      el.setAttribute("width", 1.7); el.setAttribute("height", 1.7);
+      el.setAttribute("fill", "#8d8d97");
+      g.appendChild(el);
+      bits.push({
+        el: el, x: p.x, y: p.y,
+        dx: (Math.random() - 0.5) * 11, dy: (Math.random() - 0.5) * 11,
+        // Each bit waits its own share of the first half before it sets off,
+        // and every one of them lands on nothing at the same moment.
+        t0: Math.random() * 0.45
+      });
+    }
+    var start = Date.now();
+    (function step() {
+      var p = (Date.now() - start) / DISSOLVE_MS;
+      for (var j = 0; j < bits.length; j++) {
+        var b = bits[j], q = Math.max(0, Math.min(1, (p - b.t0) / (1 - b.t0)));
+        b.el.setAttribute("x", b.x - 0.85 + b.dx * q);
+        b.el.setAttribute("y", b.y - 0.85 + b.dy * q);
+        b.el.setAttribute("opacity", (1 - q).toFixed(3));
+      }
+      if (p < 1) setTimeout(step, 16); else g.textContent = "";
+    })();
+  }
+
+  // What would be pressed right now: the attachment if there is one, or the
+  // text in the box.
+  function currentHomeBytes() {
+    if (homeAttached) return homeAttached.bytes;
+    return homeEncoder.encode($("makeText").value);
+  }
+
+  // Redraw the meter for whatever the box holds. force skips the settle wait
+  // and the two effects, for the first paint and for a cleared box.
+  function updateHomeMeter(force) {
+    clearTimeout(homeSettleTimer);
+    homeSettleTimer = setTimeout(async function () {
+      var token = ++homeRunToken;
+      var bytes = currentHomeBytes();
+      var packed = await packedSize(bytes);
+      if (token !== homeRunToken) return;
+
+      var k = rungFor(packed);
+      var over = k >= RUNGS.length;
+      var cap = over ? RUNGS[RUNGS.length - 1].cap : RUNGS[k].cap;
+      var floor = k === 0 ? 0 : RUNGS[k - 1].cap;
+      var frac = over ? 1 : Math.max(0, Math.min(1, (packed - floor) / (cap - floor)));
+
+      // Gaining a rung is a big enough moment to wash the ring, even when the
+      // few bytes that did it were far too small to notice on their own.
+      if (!force && k > homeLastRung) flashRing();
+      homeLastRung = k;
+      setMeterWidth(k);
+
+      $("makeLabel").innerHTML = over ? RUNG_LABEL_OVER : RUNG_LABELS[k];
+      // The adjective wears the colour of the rung that earned it.
+      var word = $("makeLabel").querySelector("em");
+      if (word) word.style.color = over ? rgb(RUNG_OVER_COLOR) : rgb(RUNGS[k].color);
+
+      var deg = drawMeter(k, frac);
+
+      // Only the taking away waits for the real numbers. The flash already ran
+      // at the moment of the keystroke.
+      if (!force && packed < homeLastPacked) dissolveArc(homeLastDeg, deg);
+      if (over && packed !== homeLastPacked) {
+        var w = $("meterwrap");
+        w.classList.remove("judder");
+        void w.getBoundingClientRect();
+        w.classList.add("judder");
+      }
+      homeLastPacked = packed;
+      homeLastDeg = deg;
+
+      // The whole donut, inner rings included, is how full this disc is, so
+      // the reading is the packed size against the whole disc and not against
+      // the outer band alone.
+      var total = over ? RUNGS[RUNGS.length - 1].cap : cap;
+      $("usage").textContent = homeFmt(packed);
+      var of = document.createElement("i");
+      // "used of" rather than a bare "of", so the number reads as room left.
+      of.textContent = "used of " + homeFmt(total) + (over ? " max" : "");
+      $("usage").appendChild(of);
+      $("rungNo").textContent = over ? "(past the 2048 disc)" : "(" + RUNGS[k].px + " disc)";
+
+      $("homeMakeBtn").disabled = over;
+    }, force ? 0 : HOME_SETTLE_MS);
+  }
+
+  /* WHAT COUNTS AS LARGE. The raw byte change is known on the keystroke, long
+     before the compression finishes, so a big paste can wash the ring on the
+     same frame rather than a tenth of a second later. */
+  function noteHomeInput() {
+    // What is in the tray was pressed from what the box used to hold. One
+    // letter is enough to make it wrong, so it goes.
+    if (homeDiscOut) tossDisc();
+    var raw = currentHomeBytes().byteLength;
+    var rung = RUNGS[Math.min(homeLastRung, RUNGS.length - 1)];
+    var band = rung.cap - (homeLastRung ? RUNGS[homeLastRung - 1].cap : 0);
+    flashCut();
+    if (Math.abs(raw - homeLastRaw) > band * 0.05) flashRing();
+    homeLastRaw = raw;
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - THE ATTACHMENT
+     One payload at a time: text or one file, never both together. See
+     addendums.ini for why, and for what would have to change first.
+     ========================================================================== */
+
+  function showHomeAttachment() {
+    var pill = $("filePill");
+    $("fileIcon").innerHTML = homeIcon(D_FILE, 15);
+    $("homeFileName").textContent = homeAttached.name;
+    $("homeFileSize").textContent = homeFmt(homeAttached.bytes.length);
+    $("fileX").innerHTML = homeIcon(D_X, 14);
+    pill.hidden = false;
+    $("makeBox").classList.add("has");
+    // The box is hidden behind the chip, so it must not be reachable by tab.
+    $("makeText").disabled = true;
+  }
+
+  function dropHomeAttachment() {
+    homeAttached = null;
+    $("filePill").hidden = true;
+    $("makeBox").classList.remove("has");
+    $("makeText").disabled = false;
+    noteHomeInput();
+    updateHomeMeter();
+  }
+
+  async function takeHomeAttachment(f) {
+    if (!f) return;
+    homeAttached = {
+      name: f.name,
+      mime: f.type || "application/octet-stream",
+      bytes: new Uint8Array(await f.arrayBuffer())
+    };
+    showHomeAttachment();
+    noteHomeInput();
+    updateHomeMeter();
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - MAKE, AND THE DISC THAT COMES OUT
+     ========================================================================== */
+
+  function resetDisc() {
+    var cd = $("cd");
+    cd.style.transition = "none";
+    cd.classList.remove("out", "gone", "lifted");
+    void cd.getBoundingClientRect();
+    cd.style.transition = "";
+  }
+
+  // Throw away whatever is in the tray, then run then() once it has gone.
+  function tossDisc(then) {
+    if (!homeDiscOut) { if (then) then(); return; }
+    homeDiscOut = false;
+    $("cd").classList.add("gone");
+    setTimeout(function () { resetDisc(); if (then) then(); }, DISC_TOSS_MS);
+  }
+
+  async function pressHomeDisc() {
+    if (homePressing) return;
+    homePressing = true;
+    var btn = $("homeMakeBtn"), lab = $("makeLabel"), label = lab.innerHTML;
+    btn.disabled = true;
+    lab.textContent = "Pressing...";
+    try {
+      var input = homeAttached ? homeAttached.bytes : ($("makeText").value || "(empty)");
+      var opts = { coverStyle: "cd", depth: "standard", maxSize: 2048 };
+      // The engine takes a name and a type in its options, so a file comes out
+      // of the other end still knowing what it was called.
+      if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
+      var png = await PuttyPNG.encode(input, opts);
+      homeLastBlob = png.blob;
+      tossDisc(function () {
+        var cd = $("cd");
+        cd.src = png.dataUrl;
+        // A timer, not requestAnimationFrame. The frame callback does not run
+        // in a headless test, and the disc would then never be told to come out.
+        setTimeout(function () { cd.classList.add("out"); homeDiscOut = true; }, DISC_EJECT_MS);
+      });
+    } catch (err) {
+      toast(friendly(err), "bad");
+    }
+    lab.innerHTML = label;
+    btn.disabled = false;
+    homePressing = false;
+  }
+
+  async function copyHomeDisc(el, word) {
+    if (!homeLastBlob) return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": homeLastBlob })]);
+      confirmDone(el, word);
+    } catch (err) {
+      toast("This browser would not let the page copy it.", "bad");
+    }
+  }
+
+  /* CARRYING A DISC. A copy of it follows the pointer and the original stays
+     as a trace in the slot, so the tray never looks empty mid-move.
+     THERE IS ONLY ONE PLACE TO PUT ONE DOWN. The bin is a button, so a release
+     anywhere but Load carries the disc back to its slot. */
+  function endDiscDrag(e) {
+    if (!homeDrag) return;
+    var d = homeDrag;
+    homeDrag = null;
+    if (!d.live) return;
+    var cd = $("cd"), zone = $("zone");
+    zone.classList.remove("over");
+    var g = d.ghost;
+    if (!!e && pointerInside(zone, e)) {
+      g.style.transition = "transform .25s ease, opacity .25s ease";
+      g.style.transform += " scale(.4)";
+      g.style.opacity = 0;
+      cd.classList.remove("lifted");
+      loadHomeFromSrc(cd.src, "the one you made", homeLastBlob);
+      homeDiscOut = false;
+      cd.classList.add("gone");
+      setTimeout(resetDisc, DISC_TOSS_MS);
+    } else {
+      g.style.transition = "transform .25s ease";
+      g.style.transform = "translate(0,0)";
+      setTimeout(function () { cd.classList.remove("lifted"); }, 240);
+    }
+    setTimeout(function () { g.remove(); }, DISC_DRAG_MS);
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - LOAD
+     ========================================================================== */
+
+  /* READING TAKES REAL TIME ON A LARGE DISC. The notice waits a moment before
+     it appears, so a small one is read and shown without a flicker of it. */
+  function startReading() {
+    homeReadDepth++;
+    clearTimeout(homeReadTimer);
+    homeReadTimer = setTimeout(function () {
+      if (homeReadDepth > 0) $("zone").classList.add("reading");
+    }, READING_DELAY_MS);
+  }
+
+  function stopReading() {
+    homeReadDepth = Math.max(0, homeReadDepth - 1);
+    if (homeReadDepth === 0) {
+      clearTimeout(homeReadTimer);
+      $("zone").classList.remove("reading");
+    }
+  }
+
+  async function readHomeFile(file) {
+    if (!file) return;
+    if (!/png/i.test(file.type) && !/\.png$/i.test(file.name || "")) {
+      toast("That is not a PNG. A PuttyPNG has to stay a PNG.", "bad");
+      return;
+    }
+    var url = URL.createObjectURL(file);
+    startReading();
+    try {
+      var res = await PuttyPNG.decode(file);
+      showHomeLoaded(url, file.name || "pasted.png", res, file);
+    } catch (err) {
+      if (err && err.code === "PTY-E00") {
+        // A plain PNG is still worth showing. It is empty.
+        showHomeLoaded(url, file.name || "pasted.png", null, file);
+        toast(friendly(err), "bad");
+        return;
+      }
+      toast(friendly(err), "bad");
+    } finally {
+      stopReading();
+    }
+  }
+
+  async function loadHomeFromSrc(src, name, blob) {
+    startReading();
+    try {
+      showHomeLoaded(src, name, await PuttyPNG.decode(src), blob);
+    } catch (err) {
+      showHomeLoaded(src, name, null, blob);
+      toast(friendly(err), "bad");
+    } finally {
+      stopReading();
+    }
+  }
+
+  /* What came out is shown as the disc and its name, then whatever came out as
+     a file, then the text. A file gets its own chip with a download arrow, so
+     it can be taken on its own rather than through the picture. */
+  function showHomeLoaded(url, name, res, blob) {
+    homeLoadedBlob = blob || null;
+    $("gotImg").src = url;
+    $("gotName").textContent = name;
+    $("gotFiles").textContent = "";
+    var text = null;
+
+    if (res === null) {
+      $("gotSize").textContent = "no PuttyPNG data inside";
+    } else if (res.text != null) {
+      text = res.text;
+      $("gotSize").textContent = homeFmt(res.bytes.length) + " of text inside";
+    } else {
+      $("gotSize").textContent = "one file inside";
+      addHomeFileChip(res.name || "a file", res.bytes, res.mime);
+    }
+    // All of it. The panel is meant to hold a whole book if one went in.
+    $("gotText").textContent = text === null ? "" : text;
+    $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
+    $("zone").classList.add("has");
+  }
+
+  // The whole chip takes the file. Nothing asks for a small target inside it.
+  function addHomeFileChip(name, bytes, mime) {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "pill";
+    chip.title = "Press to save " + name;
+    chip.innerHTML = '<span class="ic">' + homeIcon(D_FILE, 15) + "</span>" +
+      '<span class="nm"></span><span class="sz"></span>' +
+      '<span class="act-ic">' + homeIcon(D_DOWN, 14) + "</span>";
+    chip.querySelector(".nm").textContent = name;
+    chip.querySelector(".sz").textContent = homeFmt(bytes.length);
+    chip.addEventListener("click", function () {
+      var href = URL.createObjectURL(new Blob([bytes], { type: mime || "application/octet-stream" }));
+      saveBytes(href, name, true);
+      var slot = chip.querySelector(".act-ic");
+      slot.innerHTML = homeIcon(D_TICK, 14);
+      slot.style.color = "var(--ok)";
+      setTimeout(function () {
+        slot.innerHTML = homeIcon(D_DOWN, 14);
+        slot.style.color = "";
+      }, HOME_CONFIRM_MS);
+    });
+    $("gotFiles").appendChild(chip);
+  }
+
+  function clearHomeLoaded() {
+    homeLoadedBlob = null;
+    $("zone").classList.remove("has");
+    $("gotImg").removeAttribute("src");
+    $("gotFiles").textContent = "";
+    $("gotText").textContent = "";
+    $("gotBody").classList.remove("filesonly");
+    $("sink").value = "";
+  }
+
+  // The first PNG on a clipboard, or nothing.
+  function pngFrom(items) {
+    for (var i = 0; items && i < items.length; i++) {
+      if (/^image\/png/.test(items[i].type)) return items[i].getAsFile();
+    }
+    return null;
   }
 
   /* ==========================================================================
@@ -2682,6 +3628,7 @@
     setDriveState("empty");
 
     wireTabs();
+    wireHome();
     wireDrawer();
     wireOptionFields();
     wireDataBox();
