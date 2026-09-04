@@ -13,8 +13,9 @@ server, no link that expires, no account to sign into.
 Open `index.html`. There is nothing to install and nothing to build.
 
 Serving the folder over HTTP is better than opening the file directly, because
-a browser blocks `fetch` against a `file://` path. The playground works either
-way, but the engine source card on the page can only fill itself over HTTP.
+a browser blocks `fetch` against a `file://` path. Making and reading a
+PuttyPNG works either way, but the engine source card on the How it works tab
+can only fill itself over HTTP.
 
 ## The four files
 
