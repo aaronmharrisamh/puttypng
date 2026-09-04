@@ -62,29 +62,99 @@
   var animationsOn = true;
   var celebrationOn = true;
 
+  // The formation, as it is running now. The defaults are the FORM_ constants
+  // and a stored choice replaces them at startup.
+  var formStyle = "fade";
+  var formMs = 620;
+  var formOverlap = 20;
+
+  // The drive button's two arrows. Down means the disc is going in, up means
+  // it is coming out, so the icon says the same thing as the label.
+  var ARROW_DOWN =
+    '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+    '<path d="M12 5v13m0 0l-5-5m5 5l5-5" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ARROW_UP =
+    '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+    '<path d="M12 19V6m0 0l-5 5m5-5l5 5" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  // THE FASCIA AT REST.
+  // The drive keeps its whole display, with or without a disc. An empty drive
+  // shows its six labels and no reading, the way an instrument does. These
+  // labels are used until a disc has been read.
+  var BLANK_READING = "-";
+  var RESTING_LABELS = ["Size", "Data", "Used", "Depth", "Zip", "Lock"];
+
   // THE SHOW, IN TIME.
   // The compressed column is used when a person acts again while a result is
   // already on screen, so an impatient second drop does not feel slow.
   var KILL_MS = 620,   KILL_MS_FAST = 260;    // clearing the old result
   var HOLD_MS = 700,   HOLD_MS_FAST = 200;    // the new one hovering, before it enters
   var INSERT_MS = 500, INSERT_MS_FAST = 260;  // a PNG sliding into the slot
-  var INGEST_MS = 620, INGEST_MS_FAST = 300;  // typed data being pulled in
+  // THE FORMATION.
+  // A new PuttyPNG appears where an ejected disc sits. The ones and zeros fly
+  // to that same place while it appears. Both take the formation time and both
+  // run on the same curve, so they finish together by construction rather than
+  // by two numbers being kept in step by hand.
+  var FORM_MS = 620;              // the whole formation, digits and disc alike
+  var FORM_OVERLAP = 20;          // per cent of the clear-out it starts over
+  var FORM_EASE = "cubic-bezier(.42, 0, .58, 1)";   // ease-in-out, both parts
+  var FORM_MS_MIN = 200, FORM_MS_MAX = 1600;
+  var FORM_OVERLAP_MAX = 60;
 
   // Matches the left, right, and top inset on .disc-holder in styles.css.
   var DISC_INSET = 14;
 
-  // How many ones and zeros are drawn for the ingest. They are decoration and
-  // carry no data, so the count is chosen for looks alone.
-  var EJECT_MS = 420;       // matches the .disc-holder transition in styles.css
-  var SPIN_STAGE_MS = 320;  // each step of the spin up, three in all
+  // ONE MOVE EACH WAY. Both match a rule in styles.css.
+  var EJECT_MS = 300;       // out of the machine, rising 5px past the rest place
+  var LOAD_MS = 400;        // back in, lifting 45px before it drops
+  var SPIN_STAGE_MS = 320;      // each step of the spin up, three in all
+  var WIN_SLIDE_MS = 220;   // the disc sliding into the window, or back out
+  // A turnaround part way through a move never takes less than this, so a
+  // disc a hair from home still reads as a move rather than as a jump.
+  var DISC_MIN_MS = 90;
+  // A plain curve, for a move that starts part way. The designed curves wind
+  // up by dipping below their start, and a half way disc would visibly go the
+  // wrong way first.
+  var DISC_EASE = "cubic-bezier(.25, .1, .25, 1)";
+  // How long a decode may run before the button says so. A decode of a 256px
+  // cover finishes in a few milliseconds, and a label that flashes up for one
+  // frame is noise rather than news.
+  var DECODE_SAY_MS = 140;
+  // THE RAW PIXELS VIEW.
+  // The widest the picture may be drawn, and the most times life size it may
+  // be shown at. Three is enough to count the stipple and still fit a laptop.
+  var PIXEL_VIEW_MAX = 520;
+  var PIXEL_VIEW_STEPS = 3;
+  var WIN_LEAD_MS = 60;     // how far ahead of the disc the window empties
+  // One turn. Matches the rule on .spin-rotor.turning in styles.css.
+  var SPIN_TURN_MS = 1400;
   var KILL_MIN_LIFT = 60;   // every thrown piece clears the deck by at least this
+
+  // A flight of ones and zeros that is culled before it lands flares and goes
+  // out over this time. Something that pops out of existence reads as a fault.
+  var SPARK_MS = 260;
 
   // The celebration. Ribbons only, with a ripple, from mockup F.
   var CONFETTI_COUNT = 60;
   var CONFETTI_LIFE_MS = 2200;
   var CONFETTI_COLORS = ["#c96f52", "#a8532f", "#e0a06f", "#7fa8a0", "#8a7fb0", "#d8c15e"];
 
+  // How many ones and zeros are drawn for one flight. They are decoration and
+  // carry no data, so the count is chosen for looks alone.
   var INGEST_DIGITS = 16;
+
+  // WHAT THE MAKE BUTTON SAYS, STAGE BY STAGE.
+  // The words follow the order the work really runs in: the data is taken
+  // first, then the old disc is thrown out, then the new one is pressed.
+  var STAGE_GRAB = "Grabbing your bytes...";
+  var STAGE_TOSS = "Tossing the old one...";
+  var STAGE_PRESS = "Pressing...";
+  // The shortest time a stage stays on the button. Encoding a short line of
+  // text can finish inside one frame, and a label nobody can read is worse
+  // than no label at all.
+  var MAKE_STAGE_MS = 450;
 
   // How often each kill animation is chosen. The two canvas tricks are rare on
   // purpose, so they read as a surprise rather than the usual thing.
@@ -127,7 +197,8 @@
     "splHubSize", "splHoleSize", "splOuter", "splInner",
     "splPoints", "splCurve", "splWaviness", "splAmplitude", "splSize",
     "splDotSep", "splDotMin", "splDotMax", "splTextBuffer", "splTextClear",
-    "optRimSize", "optRimSpacing"
+    "optRimSize", "optRimSpacing",
+    "optFormMs", "optFormOverlap"
   ];
 
   // What the engine snippet card says when it cannot show the real source.
@@ -205,9 +276,16 @@
   var deckEl = document.getElementById("deck");
   var deckHandle = document.getElementById("deckHandle");
   var driveBtn = document.getElementById("driveBtn");
-  var deckFoot = document.getElementById("deckFoot");
+  var driveShelf = document.getElementById("driveShelf");
+  var driveLamp = document.getElementById("driveLamp");
+  var glassWrap = document.getElementById("glassWrap");
+  var wingL = document.getElementById("wingL");
+  var wingR = document.getElementById("wingR");
+  var driveIcon = document.getElementById("driveIcon");
+  var driveLabel = document.getElementById("driveLabel");
   var glass = document.getElementById("glass");
   var discTools = document.getElementById("discTools");
+  var pixelBtn = document.getElementById("pixelBtn");
 
   // Page state that outlives any single function. Declared here so every
   // section can see it, and only ever changed through the functions below.
@@ -217,6 +295,11 @@
   var dropBusy = false;      // true while a drop is being read, so two cannot race
   var lastPng = null;        // the most recent result, for Save and Copy
   var driveState = "empty";  // "empty", "out", or "in"
+  var decoding = false;      // real work is running, and a second press must wait
+  var discRun = 0;           // which disc move is current, so a stale timer cannot fire
+  var discTimer = 0;
+  var step = "input";        // which section the wide column is showing
+  var deckRows = null;       // the six values of the last disc read, or null
   var discUrl = null;        // the blob URL of a dropped disc, held while it is loaded
   var subTabShow = null;     // set by wireSubTabs, so the cover style can switch group
   var lastIsDisc = false;    // whether the loaded cover is really a CD
@@ -305,7 +388,10 @@
     make: "ppng.seen.make",
     read: "ppng.seen.read",
     animations: "ppng.pref.animations",
-    celebration: "ppng.pref.celebration"
+    celebration: "ppng.pref.celebration",
+    formStyle: "ppng.pref.formStyle",
+    formMs: "ppng.pref.formMs",
+    formOverlap: "ppng.pref.formOverlap"
   };
 
   var SEEN_DAYS = 7;      // the celebration comes back for someone returning
@@ -357,12 +443,33 @@
     writeStore(STORE_KEYS[kind], stampValue(""));
   }
 
-  function readPref(kind) {
+  // A stored choice, or null when there is none and when it has expired.
+  function readSetting(kind) {
     return readFresh(STORE_KEYS[kind], PREF_DAYS);
   }
+  function writeSetting(kind, value) {
+    writeStore(STORE_KEYS[kind], stampValue(value));
+  }
 
+  // A stored number, or null when there is none, it has expired, or it falls
+  // outside what the control allows.
+  //
+  // RULE: an empty or missing value must not read as zero. Number("") is 0,
+  // and 0 is inside most of these ranges, so it would look like a real choice.
+  function readNumber(kind, lo, hi) {
+    var raw = readSetting(kind);
+    if (raw === null || raw === "") return null;
+    var v = Number(raw);
+    if (!isFinite(v) || v < lo || v > hi) return null;
+    return v;
+  }
+
+  // The two switches are a setting that reads "on" or "off".
+  function readPref(kind) {
+    return readSetting(kind);
+  }
   function writePref(kind, on) {
-    writeStore(STORE_KEYS[kind], stampValue(on ? "on" : "off"));
+    writeSetting(kind, on ? "on" : "off");
   }
 
   // ---- The celebration ----------------------------------------------------
@@ -826,7 +933,9 @@
     } catch (err) {
       // Fall through. The cleanup below runs either way.
     }
-    clearShowLayers();
+    // Kill pieces only. A flight of ones and zeros overlaps the end of a kill
+    // by design, so sweeping the show here would cut that flight in half.
+    clearKillLayers();
     return name;
   }
 
@@ -854,35 +963,89 @@
   // Typed data has no picture, so ones and zeros are pulled from the box into
   // the slot instead. They are decoration and carry nothing: the payload may
   // be encrypted, and showing real bytes would suggest something is leaking.
-  async function runIngest(ms) {
+  //
+  // THE FLIGHT OWNS ITSELF. It is started, never waited for, and nothing that
+  // clears the show may touch it. The clear-out of the old disc ends in the
+  // middle of a flight by design, and a flight cut short there is the one
+  // fault this part exists to prevent.
+  //
+  // ms is how long one digit flies for. to is the rectangle the digits fly at,
+  // so the caller decides where the disc is forming. Returns the host element.
+  function launchIngest(ms, to) {
     var host = document.createElement("div");
     host.className = "ingest-host";
     host.setAttribute("aria-hidden", "true");
     document.body.appendChild(host);
 
     var from = exportText.getBoundingClientRect();
-    var to = slotEl.getBoundingClientRect();
     var tx = to.left + to.width / 2;
-    var ty = to.top + to.height * 0.74;
-    var lag = Math.round(ms * 0.45);
+    var ty = to.top + to.height / 2;
 
+    // A development surface, the same as lastKill. Each digit is aimed by a
+    // transform set inside requestAnimationFrame, and that cannot be read back
+    // under a headless virtual clock, so where they were aimed is recorded.
+    if (window.PuttyPNGDebug) window.PuttyPNGDebug.lastAim = { x: tx, y: ty };
+
+    // EVERY DIGIT LANDS BY ms. The stagger is taken out of the flight, not
+    // added after it, so the last digit arrives as the disc finishes.
+    var lag = Math.round(ms * 0.35);
+    var fly = ms - lag;
+
+    // Every digit is built first and sent on its way after ONE forced reflow,
+    // rather than one animation frame each. That gives the browser a start
+    // state for all sixteen at once, which is one layout instead of sixteen,
+    // and it does not depend on an animation frame ever arriving.
+    var flying = [];
     for (var i = 0; i < INGEST_DIGITS; i++) {
-      var b = document.createElement("span");
-      b.className = "bit";
-      b.textContent = Math.random() < 0.5 ? "0" : "1";
+      // Drawn once in the markup and used here, so sixteen digits cost one
+      // shape each rather than sixteen glyphs to lay out.
+      var b = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      b.setAttribute("class", "bit");
+      b.setAttribute("viewBox", "0 0 12 16");
+      var u = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      u.setAttribute("href", Math.random() < 0.5 ? "#bit0" : "#bit1");
+      b.appendChild(u);
       var sx = from.left + Math.random() * from.width;
       var sy = from.top + Math.random() * from.height;
       b.style.left = sx + "px";
       b.style.top = sy + "px";
-      host.appendChild(b);
       var d = Math.round(Math.random() * lag);
-      b.style.transition = "transform " + ms + "ms cubic-bezier(.5,0,.9,.55) " + d + "ms, " +
-                           "opacity " + ms + "ms linear " + d + "ms";
-      spring(b, "translate(" + (tx - sx).toFixed(0) + "px," + (ty - sy).toFixed(0) +
-                "px) scaleX(.3) scaleY(2.8)");
+      b.style.transition = "transform " + fly + "ms " + FORM_EASE + " " + d + "ms, " +
+                           "opacity " + fly + "ms linear " + d + "ms";
+      host.appendChild(b);
+      flying.push([b, "translate(" + (tx - sx).toFixed(0) + "px," +
+                      (ty - sy).toFixed(0) + "px) scaleX(.3) scaleY(2.8)"]);
     }
-    await wait(ms + lag);
-    host.remove();
+    void host.offsetHeight;
+    for (var k = 0; k < flying.length; k++) {
+      flying[k][0].style.transform = flying[k][1];
+      flying[k][0].style.opacity = "0";
+    }
+    // THE HOST GOES WHEN THE LAST DIGIT HAS REALLY LANDED, counted off the
+    // browser's own transition endings. A timer would have to guess, and a
+    // guess one frame short cuts the tail off the flight.
+    //
+    // The timer here is only a backstop. Transitions do not run in a
+    // background tab, and a person who looks away must not come back to a
+    // page with sixteen digits stuck on it.
+    var landed = 0, ended = false, guard = 0;
+    function land(how) {
+      if (ended) return;
+      ended = true;
+      clearTimeout(guard);
+      host.removeEventListener("transitionend", onEnd);
+      if (window.PuttyPNGDebug) window.PuttyPNGDebug.lastLanding = how;
+      // A culled flight is already spoken for: its flare takes the host away.
+      if (host.dataset.culled !== "1") host.remove();
+    }
+    function onEnd(e) {
+      if (e.propertyName !== "transform") return;
+      landed++;
+      if (landed >= INGEST_DIGITS) land("transitions");
+    }
+    host.addEventListener("transitionend", onEnd);
+    guard = setTimeout(function () { land("backstop"); }, ms + 500);
+    return host;
   }
 
   // Mark the deck as holding something. Below the collapse point an empty
@@ -1198,6 +1361,43 @@
       writePref("celebration", celebrationOn);
       if (!celebrationOn) clearConfetti();
     });
+
+    wireFormationFields();
+  }
+
+  // The three formation settings. They are here rather than in the page code
+  // so the feel can be tuned without an edit.
+  //
+  // The range and the number beside it are already kept in step by bindSlider,
+  // so only the range is read.
+  function wireFormationFields() {
+    var style = document.getElementById("optFormStyle");
+    var ms = document.getElementById("optFormMs");
+    var msNum = document.getElementById("optFormMsNum");
+    var ov = document.getElementById("optFormOverlap");
+    var ovNum = document.getElementById("optFormOverlapNum");
+    if (!style || !ms || !ov) return;
+
+    style.value = formStyle;
+    ms.value = msNum.value = formMs;
+    ov.value = ovNum.value = formOverlap;
+
+    style.addEventListener("change", function () {
+      formStyle = FORMATIONS[style.value] ? style.value : "fade";
+      writeSetting("formStyle", formStyle);
+    });
+    function onMs() {
+      formMs = Number(ms.value);
+      writeSetting("formMs", String(formMs));
+    }
+    function onOverlap() {
+      formOverlap = Number(ov.value);
+      writeSetting("formOverlap", String(formOverlap));
+    }
+    ms.addEventListener("change", onMs);
+    msNum.addEventListener("change", onMs);
+    ov.addEventListener("change", onOverlap);
+    ovNum.addEventListener("change", onOverlap);
   }
 
   // The drive button is the only way between the two sections now.
@@ -1205,23 +1405,99 @@
     driveBtn.addEventListener("click", onDriveButton);
   }
 
+  // THE RAW PIXELS. The deck draws the picture smoothed, because it is drawn
+  // smaller than it really is. This is the one place it is shown at its true
+  // size with no smoothing, which is where the stippling and the rim text can
+  // be seen.
+  function showPixels() {
+    var src = outImg.src;
+    if (!src) return;
+    var w = outImg.naturalWidth || 256;
+    var h = outImg.naturalHeight || 256;
+
+    var wrap = document.createElement("div");
+    wrap.className = "modal-overlay-el";
+    wrap.innerHTML =
+      '<div class="modal-card pixel-card" role="dialog" aria-modal="true" aria-label="The real pixels">' +
+      "<h3>The real pixels</h3>" +
+      '<div class="pixel-frame"><img alt="Your PuttyPNG at its true size" ' +
+      'width="' + w + '" height="' + h + '"></div>' +
+      '<p class="small muted"><span data-scale></span> The deck draws it smaller ' +
+      "and smooth, which is why it looks softer there. Right-click this picture, " +
+      "or either button on the disc, to take the original file.</p>" +
+      '<div class="modal-actions">' +
+      '<button type="button" class="btn btn-clay btn-sm" data-ok>Close</button></div></div>';
+    // The source is set on the element rather than in the markup, so a data
+    // URL never has to survive being written into a string.
+    var shot = wrap.querySelector("img");
+    shot.src = src;
+
+    function close() { wrap.remove(); document.removeEventListener("keydown", onKey); }
+    function onKey(e) { if (e.key === "Escape" || e.key === "Enter") close(); }
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
+    wrap.querySelector("[data-ok]").addEventListener("click", close);
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(wrap);
+
+    // NEAREST NEIGHBOUR CAN ONLY PUT A WHOLE NUMBER OF DEVICE PIXELS UNDER
+    // EACH IMAGE PIXEL. A screen at 125 or 150 per cent gives 1.25 or 1.5 of
+    // them, so some image pixels come out one device pixel wide and their
+    // neighbours two, which is the uneven blockiness this view exists to
+    // avoid. The width is worked out from the device ratio instead, so every
+    // image pixel gets the same whole number and every block is square.
+    //
+    // RULE: the room is MEASURED, after the card is on the page. The card
+    // decides how much space the picture has, not the window, and a width
+    // worked out from the window was clamped by the frame without a word.
+    var dpr = window.devicePixelRatio || 1;
+    var room = Math.min(wrap.querySelector(".pixel-frame").clientWidth, PIXEL_VIEW_MAX);
+    var step = Math.floor((room * dpr) / w);
+    var even = step >= 1;
+    if (step > PIXEL_VIEW_STEPS) step = PIXEL_VIEW_STEPS;
+    // Below one device pixel per image pixel there is no honest way to show
+    // them, so the picture is fitted and smoothed rather than made uneven.
+    var shown = even ? (w * step / dpr) : room;
+
+    shot.style.width = Math.round(shown * 100) / 100 + "px";
+    shot.style.height = "auto";
+    if (even) shot.classList.add("even");
+    wrap.querySelector("[data-scale]").textContent =
+      w + " by " + h + ", shown at " +
+      (even ? step + " to 1, with no smoothing."
+            : "the size it fits, smoothed, because there is no room to show it true.");
+    if (window.PuttyPNGDebug) {
+      window.PuttyPNGDebug.lastPixelView = { dpr: dpr, step: step, css: shown, even: even };
+    }
+
+    wrap.querySelector("[data-ok]").focus();
+  }
+
+  function downloadPng() {
+    if (!lastPng) return;
+    var a = document.createElement("a");
+    a.href = lastPng.dataUrl;
+    a.download = "puttypng.png";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  async function copyPng() {
+    if (!lastPng || !lastPng.blob) { toast("Nothing to copy yet", "bad"); return; }
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": lastPng.blob })]);
+        toast("Image copied to clipboard", "ok");
+      } else { toast("Clipboard images not supported here - use Download", "bad"); }
+    } catch (e) { toast("Could not copy image", "bad"); }
+  }
+
+  // The same two acts are offered twice: named on the picture, and as icons
+  // above the window. One handler each, so the two copies cannot drift.
   function wireSaveAndCopy() {
-    document.getElementById("saveBtn").addEventListener("click", function () {
-      if (!lastPng) return;
-      var a = document.createElement("a");
-      a.href = lastPng.dataUrl;
-      a.download = "puttypng.png";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    });
-    document.getElementById("copyImgBtn").addEventListener("click", async function () {
-      if (!lastPng || !lastPng.blob) { toast("Nothing to copy yet", "bad"); return; }
-      try {
-        if (navigator.clipboard && window.ClipboardItem) {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": lastPng.blob })]);
-          toast("Image copied to clipboard", "ok");
-        } else { toast("Clipboard images not supported here - use Save", "bad"); }
-      } catch (e) { toast("Could not copy image", "bad"); }
-    });
+    document.getElementById("saveBtn").addEventListener("click", downloadPng);
+    document.getElementById("winSaveBtn").addEventListener("click", downloadPng);
+    document.getElementById("copyImgBtn").addEventListener("click", copyPng);
+    document.getElementById("winCopyBtn").addEventListener("click", copyPng);
+    document.getElementById("pixelBtn").addEventListener("click", showPixels);
   }
 
   function wireReader() {
@@ -1519,10 +1795,62 @@
     return opts;
   }
 
+  // ---- WHAT THE MAKE BUTTON SAYS ------------------------------------------
+
+  // The resting words are read from the markup, so the button and the page can
+  // never drift apart.
+  var MAKE_LABEL = makeBtn.textContent;
+
+  // A queue, because the work does not wait for the words. Encoding a short
+  // line of text finishes long before its stage has been on screen for
+  // MAKE_STAGE_MS, so a stage that arrives too early is held and painted when
+  // the one before it has had its time.
+  //
+  // The generation number is what stops a late stage from landing on top of a
+  // make that has already started after it.
+  var stageQueue = [], stageShownAt = 0, stageTimer = 0, stageRun = 0;
+
+  function stagePaint(text) {
+    makeBtn.textContent = text;
+    stageShownAt = now();
+  }
+
+  function stagePump(gen) {
+    stageTimer = 0;
+    if (gen !== stageRun || !stageQueue.length) return;
+    var left = MAKE_STAGE_MS - (now() - stageShownAt);
+    if (left > 0) {
+      stageTimer = setTimeout(function () { stagePump(gen); }, left);
+      return;
+    }
+    stagePaint(stageQueue.shift());
+    if (stageQueue.length) {
+      stageTimer = setTimeout(function () { stagePump(gen); }, MAKE_STAGE_MS);
+    }
+  }
+
+  function stageSay(text) {
+    stageQueue.push(text);
+    if (!stageTimer) stagePump(stageRun);
+  }
+
+  // A new make takes the button over at once, whatever the last one still had
+  // queued.
+  function stageBegin() {
+    stageRun++;
+    clearTimeout(stageTimer);
+    stageTimer = 0;
+    stageQueue.length = 0;
+    stagePaint(STAGE_GRAB);
+  }
+
+  function stageEnd() {
+    stageSay(MAKE_LABEL);
+  }
+
   async function makePuttyPNG() {
     makeBtn.disabled = true;
-    var original = makeBtn.textContent;
-    makeBtn.textContent = "Pressing...";
+    stageBegin();
     try {
       var opts = gatherOptions();
       // An attached file, dropped or browsed, encodes as binary with its name.
@@ -1539,13 +1867,15 @@
       toast("PuttyPNG created", "ok");
       // The engine has finished. Everything after this is decoration, and the
       // result is already safe whether or not it plays.
-      await presentResult(png.dataUrl, lastPng.isDisc, "ingest", false);
+      await presentResult(png.dataUrl, lastPng.isDisc, "ingest", false, stageSay);
       maybeCelebrate("make");
     } catch (err) {
       toast(friendly(err), "bad");
     } finally {
+      // The button is free again at once. Only the words wait, so the last
+      // stage stays readable without holding a person up.
       makeBtn.disabled = false;
-      makeBtn.textContent = original;
+      stageEnd();
     }
   }
 
@@ -1563,45 +1893,86 @@
     var loaded = (state === "in");
 
     if (!empty) raiseSheet();
-    driveBtn.classList.toggle("hidden", empty);
-    driveBtn.textContent = loaded ? "Eject PuttyPNG" : "Decode PuttyPNG";
-    deckFoot.classList.toggle("hidden", empty);
+    // The shelf hides but keeps its space, so the six values never move.
+    driveShelf.classList.toggle("empty", empty);
+    driveLamp.classList.toggle("lit", loaded);
+    // The two acts on the window are only offered when there is a disc in it.
+    glassWrap.classList.toggle("has-disc", loaded);
+    driveLabel.textContent = loaded ? "Eject PuttyPNG" : "Decode PuttyPNG";
+    driveIcon.innerHTML = loaded ? ARROW_UP : ARROW_DOWN;
+    // The window and the values describe what is INSIDE. The fascia is drawn
+    // in every state, so an empty drive reads as a machine with nothing in it.
+    // Only the reading changes: lit means the values on show are real.
     glass.classList.toggle("lit", loaded);
+    wingL.classList.toggle("lit", loaded);
+    wingR.classList.toggle("lit", loaded);
+    renderFascia();
     discTools.classList.toggle("hidden", state !== "out");
+    // The same rule as the two on the picture: there is nothing to look at
+    // unless a picture is on show.
+    pixelBtn.classList.toggle("hidden", state !== "out");
   }
 
-  // The slim display under the drive. It describes whichever disc the drive
-  // has, in or out, because those details have no other home.
+  // The six values, wing and wing around the window.
+  //
+  // Short labels on purpose: each wing is about 80 pixels, and a long label
+  // would push the value onto a second line.
+  // RULE: this remembers the values. renderFascia decides what is drawn.
+  // Only a loaded drive shows a real reading.
   function setDeckFoot(rows) {
-    if (!rows) { deckFoot.innerHTML = ""; return; }
-    deckFoot.innerHTML = rows.map(function (r) {
-      return '<div class="stat-row"><span class="k">' + r[0] +
-             '</span><span class="v">' + r[1] + "</span></div>";
-    }).join("");
+    deckRows = rows || null;
+    renderFascia();
+  }
+
+  // Draw the fascia for the state the drive is in.
+  //
+  // The fascia is never emptied. An empty drive keeps its six labels and shows
+  // no reading, so the display always says what it will tell you once a disc
+  // is in.
+  function renderFascia() {
+    var rows = (driveState === "in" && deckRows) ? deckRows : restingRows();
+    function cells(list) {
+      return list.map(function (r) {
+        return '<div class="cell"><span class="k">' + r[0] +
+               '</span><span class="v">' + r[1] + "</span></div>";
+      }).join("");
+    }
+    wingL.innerHTML = cells(rows.slice(0, 3));
+    wingR.innerHTML = cells(rows.slice(3, 6));
+  }
+
+  // The labels of the last disc, with no reading against them. Keeping those
+  // labels stops them changing when a disc goes in or comes out.
+  function restingRows() {
+    var labels = deckRows
+      ? deckRows.map(function (r) { return r[0]; })
+      : RESTING_LABELS;
+    return labels.map(function (k) { return [k, BLANK_READING]; });
   }
 
   // A disc that was made here. The engine reports every field.
   function madeFoot(png) {
     return [
-      ["Image", png.width + " &times; " + png.height + " px"],
-      ["Hidden", png.bytesHidden.toLocaleString() + " bytes"],
-      ["Capacity used", png.usedPercent + "%"],
+      ["Size", png.width + " x " + png.height],
+      ["Data", formatSize(png.bytesHidden)],
+      ["Used", png.usedPercent + "%"],
       ["Depth", png.depth],
-      ["Compressed", png.compressed ? "yes" : "no"],
-      ["Encrypted", png.encrypted ? "yes (AES-256)" : "no"]
+      ["Zip", png.compressed ? "yes" : "no"],
+      ["Lock", png.encrypted ? "yes" : "no"]
     ];
   }
 
   // A disc that came from somewhere else. Its capacity is unknown, so that row
-  // is left out rather than guessed at.
+  // carries the payload type instead of a number that would be a guess.
   function loadedFoot(result, w, h) {
-    var rows = [["Image", w + " &times; " + h + " px"]];
-    if (result.name) rows.push(["Name", escapeHtml(result.name)]);
-    rows.push(["Type", result.type]);
-    rows.push(["Depth", result.depth]);
-    rows.push(["Compressed", result.compressed ? "yes" : "no"]);
-    rows.push(["Encrypted", result.encrypted ? "yes (AES-256)" : "no"]);
-    return rows;
+    return [
+      ["Size", w + " x " + h],
+      ["Type", result.type],
+      ["Name", result.name ? escapeHtml(result.name) : "none"],
+      ["Depth", result.depth],
+      ["Zip", result.compressed ? "yes" : "no"],
+      ["Lock", result.encrypted ? "yes" : "no"]
+    ];
   }
 
   // ---- The spin illusion --------------------------------------------------
@@ -1632,11 +2003,19 @@
     return c;
   }
 
-  // Spin the loaded disc up, then hand over to a still picture and stop.
+  // Fill the window and spin the disc up.
   //
-  // Stage 1 is a real rotation. Stages 2 and 3 are baked once and never
-  // redrawn, so the drive costs nothing for the rest of the visit.
-  async function spinUp(src) {
+  // ORDER, and the reason for it: the disc slides all the way in FIRST, cut
+  // off by the window as it goes, and only then does it turn. A disc that
+  // turned on the way in would read as already running before it had arrived.
+  //
+  // delayMs holds the slide back, so the window can be timed to fill as the
+  // real disc reaches the machine.
+  //
+  // RULE: no smear may cover a whole turn. A full smear is the same picture at
+  // every angle, so turning it would show nothing at all. Every level here is
+  // a part turn for that reason.
+  async function spinUp(src, delayMs) {
     glass.innerHTML = "";
     var size = Math.max(24, Math.round(glass.getBoundingClientRect().width)) || 90;
     var img = await loadImage(src);
@@ -1650,16 +2029,37 @@
       return;
     }
 
+    // The wrapper slides. The rotor inside it turns. Keeping the two apart
+    // means neither move can disturb the other.
+    var wrap = document.createElement("div");
+    wrap.className = "spin-wrap";
+    var rotor = document.createElement("div");
+    rotor.className = "spin-rotor";
+    wrap.appendChild(rotor);
+
     var live = document.createElement("img");
     live.src = src;
-    live.className = "spin-live";
-    var mid = bakeSpin(img, size, 10, 30);
-    var full = bakeSpin(img, size, 36, 360);
+    live.className = "spin-frame";
+    var mid = bakeSpin(img, size, 10, 26);
+    var full = bakeSpin(img, size, 22, 70);
+    mid.className = "spin-frame";
+    full.className = "spin-frame";
     mid.style.opacity = "0";
     full.style.opacity = "0";
-    glass.appendChild(live);
-    glass.appendChild(mid);
-    glass.appendChild(full);
+    rotor.appendChild(live);
+    rotor.appendChild(mid);
+    rotor.appendChild(full);
+    glass.appendChild(wrap);
+
+    // The start of the slide has to be painted before the end of it is set.
+    void wrap.offsetHeight;
+    if (delayMs) await wait(delayMs);
+    wrap.classList.add("seated");
+    await wait(WIN_SLIDE_MS);
+
+    // ALL THE WAY IN. Now it turns, and the blur winds up over it.
+    rotor.classList.add("turning");
+    if (window.PuttyPNGDebug) window.PuttyPNGDebug.spinAt = "turning";
 
     await wait(SPIN_STAGE_MS);
     mid.style.opacity = "1";
@@ -1667,52 +2067,141 @@
     full.style.opacity = "1";
     await wait(SPIN_STAGE_MS);
 
-    // Only the still frame is left, so no work remains.
+    // Only the heaviest frame is left, so no work remains but the turn.
     live.remove();
     mid.remove();
   }
 
+  // Put the disc in the machine and fill the window as it arrives, so the two
+  // read as one act rather than two.
+  async function putItIn(src) {
+    // The drive reads as loaded from the moment it takes the disc, so a press
+    // during the move offers Eject rather than starting the read again.
+    setDriveState("in");
+    var going = loadDisc();
+    var filling = animationsOn
+      ? spinUp(src, Math.max(0, LOAD_MS - WIN_SLIDE_MS))
+      : spinUp(src, 0);
+    await going;
+    await filling;
+  }
+
+  // THE WAYS A NEW DISC CAN APPEAR.
+  // One for now. Another is added here, and nothing that calls formDisc has to
+  // change. Each takes the picture and the time it has to work in.
+  var FORMATIONS = {
+    fade: function (img, ms) {
+      img.style.transition = "opacity " + ms + "ms " + FORM_EASE;
+      img.style.opacity = "1";
+    }
+  };
+
+  // A new PuttyPNG arrives WHERE AN EJECTED DISC SITS, not inside the window.
+  // The ones and zeros fly to the same place while it appears, so a person
+  // sees their data become the thing they are handed.
+  //
+  // The window stays dark all the way through. The disc never goes into the
+  // machine here, which is what leaves the next step worth pressing.
+  async function formDisc(src, w, h, ms) {
+    // The picture is put in its resting place first, with no move, so the
+    // digits have a real place to fly at.
+    applyDisc(src, w, h);
+    placeDiscOut();
+    outImg.style.transition = "none";
+    outImg.style.opacity = "0";
+    void outImg.offsetHeight;
+
+    var appear = FORMATIONS[formStyle] || FORMATIONS.fade;
+    appear(outImg, ms);
+    // Launched, not waited for. The digits are given the same time and the
+    // same curve as the disc, so the two land together, but from here neither
+    // one can cut the other short.
+    launchIngest(ms, discBox());
+    await wait(ms);
+    outImg.style.transition = "";
+    outImg.style.opacity = "";
+  }
+
+  // Stop the drive dead, wherever the turn had got to, and empty the window.
+  //
+  // RULE: the angle is pinned BEFORE the animation comes off. Without that the
+  // disc would snap back to nought degrees, which reads as a fault rather than
+  // as a stop.
   function stopSpin() {
-    glass.innerHTML = "";
+    var wrap = glass.querySelector(".spin-wrap");
+    if (!wrap) { glass.innerHTML = ""; return; }
+
+    var rotor = wrap.querySelector(".spin-rotor");
+    if (rotor) {
+      var at = window.getComputedStyle(rotor).transform;
+      rotor.classList.remove("turning");
+      if (at && at !== "none") rotor.style.transform = at;
+      if (window.PuttyPNGDebug) window.PuttyPNGDebug.spinAt = "stopped";
+    }
+    if (!animationsOn) { glass.innerHTML = ""; return; }
+
+    // It leaves the way it came. Only this wrapper is taken away, because a
+    // new one may already be sliding in behind it.
+    wrap.classList.remove("seated");
+    setTimeout(function () {
+      if (wrap.parentNode === glass) wrap.remove();
+    }, WIN_SLIDE_MS + 40);
   }
 
   // The one control on the drive. What it does depends on the state, and its
   // label always says which.
   async function onDriveButton() {
-    if (driveState === "in") await driveEject();
-    else if (driveState === "out") await driveDecode();
+    var run = (driveState === "in") ? driveEject()
+            : (driveState === "out") ? driveDecode()
+            : Promise.resolve();
+    // A development surface, the same as lastKill. The button is never locked
+    // now, so this is the only way anything outside can tell when the drive
+    // has finished what it was asked to do.
+    if (window.PuttyPNGDebug) window.PuttyPNGDebug.driveDone = run;
+    await run;
   }
 
   // Draw the disc in and read it. This is the same work a drop does, started
   // from a disc the person is already holding.
+  // Read the disc, then draw it in.
+  //
+  // The button is NOT locked for the length of the show. It is held only while
+  // real work runs, which for a 256px cover is a few milliseconds. Everything
+  // after that is decoration, and a press during decoration turns the disc
+  // around at once.
   async function driveDecode() {
     var src = outImg.src;
-    if (!src) return;
-    driveBtn.disabled = true;
+    if (!src || decoding) return;
+    decoding = true;
+    // The state flips before the disc moves, so a press during the move reads
+    // the new intent and sends the disc back out rather than starting again.
+    var say = setTimeout(function () { driveLabel.textContent = "Reading PuttyPNG..."; }, DECODE_SAY_MS);
     try {
       var result = await PuttyPNG.decode(src);
+      clearTimeout(say);
+      decoding = false;
       showResult(result);
-      await loadDisc();
-      setDriveState("in");
-      await spinUp(src);
+      await putItIn(src);
       maybeCelebrate("read");
     } catch (err) {
+      clearTimeout(say);
+      decoding = false;
       toast(friendly(err), "bad");
       // The disc never left, so put the drive back as it was.
       setDriveState("out");
-    } finally {
-      driveBtn.disabled = false;
     }
   }
 
   // Hand the disc back. It comes straight out, with no spin down.
   async function driveEject() {
-    driveBtn.disabled = true;
+    // The state flips first, so a press part way through reads the new intent.
+    setDriveState("out");
+    // The window empties first, and the disc follows, so the window reads as
+    // the thing that handed the disc back.
     stopSpin();
     showStep("input");
+    await wait(WIN_LEAD_MS);
     await ejectDisc(lastIsDisc);
-    setDriveState("out");
-    driveBtn.disabled = false;
   }
 
   // Put a result on screen, with the whole show around it.
@@ -1726,22 +2215,37 @@
   //
   // kind is "insert" when a real PNG arrived, or "ingest" when data was typed.
   // fast compresses every step, for a person who acts again straight away.
-  async function presentResult(src, isDisc, kind, fast) {
+  // stage is optional. When it is given it is called with the words for each
+  // stage as that stage starts, so a button can say what is happening.
+  async function presentResult(src, isDisc, kind, fast, stage) {
     var img = await loadImage(src);
     var aspect = img.naturalWidth / img.naturalHeight;
     lastIsDisc = isDisc;
 
-    clearShowLayers();
+    // Kill pieces only. A flight left over from an earlier result is left
+    // alone: it is decoration on a path of its own, and cutting it here would
+    // make a person who acts twice in a row watch half an animation.
+    clearKillLayers();
     stopSpin();
 
     // Clear whatever the drive was holding. This is the only place a result is
     // destroyed, and it runs long after the caller proved the new one is good.
+    //
+    // A drop waits for the old disc to be gone, because the new one arrives
+    // from off the page and the two would collide. Typed data does not wait:
+    // the new disc starts to form while the last of the old one is still
+    // clearing, so the two read as one act rather than two.
+    var killing = null;
+    var killMs = fast ? KILL_MS_FAST : KILL_MS;
     var hadResult = !outImg.classList.contains("hidden");
     if (animationsOn && hadResult) {
       var box = discBox();
       var oldSrc = outImg.src;
       outImg.classList.add("hidden");
-      await runKill(oldSrc, box, fast ? KILL_MS_FAST : KILL_MS);
+      if (stage) stage(STAGE_TOSS);
+      killing = runKill(oldSrc, box, killMs);
+      if (kind === "insert") { await killing; killing = null; }
+      else await wait(Math.round(killMs * (1 - formOverlap / 100)));
     }
 
     if (kind === "insert") {
@@ -1749,24 +2253,30 @@
       // takes over at the same spot and slides into the machine.
       if (animationsOn) {
         await Promise.race([runInsert(src, aspect, fast ? HOLD_MS_FAST : HOLD_MS), wait(4000)]);
-        clearShowLayers();
+        clearKillLayers();
       }
       applyDisc(src, img.naturalWidth, img.naturalHeight);
       placeDiscOut();
-      await loadDisc();
-      setDriveState("in");
-      await spinUp(src);
+      await putItIn(src);
       return;
     }
 
-    // Typed data has no picture to slide in, so the ones and zeros stand in
-    // for it, and the finished disc is handed straight to the person.
+    // Typed data has no picture to slide in, and it never goes into the
+    // machine. The disc forms already ejected, so the next step can be pressed
+    // the moment the formation ends.
     if (animationsOn) {
-      await Promise.race([runIngest(fast ? INGEST_MS_FAST : INGEST_MS), wait(4000)]);
-      clearShowLayers();
+      var ms = fast ? Math.round(FORM_MS_MIN + (formMs - FORM_MS_MIN) * 0.4) : formMs;
+      if (stage) stage(STAGE_PRESS);
+      await Promise.race([formDisc(src, img.naturalWidth, img.naturalHeight, ms), wait(6000)]);
+      // Only now, because clearing a layer mid-flight would cut the kill off.
+      // The flight is not swept here either. It has an ending of its own, so
+      // the cap above can never take the digits down with it.
+      if (killing) await killing;
+      clearKillLayers();
+    } else {
+      applyDisc(src, img.naturalWidth, img.naturalHeight);
+      placeDiscOut();
     }
-    applyDisc(src, img.naturalWidth, img.naturalHeight);
-    await ejectDisc(isDisc);
     setDriveState("out");
   }
 
@@ -1795,49 +2305,121 @@
   //
   // With animationsOn false this puts the disc in its finished place with no
   // motion, which is the path that proves the engine needs none of this.
+  // Where the picture is now, in pixels down from the resting place. It is
+  // read out of the matrix the browser is painting, so a move that was
+  // interrupted is measured where it really is and not where it was sent.
+  function discY() {
+    var t = window.getComputedStyle(discHolder).transform;
+    if (!t || t === "none") return 0;
+    var m = /matrix(3d)?\(([^)]+)\)/.exec(t);
+    if (!m) return 0;
+    var n = m[2].split(",").map(Number);
+    return m[1] ? n[13] : n[5];
+  }
+
+  // ONE MOVE, FROM WHEREVER IT IS.
+  //
+  // A press pins the picture at the point it has reached, hands the target
+  // back to the stylesheet, and times the trip by the distance that is left.
+  // A disc almost home comes back almost at once instead of taking the whole
+  // four hundred milliseconds.
+  //
+  // RULE: a move that starts AT REST keeps its designed curve, which rises
+  // past the resting place or winds up before it drops. A move that starts
+  // part way uses a plain curve instead, because a curve that dips below its
+  // own start would send a half way disc the wrong way first.
+  function moveDisc(toOut) {
+    discRun++;
+    var mine = discRun;
+    clearTimeout(discTimer);
+
+    var span = discHolder.getBoundingClientRect().height * 1.2;
+    var atY = discY();
+    var toY = toOut ? 0 : span;
+    var part = span > 0 ? Math.min(1, Math.abs(toY - atY) / span) : 1;
+    var full = toOut ? EJECT_MS : LOAD_MS;
+    var partWay = part < 0.995;
+    var ms = partWay ? Math.max(DISC_MIN_MS, Math.round(full * part)) : full;
+
+    if (partWay) {
+      // Pin it where it is painted, and commit that before anything else, or
+      // the browser folds the two states into one paint and nothing moves.
+      discHolder.style.transition = "none";
+      discHolder.style.transform = window.getComputedStyle(discHolder).transform;
+      void discHolder.offsetHeight;
+      // The stylesheet owns the target again. Only the timing is set here.
+      discHolder.classList.toggle("out", toOut);
+      discHolder.classList.toggle("loading", !toOut);
+      discHolder.classList.remove("above");
+      discHolder.style.transition = "transform " + ms + "ms " + DISC_EASE;
+      discHolder.style.transform = "";
+    } else {
+      discHolder.style.transition = "";
+      discHolder.style.transform = "";
+      void discHolder.offsetHeight;
+      discHolder.classList.toggle("out", toOut);
+      discHolder.classList.toggle("loading", !toOut);
+      if (!toOut) discHolder.classList.remove("above");
+    }
+
+    if (window.PuttyPNGDebug) {
+      window.PuttyPNGDebug.lastMove = { to: toOut ? "out" : "in", ms: ms, partWay: partWay };
+    }
+
+    return new Promise(function (resolve) {
+      discTimer = setTimeout(function () {
+        if (mine !== discRun) return resolve();
+        discHolder.style.transition = "";
+        // THE LAYER CHANGE, AT REST. The resting place clears the line, so the
+        // picture covers neither the face nor the opening and the change
+        // cannot be seen.
+        if (toOut) discHolder.classList.add("above");
+        resolve();
+      }, ms);
+    });
+  }
+
   function ejectDisc(isDisc) {
     if (!discHolder) return Promise.resolve();
 
     outImg.classList.remove("hidden");
     deckFilled();
-
-    // Start from the resting place every time, so a second result plays the
-    // whole move rather than jumping from wherever the last one stopped.
-    discHolder.classList.remove("out", "instant", "loading", "above");
+    discHolder.classList.remove("instant");
     discHolder.classList.toggle("no-spin", !isDisc);
 
     if (!animationsOn) {
+      discRun++;
+      clearTimeout(discTimer);
       discHolder.classList.add("instant", "out", "above");
+      discHolder.classList.remove("loading");
       return Promise.resolve();
     }
 
-    // Read a layout value to force the browser to apply the resting state
-    // before the ejected one. Without this the two are batched into one paint
-    // and no transition runs.
-    void discHolder.offsetHeight;
-    discHolder.classList.add("out");
-
-    return wait(EJECT_MS).then(function () {
-      // Clear of the lip now, so the disc can sit above the machine. The
-      // change cannot be seen, because nothing overlaps at this point.
-      discHolder.classList.add("above");
-    });
+    return moveDisc(true);
   }
 
   // Draw the disc back into the machine. It goes behind the face on the way,
   // which is what makes the slot look like a hole rather than a picture.
   function loadDisc() {
     if (!discHolder) return Promise.resolve();
-    discHolder.classList.remove("above");
+
+    // The place the digits are flying at is about to be inside the machine,
+    // so any flight still in the air is culled.
+    retireDigits();
+
     if (!animationsOn) {
+      discRun++;
+      clearTimeout(discTimer);
       discHolder.classList.add("instant");
-      discHolder.classList.remove("out");
+      discHolder.classList.remove("out", "above");
       return Promise.resolve();
     }
-    discHolder.classList.add("loading");
-    return wait(EJECT_MS).then(function () {
-      discHolder.classList.remove("out");
-    });
+
+    // RULE: "out" comes off in the same breath as the move starts. While it is
+    // set, the hover rule outranks "loading", so a pointer resting on the deck
+    // would hold the disc at the resting place and the move would never run.
+    // moveDisc does both, and takes the layer with it.
+    return moveDisc(false);
   }
 
   // Swap the wide column between step one and step two.
@@ -1847,6 +2429,11 @@
   // "input" is What you'd like to encode. "read" is What was inside.
   function showStep(which) {
     clearDropFail();
+    // A flight belongs to the screen it started on. When the wide column
+    // swaps, the box the digits were pulled from has gone, so anything still
+    // in the air is culled.
+    if (which !== step) retireDigits();
+    step = which;
     var onResult = (which === "read");
     stepInput.classList.toggle("hidden", onResult);
     stepResult.classList.toggle("hidden", !onResult);
@@ -1987,9 +2574,54 @@
   //
   // Twenty results in a row must not leave twenty sets of pieces behind, and
   // an animation cut short by a second action must not keep drawing.
-  function clearShowLayers() {
-    var junk = document.querySelectorAll(".kill-host, .kill-canvas, .ingest-host");
+  function clearKillLayers() {
+    var junk = document.querySelectorAll(".kill-host, .kill-canvas");
     for (var i = 0; i < junk.length; i++) junk[i].remove();
+  }
+
+  // Cull every flight still in the air, and report how many digits went.
+  //
+  // A flight is never yanked. Each digit stops where it is and flares out,
+  // because something that pops out of existence reads as a fault rather than
+  // as an ending.
+  function retireDigits() {
+    var hosts = document.querySelectorAll(".ingest-host");
+    var culled = 0;
+    for (var i = 0; i < hosts.length; i++) culled += sparkleOut(hosts[i]);
+    if (window.PuttyPNGDebug) {
+      window.PuttyPNGDebug.lastCull = { digits: culled, at: now() };
+    }
+    return culled;
+  }
+
+  // Stop one flight where it is and flare it out.
+  //
+  // RULE: the running move is pinned before the flare is set. Dropping the
+  // transform out of the transition list without pinning it first would send
+  // every digit to the end of its course inside one frame.
+  function sparkleOut(host) {
+    var bits = host.querySelectorAll(".bit");
+    for (var i = 0; i < bits.length; i++) {
+      var b = bits[i];
+      var seen = window.getComputedStyle(b);
+      var at = (seen.transform === "none") ? "" : seen.transform + " ";
+      b.style.transition = "none";
+      b.style.transform = seen.transform;
+      b.style.opacity = seen.opacity;
+      void b.offsetHeight;
+      b.style.transition = "transform " + SPARK_MS + "ms ease-out, " +
+                           "opacity " + SPARK_MS + "ms ease-out, " +
+                           "filter " + SPARK_MS + "ms ease-out";
+      b.style.transform = at + "scale(1.7)";
+      // Set here and not in the class, because the pinned value above is
+      // inline and would outrank it.
+      b.style.opacity = "0";
+      b.classList.add("spark");
+    }
+    // Marked, so the flight's own ending knows the host is spoken for.
+    host.dataset.culled = "1";
+    setTimeout(function () { host.remove(); }, SPARK_MS + 60);
+    return bits.length;
   }
 
   // Back to step one. The typed text is kept on purpose, because a person
@@ -2019,8 +2651,9 @@
 
   function init() {
     // A small development surface. forceKill pins one animation so it can be
-    // watched, lastKill reports what played, and awayTransform is exposed so
-    // its rule can be checked without waiting for a frame to run.
+    // watched, lastKill reports what played, lastAim reports where the digits
+    // were sent, and the two transform rules are exposed so they can be
+    // checked without waiting for a frame to run.
     window.PuttyPNGDebug = window.PuttyPNGDebug || {};
     window.PuttyPNGDebug.awayTransform = awayTransform;
     window.PuttyPNGDebug.launchTransform = launchTransform;
@@ -2032,6 +2665,21 @@
     animationsOn = (savedAnim === null) ? !prefersLessMotion() : (savedAnim === "on");
     var savedCeleb = readPref("celebration");
     celebrationOn = (savedCeleb === null) ? true : (savedCeleb === "on");
+
+    // The formation. A stored choice wins, and anything outside what the
+    // control allows is ignored rather than trusted.
+    formMs = FORM_MS;
+    formOverlap = FORM_OVERLAP;
+    var savedStyle = readSetting("formStyle");
+    if (savedStyle && FORMATIONS[savedStyle]) formStyle = savedStyle;
+    var savedMs = readNumber("formMs", FORM_MS_MIN, FORM_MS_MAX);
+    if (savedMs !== null) formMs = savedMs;
+    var savedOverlap = readNumber("formOverlap", 0, FORM_OVERLAP_MAX);
+    if (savedOverlap !== null) formOverlap = savedOverlap;
+
+    // The drive owns its own display, including the empty one, so the resting
+    // fascia is drawn from the same function every other state comes from.
+    setDriveState("empty");
 
     wireTabs();
     wireDrawer();
