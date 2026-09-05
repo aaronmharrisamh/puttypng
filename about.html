@@ -17,14 +17,19 @@
   <!-- SYNC:head -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="assets/puttypng-mark.svg" type="image/svg+xml">
+  <!-- THE ICON IS A REAL DISC, SO IT IS RASTER. It is the engine's own CD with
+       its splat of data dots, and a dot field cannot be a small SVG. Each size
+       is rendered from a 512px master by halving, not by one long leap, so the
+       dots survive down to 16. -->
+  <link rel="icon" href="assets/puttypng-icon-16.png" type="image/png" sizes="16x16">
   <link rel="icon" href="assets/puttypng-icon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="assets/puttypng-icon-512.png" type="image/png" sizes="512x512">
   <link rel="apple-touch-icon" href="assets/puttypng-icon-180.png">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://puttypng.com/assets/puttypng-social-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="PuttyPNG disc with a clay peel that reveals binary data.">
+  <meta property="og:image:alt" content="A PuttyPNG disc with a rainbow splat of data pressed into it, beside the name.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://puttypng.com/assets/puttypng-social-card.png">
   <link rel="stylesheet" href="fonts/fonts.css">
@@ -146,7 +151,7 @@ SOFTWARE.</div>
       <div class="line">
         <b>PuttyPNG</b>
         <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Page v2.6.1</span>
+        <span>Page v2.6.2</span>
         <span class="sep" aria-hidden="true">&middot;</span>
         <span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span>
