@@ -1,0 +1,6 @@
+# One line ending for every machine, so no checkout can decide differently.
+# Removing this file lets each machine choose again. Do not remove it.
+* text=auto eol=lf
+
+*.png   binary
+*.woff2 binary
