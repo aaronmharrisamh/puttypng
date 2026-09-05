@@ -126,7 +126,27 @@ header.masthead { text-align: center; padding: 28px 0 16px; }
   box-shadow: 0 0 0 1px rgba(0,0,0,.16), 0 1px 3px rgba(0,0,0,.14);
 }
 
-.made-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+/* ONE CLAIM PER LINE, NOT A BULLET LIST. A wrapped bullet list can leave the
+   separator at the end of a line or the start of the next, and neither is
+   wanted. This column is 250px, so every claim would wrap. Stacking them
+   removes the question. The footer is wide and centred, so it keeps bullets. */
+.made-note {
+  display: flex; flex-direction: column; align-items: flex-end;
+  margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--muted);
+}
+
+/* Back into the flow on a narrow screen, where the block is centred under the
+   flag rather than hung in a corner. */
+@media (max-width: 700px) { .made-note { align-items: center; } }
+
+/* Underlined by a border rather than by text-decoration, so the rule sits
+   clear of the descenders at this size. */
+.made-note a {
+  color: var(--muted); text-decoration: none;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.made-note a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
 
 /* The name is two different materials. Putty takes the display face and the
    clay; PNG stays the body face in black. It leads the page, so it is set
