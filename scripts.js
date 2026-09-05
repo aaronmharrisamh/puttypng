@@ -34,7 +34,11 @@
      and all three are shown apart in the footer so nobody has to guess which
      number a bug report is about.
      RULE: this is the version the commit carries. Move it with the release. */
-  var PAGE_VERSION = "2.4.0";
+  var PAGE_VERSION = "2.5.0";
+
+  // Where the whole thing lives. One place, used by the footer and the
+  // Download tab's second choice.
+  var REPO_URL = "https://github.com/aaronmharrisamh/puttypng";
 
   // Timings, in milliseconds.
   var TOAST_MS = 2600;
@@ -1196,11 +1200,15 @@
         "Page v" + PAGE_VERSION,
         "Engine v" + (window.PuttyPNG ? PuttyPNG.version : "?"),
         "Protocol v" + (window.PuttyPNG ? PuttyPNG.protocolVersion : "?"),
-        "MIT License"
+        "MIT License",
+        '<a href="' + REPO_URL + '" target="_blank" rel="noreferrer">GitHub' +
+          '<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">' +
+          '<path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" ' +
+          'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'
       ]) +
       line([
         "<span>" + flag + "Made in USA</span>",
-        "Absolutely 0% of your data is collected.",
+        "Absolutely NONE of your data is collected.",
         "&copy; 2026 Aaron Michael Harris"
       ]);
   }

@@ -210,6 +210,10 @@ nav.tabs button {
 
 .foot b { font-weight: 600; color: var(--ink-soft); }
 
+.foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
+
+.foot a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+
 
 /* Docs */
 .subnav { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 26px; }
@@ -223,6 +227,30 @@ nav.tabs button {
 .doc-section { scroll-margin-top: 70px; margin-bottom: 10px; }
 
 .doc-section > h2 { margin: 40px 0 4px; }
+
+/* TWO WAYS TO THE CODE, SIDE BY SIDE AND THE SAME SIZE. Neither one is the
+   small print of the other, so they share a row and a height. */
+.getcode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Each choice ends with its button on the same line as the other's, whatever
+   the words above it come to. */
+.card.get { display: flex; flex-direction: column; text-align: center; }
+
+.card.get h3 { margin: 10px 0 6px; }
+
+.card.get p { flex: 1; }
+
+.card.get .btn { align-self: center; margin-top: 4px; }
+
+.get-ic { color: var(--clay); display: flex; justify-content: center; }
+
+/* The mark that says a link leaves the page. */
+.ext { vertical-align: -1px; margin-left: 5px; opacity: .75; }
 
 /* THE HOME BOARD.
    One grid holds the two headings, the two columns, and the deck, so a
@@ -289,6 +317,9 @@ nav.tabs button {
   border-radius: 999px; padding: 12px 20px; cursor: pointer;
   border: 1px solid transparent; transition: transform .08s ease, background .15s ease, border-color .15s ease, color .15s ease;
   display: inline-flex; align-items: center; gap: 8px;
+  /* A button that happens to be a link is still a button. Without this the
+     browser underlines the label of every anchor wearing this class. */
+  text-decoration: none;
 }
 
 .btn-primary { background: var(--ink); color: #fff; }
@@ -629,9 +660,6 @@ table.doc td.mono, table.doc td .mono { font-family: ui-monospace, SFMono-Regula
 
 .license { font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-soft); }
 
-.big-dl { text-align: center; padding: 40px 20px; }
-
-.big-dl .lock { font-size: 40px; }
 
 /* Collapsible section, built on the browser's own details element. It needs no
    script, so it still opens and closes if scripts.js fails to load. */
@@ -1347,6 +1375,10 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 
 /* Fields */
 @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Side by side needs room for two buttons and their words. Below this the
+   two choices stack, still equal, one after the other. */
+@media (max-width: 700px) { .getcode { grid-template-columns: 1fr; } }
 
 /* Snippets */
 .hidden { display: none !important; }
