@@ -639,9 +639,10 @@
               <tr><td class="mono">tag</td><td class="mono">""</td><td>Plaintext developer tag, readable later via <span class="mono">peek()</span> without decrypting.</td></tr>
               <tr><td class="mono">cover</td><td class="mono">none</td><td>A PNG (File/Blob/URL/Image) to hide the data in. Default is generated noise. Resampled with high-quality smoothing; a transparent cover is auto-hardened so no data pixel borders a soft edge.</td></tr>
               <tr><td class="mono">coverFit</td><td class="mono">"crop"</td><td>How a cover fills the frame: <span class="mono">crop</span>, <span class="mono">keepRatio</span> (non-square, original shape), <span class="mono">scale</span>, <span class="mono">center</span>, <span class="mono">stretch</span>.</td></tr>
-              <tr><td class="mono">size</td><td class="mono">auto</td><td>Fixed square side in pixels. Omit to auto-size to the data. A value set here is used exactly, even below <span class="mono">minSize</span>.</td></tr>
+              <tr><td class="mono">size</td><td class="mono">auto</td><td>Fixed square side in pixels. Omit to auto-size to the data. What it promises depends on the cover. <strong>Noise</strong> uses it exactly and raises <span class="mono">PTY-E04</span> if the data will not fit. <strong>CD</strong> treats it as a starting size and grows past it when the data will not fit, so set <span class="mono">maxSize</span> to the same value to pin it. <strong>Custom</strong> uses it exactly, except that it is still raised to <span class="mono">minSize</span>.</td></tr>
               <tr><td class="mono">sizeMode</td><td class="mono">"auto"</td><td><span class="mono">"pow2"</span> rounds the auto size up to a power of two.</td></tr>
-              <tr><td class="mono">minSize</td><td class="mono">256</td><td>Floor for auto-sizing (px), so a small payload still makes a shareable image. An explicit <span class="mono">size</span> ignores this floor.</td></tr>
+              <tr><td class="mono">minSize</td><td class="mono">256</td><td>Floor for auto-sizing (px), so a small payload still makes a shareable image. The noise and CD covers let an explicit <span class="mono">size</span> go below this floor. A custom cover is still raised to it.</td></tr>
+              <tr><td class="mono">maxSize</td><td class="mono">4096</td><td>Ceiling for the finished image (px). It caps auto-sizing, and it is also what stops the CD cover growing past an explicit <span class="mono">size</span>. Past it the engine raises <span class="mono">PTY-E04</span> rather than making a larger picture.</td></tr>
               <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
               <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
               <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
@@ -781,12 +782,6 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
           <tbody id="dropTableBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
         </table></div></div>
 
-        <h3>Moving from 1.0.0</h3>
-        <p class="small">Engine 2.0.0 renamed every code. The protocol did not change, so <strong>every PuttyPNG made with 1.0.0 still decodes</strong>. Only code that compared <span class="mono">err.code</span> to an old value needs an edit. The number shifted as well as gaining the prefix, so read this table by <em>meaning</em>, not by number: old <span class="mono">E06</span> is not new <span class="mono">PTY-E06</span>.</p>
-        <div class="card"><div class="tablewrap"><table class="doc">
-          <thead><tr><th>1.0.0</th><th>2.0.0</th><th>Meaning</th></tr></thead>
-          <tbody id="migrateTableBody"><tr><td colspan="3" class="muted">Loading...</td></tr></tbody>
-        </table></div></div>
       </div>
 
       <!-- RECIPES -->
@@ -915,8 +910,8 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
           <div class="tablewrap"><table class="doc">
             <thead><tr><th>Version</th><th>Notes</th></tr></thead>
             <tbody>
-              <tr><td class="mono">Engine 2.0.0<br>Protocol 1</td><td><strong>Breaking API change.</strong> Every engine error code gained the <span class="mono">PTY-</span> prefix and renumbered from <span class="mono">00</span>: old <span class="mono">E01</span> is now <span class="mono">PTY-E00</span>, through to <span class="mono">E12</span>, now <span class="mono">PTY-E11</span>. Added <span class="mono">PTY-E99</span> for a failure the engine did not classify. Page-level drop failures use the separate <span class="mono">DRP-</span> family. <strong>The protocol and the byte layout did not change, so every existing PuttyPNG still decodes.</strong> Code that compared <span class="mono">err.code</span> to an old value must be updated: see the migration table below.</td></tr>
-              <tr><td class="mono">Engine 1.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with version byte + CRC32; standard &amp; subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM + PBKDF2-SHA-256 encryption (private by default); plaintext developer tag with <span class="mono">peek()</span>; noise or custom covers; <span class="mono">E01</span> to <span class="mono">E12</span> error codes (renamed in 2.0.0, see below).</td></tr>
+              <tr><td class="mono">Engine 2.1.0<br>Protocol 1</td><td><strong>The solid background became a jewel case.</strong> <span class="mono">solidBackground</span> now sets the disc in a light grey case lying on white paper, instead of filling the corners with a soft gradient. Every pixel of the square is opaque, the spindle hole included, so a 256px cover carries <strong>65,425 bytes</strong> rather than about 64,348. The disc itself is drawn a little smaller so the case shows around it, which costs no room because the case carries data too. No function signature changed and the byte layout did not move, so every existing PuttyPNG still decodes.</td></tr>
+              <tr><td class="mono">Engine 2.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with a version byte and CRC32; standard and subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM with a PBKDF2-SHA-256 derived key, private by default; a plaintext developer tag readable with <span class="mono">peek()</span>; CD, noise, or custom covers; error codes <span class="mono">PTY-E00</span> to <span class="mono">PTY-E11</span>, plus <span class="mono">PTY-E99</span> for a failure the engine did not classify. Page-level drop failures use the separate <span class="mono">DRP-</span> family.</td></tr>
             </tbody>
           </table></div>
         </div>

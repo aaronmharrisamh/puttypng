@@ -23,7 +23,7 @@
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
-  var ENGINE_VERSION = "2.0.0";   // 2.0.0 renamed every error code: breaking for callers
+  var ENGINE_VERSION = "2.1.0";   // 2.1.0 rebuilt the solid background as a jewel case
 
   // The public object. Everything a developer touches hangs off of this.
   var PuttyPNG = {

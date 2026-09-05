@@ -34,7 +34,7 @@
      and all three are shown apart in the footer so nobody has to guess which
      number a bug report is about.
      RULE: this is the version the commit carries. Move it with the release. */
-  var PAGE_VERSION = "2.5.0";
+  var PAGE_VERSION = "2.5.1";
 
   // Where the whole thing lives. One place, used by the footer and the
   // Download tab's second choice.
@@ -1166,19 +1166,6 @@
 
   // Old code beside new code. This exists because the number moved as well as
   // gaining a prefix, so an old bug report cannot be read by number alone.
-  function renderMigrationTable() {
-    var body = document.getElementById("migrateTableBody");
-    if (!body || typeof PuttyPNG === "undefined" || !PuttyPNG.errors) return;
-    var rows = "";
-    for (var i = 1; i <= 12; i++) {
-      var oldCode = "E" + (i < 10 ? "0" + i : i);
-      var newCode = "PTY-E" + (i - 1 < 10 ? "0" + (i - 1) : i - 1);
-      rows += "<tr><td class='err-code'>" + oldCode + "</td><td class='err-code'>" + newCode +
-              "</td><td>" + escapeHtml(PuttyPNG.errors[newCode] || "") + "</td></tr>";
-    }
-    body.innerHTML = rows;
-  }
-
   /* The footer. Written here rather than in the markup, so each number has one
      source and the page can never disagree with the engine it loaded. */
   function renderFoot() {
@@ -2271,7 +2258,6 @@
     wireSnippets();
     renderErrorTable();
     renderDropTable();
-    renderMigrationTable();
     renderLicense();
     renderFoot();
     wireTutorial();
