@@ -28,18 +28,6 @@
      decision. These are the names everything else refers to.
      ========================================================================== */
 
-  /* THE PAGE'S OWN VERSION, which is not the engine's.
-     This one moves with the site: the layout, the wording, the board. The
-     engine carries its own in puttypng.js and the protocol carries a third,
-     and all three are shown apart in the footer so nobody has to guess which
-     number a bug report is about.
-     RULE: this is the version the commit carries. Move it with the release. */
-  var PAGE_VERSION = "2.5.1";
-
-  // Where the whole thing lives. One place, used by the footer and the
-  // Download tab's second choice.
-  var REPO_URL = "https://github.com/aaronmharrisamh/puttypng";
-
   // Timings, in milliseconds.
   var TOAST_MS = 2600;
   var COPY_FEEDBACK_MS = 1400;
@@ -207,35 +195,11 @@
     "optRimSize", "optRimSpacing"
   ];
 
-  // What the engine snippet card says when it cannot show the real source.
-  // There are two different reasons, and each one gets its own message.
-  var ENGINE_SOURCE_LOCAL =
-    "This page is open from a local file, so the browser will not let it read " +
-    "puttypng.js.\n" +
-    "Use the \"Download puttypng.js\" link below to get the engine.";
-
+  // What the engine snippet card says when a server is present but the file
+  // cannot be read. The disk case is markup, not script: see engineCodeLocal.
   var ENGINE_SOURCE_FAILED =
     "puttypng.js could not be loaded.\n" +
     "Check that the file sits next to index.html on the server.";
-
-  var MIT_LICENSE =
-    "MIT License\n\n" +
-    "Copyright (c) 2026 Aaron Michael Harris\n\n" +
-    "Permission is hereby granted, free of charge, to any person obtaining a copy\n" +
-    "of this software and associated documentation files (the \"Software\"), to deal\n" +
-    "in the Software without restriction, including without limitation the rights\n" +
-    "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n" +
-    "copies of the Software, and to permit persons to whom the Software is\n" +
-    "furnished to do so, subject to the following conditions:\n\n" +
-    "The above copyright notice and this permission notice shall be included in all\n" +
-    "copies or substantial portions of the Software.\n\n" +
-    "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n" +
-    "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n" +
-    "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n" +
-    "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n" +
-    "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n" +
-    "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n" +
-    "SOFTWARE.\n";
 
   // Element handles. These are looked up once because the page reuses them.
   // A control used in exactly one place is looked up where it is used instead.
@@ -310,10 +274,10 @@
   // Whether the home board is the panel on screen. The page-wide drop overlay
   // and the page-wide paste both stand down while it is, because the board
   // carries two targets of its own and would otherwise read a file twice.
-  function homeIsShowing() {
-    var panel = $("tab-puttypng");
-    return !!panel && panel.classList.contains("active");
-  }
+  /* WHICH PAGE IS THIS. There are five, and each one carries its own main
+     block. The board is the only page with a Make column and a Load column,
+     so the presence of the board is the question every drop handler asks. */
+  function onBoardPage() { return !!$("board"); }
 
   // Show a short message at the bottom of the screen. kind is "ok" or "bad".
   function toast(message, kind) {
@@ -330,20 +294,6 @@
     return text + (code ? " (" + code + ")" : "");
   }
 
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"]/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
-    });
-  }
-
-  // Turn HTML entities back into characters. The snippet sources are stored
-  // escaped in the markup so a browser cannot try to run them.
-  function decodeEntities(s) {
-    var t = document.createElement("textarea");
-    t.innerHTML = s;
-    return t.value;
-  }
 
   /* ==========================================================================
      THE HOME BOARD - DRAWING AND MEASURING
@@ -468,7 +418,8 @@
 
   function lerp(a, b, t) { return a + (b - a) * t; }
 
-  // The home board's own sizes. Short, because they sit under a small donut.
+  // The short size format. It began under the board's donut, where there is no
+  // room for a long one, and the How it works result block uses it too.
   function homeFmt(n) {
     if (n >= 1048576) return (n / 1048576).toFixed(2) + " MB";
     if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
@@ -857,29 +808,21 @@
      starting state. They run once, in the order listed in Section 7.
      ========================================================================== */
 
-  function wireTabs() {
-    document.getElementById("tabs").addEventListener("click", function (e) {
-      var btn = e.target.closest("button[data-tab]");
-      if (!btn) return;
-      switchTab(btn.getAttribute("data-tab"));
-    });
-    // In-page links that jump to another tab, optionally to an anchor within it.
-    document.addEventListener("click", function (e) {
-      var link = e.target.closest("[data-gototab]");
-      if (!link) return;
-      e.preventDefault();
-      switchTab(link.getAttribute("data-gototab"));
-      var href = link.getAttribute("href");
-      if (href && href.charAt(0) === "#" && href.length > 1) {
-        var target = document.getElementById(href.slice(1));
-        if (target) setTimeout(function () { target.scrollIntoView({ behavior: "smooth", block: "start" }); }, SCROLL_DELAY_MS);
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
+  /* THE CURRENT PAGE, SAID TWICE. The stylesheet marks the link by colour
+     from the class on the body element. A colour is not an announcement, so
+     the same fact is put on the link as an attribute for a screen reader.
+     The cascade cannot set an attribute, which is why this is script. */
+  function markCurrentPage() {
+    var nav = $("tabs");
+    if (!nav) return;
+    var here = (document.body.className.match(/\bp-([a-z]+)\b/) || [])[1];
+    if (!here) return;
+    var link = nav.querySelector('a[data-page="' + here + '"]');
+    if (link) link.setAttribute("aria-current", "page");
   }
 
   function wireDrawer() {
+    if (!advToggle || !advDrawer) return;
     advDrawer.addEventListener("transitionend", function (e) {
       // Once fully open, drop the fixed cap so the content is free to grow or shrink.
       if (e.propertyName === "max-height" && advDrawer.classList.contains("open")) {
@@ -892,6 +835,7 @@
   }
 
   function wireOptionFields() {
+    if (!sizeMode) return;
     // Show fixed-size and cover-fit fields only when they apply.
     sizeMode.addEventListener("change", function () {
       var isFixed = sizeMode.value === "fixed";
@@ -934,13 +878,15 @@
   // overlay is driven by a depth counter, never by a boolean. A boolean is
   // wrong the moment the pointer crosses a nested element.
   function wirePageDrop() {
+    // No overlay on this page means the page does not take a dropped file.
+    if (!dropVeil) return;
     // THE OVERLAY IS FOR THE OTHER TABS. The board carries two targets of its
     // own and answers on each of them, so the overlay stands down while the
     // board is the panel on screen and offers itself everywhere else. Its
     // handlers still run at the window, below the board's, which stop what
     // they take.
     window.addEventListener("dragenter", function (e) {
-      if (homeIsShowing() || !dragHasFiles(e)) return;
+      if (onBoardPage() || !dragHasFiles(e)) return;
       e.preventDefault();
       veilDepth++;
       showDropVeil(classifyDrag(e));
@@ -955,7 +901,7 @@
     });
 
     window.addEventListener("dragleave", function (e) {
-      if (homeIsShowing() || !dragHasFiles(e)) return;
+      if (onBoardPage() || !dragHasFiles(e)) return;
       veilDepth--;
       if (veilDepth <= 0) hideDropVeil();
     });
@@ -963,7 +909,7 @@
     window.addEventListener("drop", function (e) {
       if (!dragHasFiles(e)) return;
       e.preventDefault();
-      if (homeIsShowing()) return;
+      if (onBoardPage()) return;
       hideDropVeil();
       handleDrop(e);
     });
@@ -984,6 +930,7 @@
   function wireSubTabs() {
     var tabs = document.querySelectorAll(".subtabs button");
     var panels = document.querySelectorAll(".subpanel");
+    if (!tabs.length) return;
     if (!tabs.length) return;
 
     function show(key) {
@@ -1035,6 +982,7 @@
     var anim = document.getElementById("optAnimations");
     var celeb = document.getElementById("optCelebration");
     if (!anim || !celeb) return;
+    if (!anim || !celeb) return;
 
     anim.checked = animationsOn;
     celeb.checked = celebrationOn;
@@ -1058,7 +1006,9 @@
 
 
 
-  function wireReader() {
+  /* THE BOUNDED ZONE, which only the How it works page carries. */
+  function wireBoundedZone() {
+    if (!dropzone || !importFile) return;
     dropzone.addEventListener("click", function () { importFile.click(); });
     dropzone.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); importFile.click(); }
@@ -1076,19 +1026,23 @@
       if (f.type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
       readSource(f);
     });
-    /* Pasting an image anywhere on the page reads it. There is one such
-       listener, and it hands the picture to whichever panel is showing, so a
-       paste is never read twice. */
+  }
+
+  /* PASTE, ON EVERY PAGE THAT CAN READ ONE. This used to live inside the
+     bounded zone's wiring, which after the split would have left the board
+     unable to take a paste at all. */
+  function wirePaste() {
     document.addEventListener("paste", function (e) {
       var items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
-      if (homeIsShowing()) {
+      if (onBoardPage()) {
         // Typing into the Make box is not an attempt to load a disc.
         if (e.target === $("makeText")) return;
         var png = pngFrom(items);
         if (png) { e.preventDefault(); readHomeFile(png); }
         return;
       }
+      if (!$("dropzone")) return;
       for (var i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image/") === 0) {
           if (items[i].type === "image/jpeg") { toast("JPEG is lossy - PuttyPNG needs a PNG", "bad"); return; }
@@ -1101,10 +1055,6 @@
 
   function wireSnippets() {
     loadEngineSource();
-    document.getElementById("importerCode").textContent =
-      decodeEntities(document.getElementById("importerSource").textContent);
-    document.getElementById("exporterCode").textContent =
-      decodeEntities(document.getElementById("exporterSource").textContent);
 
     document.querySelectorAll(".copy-btn").forEach(function (btn) {
       btn.addEventListener("click", async function () {
@@ -1128,10 +1078,12 @@
     if (!codeEl) return;
 
     // A browser blocks fetch against a file:// path. Test the protocol first,
-    // so a person opening the folder directly is told the real reason instead
-    // of being shown a server error that does not apply to them.
+    // so a person opening the folder directly gets the link instead of a
+    // server error that does not apply to them.
     if (location.protocol === "file:") {
-      codeEl.textContent = ENGINE_SOURCE_LOCAL;
+      codeEl.classList.add("hidden");
+      var local = document.getElementById("engineCodeLocal");
+      if (local) local.classList.remove("hidden");
       return;
     }
 
@@ -1139,68 +1091,6 @@
       .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error("HTTP " + r.status)); })
       .then(function (text) { codeEl.textContent = text; })
       .catch(function () { codeEl.textContent = ENGINE_SOURCE_FAILED; });
-  }
-
-  function renderErrorTable() {
-    var body = document.getElementById("errorTableBody");
-    if (!body || typeof PuttyPNG === "undefined" || !PuttyPNG.errors) return;
-    var rows = "";
-    Object.keys(PuttyPNG.errors).forEach(function (code) {
-      rows += "<tr><td class='err-code'>" + code + "</td><td>" + escapeHtml(PuttyPNG.errors[code]) + "</td></tr>";
-    });
-    body.innerHTML = rows;
-  }
-
-  // The page's own drop failures, listed beside the engine's.
-  function renderDropTable() {
-    var body = document.getElementById("dropTableBody");
-    if (!body) return;
-    var rows = "";
-    Object.keys(DROP_ERRORS).forEach(function (code) {
-      rows += "<tr><td class='err-code'>" + code + "</td><td>" + escapeHtml(DROP_ERRORS[code]) + "</td></tr>";
-    });
-    body.innerHTML = rows;
-  }
-
-  // Old code beside new code. This exists because the number moved as well as
-  // gaining a prefix, so an old bug report cannot be read by number alone.
-  /* The footer. Written here rather than in the markup, so each number has one
-     source and the page can never disagree with the engine it loaded. */
-  function renderFoot() {
-    var foot = $("foot");
-    if (!foot) return;
-
-    var flag = '<svg class="flag" width="19" height="10" viewBox="0 0 38 20" ' +
-               'role="img" aria-label="The flag of the United States of America">' +
-               '<use href="#usflag"/></svg>';
-
-    function line(parts) {
-      return '<div class="line">' +
-        parts.join('<span class="sep" aria-hidden="true">&middot;</span>') + "</div>";
-    }
-
-    foot.innerHTML =
-      line([
-        "<b>PuttyPNG</b>",
-        "Page v" + PAGE_VERSION,
-        "Engine v" + (window.PuttyPNG ? PuttyPNG.version : "?"),
-        "Protocol v" + (window.PuttyPNG ? PuttyPNG.protocolVersion : "?"),
-        "MIT License",
-        '<a href="' + REPO_URL + '" target="_blank" rel="noreferrer">GitHub' +
-          '<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">' +
-          '<path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" ' +
-          'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'
-      ]) +
-      line([
-        "<span>" + flag + "Made in USA</span>",
-        "Absolutely NONE of your data is collected.",
-        "&copy; 2026 Aaron Michael Harris"
-      ]);
-  }
-
-  function renderLicense() {
-    var el = document.getElementById("licenseText");
-    if (el) el.textContent = MIT_LICENSE;
   }
 
   function wireTutorial() {
@@ -1248,6 +1138,7 @@
      ========================================================================== */
 
   function wireHome() {
+    if (!onBoardPage()) return;
     wireHomeMake();
     wireHomeDisc();
     wireHomeLoad();
@@ -1462,17 +1353,6 @@
      what came back.
      ========================================================================== */
 
-  function switchTab(name) {
-    document.querySelectorAll("nav.tabs button").forEach(function (b) {
-      var on = b.getAttribute("data-tab") === name;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-    });
-    document.querySelectorAll(".tab-panel").forEach(function (p) {
-      p.classList.toggle("active", p.id === "tab-" + name);
-    });
-  }
-
   // Drive the drawer height from script so it can never clip its content:
   // animate max-height to the measured scrollHeight, then release it to "none"
   // once open, so later height changes show in full.
@@ -1632,10 +1512,14 @@
   // to be good. Every early return leaves the page exactly as it was. In
   // Phase 2 the kill animation hangs off the success path, never off the drop
   // itself, which is what makes a bad drop harmless.
-  // Take a dropped file as the thing to hide. The board is brought forward
-  // first, because the file is about to appear on it.
+  // Take a dropped file as the thing to hide. Hiding needs the Make column,
+  // and only the board has one, so anywhere else this is said plainly rather
+  // than silently doing nothing.
   function attachDropped(file) {
-    switchTab("puttypng");
+    if (!onBoardPage()) {
+      toast("That is not a PuttyPNG. Hide a file on the PuttyPNG page.", "bad");
+      return;
+    }
     takeHomeAttachment(file);
     toast("Attached " + (file.name || "file"), "ok");
   }
@@ -1681,13 +1565,59 @@
   }
 
 
-  /* EVERY READ ENDS IN THE SAME PLACE. A drop on the page, a paste, and the
-     bounded zone on the How it works tab all arrive here, and all of them
-     show their result in the board's Load column. */
+  /* EVERY READ ENDS HERE, AND THIS DECIDES WHERE IT SHOWS. The board has a
+     Load column. The How it works page has one small result block instead.
+     A page carries exactly one of the two, so the page picks the display and
+     no caller has to know which page it is on. */
   async function readSource(source) {
-    switchTab("puttypng");
-    await readHomeFile(source);
-    if (document.getElementById("zone").classList.contains("has")) maybeCelebrate("read");
+    if ($("zone")) {
+      await readHomeFile(source);
+      if ($("zone").classList.contains("has")) maybeCelebrate("read");
+      return;
+    }
+    await readBoundedFile(source);
+  }
+
+  /* THE SMALL READER, on the How it works page. It shows what came out beside
+     the code that would get you the same thing, which is the whole point of
+     that page. It shares no markup with the board. */
+  async function readBoundedFile(file) {
+    var out = $("zoneResult");
+    if (!out || !file) return;
+
+    function say(html, kind) {
+      out.className = "zone-result " + (kind || "");
+      out.innerHTML = html;
+    }
+
+    if (!/png/i.test(file.type) && !/\.png$/i.test(file.name || "")) {
+      say("<strong>" + safe(file.name || "That file") + "</strong> is not a PNG. " +
+          "A PuttyPNG has to stay a PNG.", "bad");
+      return;
+    }
+
+    say("Reading " + safe(file.name || "the file") + "...");
+    try {
+      var res = await PuttyPNG.decode(file);
+      var body = res.type === "binary"
+        ? "<p class=\"small\">It holds a file: <strong>" + safe(res.filename || "unnamed") +
+          "</strong>, " + homeFmt(res.bytes ? res.bytes.length : 0) + ".</p>"
+        : "<pre class=\"zone-text\">" + safe(String(res.text || "").slice(0, 600)) + "</pre>";
+      say("<p class=\"small\"><strong>" + safe(file.name || "pasted.png") +
+          "</strong> opened. " + (res.encrypted ? "It was encrypted. " : "") + "</p>" + body, "ok");
+      maybeCelebrate("read");
+    } catch (err) {
+      say("<p class=\"small\"><strong>" + safe(file.name || "That PNG") + "</strong> did not open. " +
+          safe(friendly(err)) + "</p>", "bad");
+    }
+  }
+
+  // Text from a decoded file is somebody else's text. It is put on the page as
+  // text, never as markup.
+  function safe(v) {
+    return String(v).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
   }
 
 
@@ -2232,6 +2162,11 @@
      ========================================================================== */
 
   function init() {
+    /* THREE OF THE FIVE PAGES CANNOT USE THE ENGINE, so they do not load it.
+       Everything below this line that needs it is guarded by the element it
+       works on, and those elements live only on the two pages that do. */
+    var hasEngine = typeof PuttyPNG !== "undefined";
+
     // A small development surface. The confetti's transform rule is exposed
     // so a test can check it without waiting for a frame to run.
     window.PuttyPNGDebug = window.PuttyPNGDebug || {};
@@ -2245,19 +2180,15 @@
     var savedCeleb = readPref("celebration");
     celebrationOn = (savedCeleb === null) ? CELEBRATION_DEFAULT : (savedCeleb === "on");
 
-    wireTabs();
+    markCurrentPage();
     wireHome();
     wireDrawer();
     wireOptionFields();
     wirePageDrop();
     wireDisplayToggles();
     wireSubTabs();
-    wireReader();
+    if (hasEngine) { wireBoundedZone(); wirePaste(); }
     wireSnippets();
-    renderErrorTable();
-    renderDropTable();
-    renderLicense();
-    renderFoot();
     wireTutorial();
     wirePromptDemo();
   }

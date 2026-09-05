@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  about.html - The idea, the author, and the licence in full.
+
+  One of five pages. The head, masthead, navigation, and footer are the same on
+  all of them and are marked SYNC so .devtools/sync-chrome.mjs can prove it.
+  Presentation is in styles.css, behavior in scripts.js, and the steganography
+  in puttypng.js, which stands alone.
+-->
+  <!-- ==========================================================================
+       SECTION 1 - HEAD / SETUP
+       Shared metadata first, so the character set is declared before anything
+       else. This page's own identity follows it.
+       ========================================================================== -->
+<head>
+  <!-- SYNC:head -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="assets/puttypng-mark.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/puttypng-icon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/puttypng-icon-180.png">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://puttypng.com/assets/puttypng-social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="PuttyPNG disc with a clay peel that reveals binary data.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://puttypng.com/assets/puttypng-social-card.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <!-- /SYNC:head -->
+
+  <!-- This page's own identity. Every line below differs from page to page,
+       which is why none of it sits inside the SYNC block above. -->
+  <title>About - PuttyPNG</title>
+  <meta name="description" content="Why PuttyPNG exists, who made it, and the full MIT license it is released under.">
+  <link rel="canonical" href="https://puttypng.com/about.html">
+  <meta property="og:url" content="https://puttypng.com/about.html">
+  <meta property="og:title" content="About - PuttyPNG">
+  <meta property="og:description" content="Why PuttyPNG exists, who made it, and the full MIT license it is released under.">
+  <meta name="twitter:title" content="About - PuttyPNG">
+  <meta name="twitter:description" content="Why PuttyPNG exists, who made it, and the full MIT license it is released under.">
+</head>
+
+<!-- The class says which page this is. The stylesheet reads it to mark the
+     current link, so the navigation block itself stays identical everywhere. -->
+<body class="p-about">
+  <div class="wrap">
+
+  <!-- ==========================================================================
+       SECTION 2 - MASTHEAD
+       The page's title block.
+       ========================================================================== -->
+    <!-- SYNC:masthead -->
+    <header class="masthead">
+
+      <!-- A corner note, not a claim on the title. It is taken out of the flow
+           so the name stays centred on the page, and put back into it on a
+           narrow screen where a floating corner would sit on the title. -->
+      <aside class="made">
+        <p class="made-mark">
+          <img class="flag" src="assets/flag.svg" width="34" height="18"
+               alt="The flag of the United States of America">
+          <span>Made in USA</span>
+        </p>
+        <p class="made-note">Absolutely NONE of your data is collected. This is a free MIT
+          license project for fun. Enjoy! -- AMH</p>
+      </aside>
+      <h1>Putty<span class="png">PNG</span></h1>
+      <div class="subtitle">Press your data into a PNG. Hand it to anyone.</div>
+      <p class="byline">Designed by <a href="https://aaronmichaelharris.com/" target="_blank" rel="noreferrer">Aaron M. Harris</a></p>
+    </header>
+    <!-- /SYNC:masthead -->
+
+  <!-- ==========================================================================
+       SECTION 3 - NAVIGATION
+       Five links to five pages. No script is needed to move between them.
+       ========================================================================== -->
+    <!-- SYNC:nav -->
+    <nav class="tabs" id="tabs" aria-label="PuttyPNG sections">
+      <a href="index.html" data-page="index">PuttyPNG</a>
+      <a href="docs.html" data-page="docs">Docs</a>
+      <a href="how-it-works.html" data-page="howitworks">How it works</a>
+      <a href="download.html" data-page="download">Download</a>
+      <a href="about.html" data-page="about">About</a>
+    </nav>
+    <!-- /SYNC:nav -->
+
+  <!-- ==========================================================================
+       SECTION 4 - ABOUT
+       The idea, the author, and the licence in full.
+       ========================================================================== -->
+    <main class="panel" id="about">
+      <h2>About</h2>
+      <div class="card">
+        <h3>The idea</h3>
+        <p>As a kid you could press a wad of putty onto a comic strip and lift the ink right off, a perfect little copy you could carry in your pocket and hand to a friend. PuttyPNG is that trick for data. Press whatever you have (a note, a form, a game save, a whole file) into an ordinary picture, and hand the picture to anyone. Because so many places let you paste a lossless PNG without mangling it, the picture becomes a friendly, universal envelope: no server, no link that expires, no account to sign into. An image that carries exactly what you put in it.</p>
+      </div>
+      <div class="card">
+        <h3>The author</h3>
+        <p>PuttyPNG is made by <strong>Aaron Michael Harris</strong>. It is a fun, open project. Use it, remix it, decorate your PuttyPNGs however you like, and build your own things on top of the protocol.</p>
+      </div>
+      <div class="card">
+        <h3>License</h3>
+        <p class="small muted">PuttyPNG is released under the MIT License.</p>
+        <div class="license" id="licenseText">MIT License
+
+Copyright (c) 2026 Aaron M. Harris
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</div>
+      </div>
+    </main>
+
+  <!-- ==========================================================================
+       SECTION 5 - FOOTER
+       The three version numbers, the licence, and the promise.
+       ========================================================================== -->
+    <!-- SYNC:footer -->
+    <!-- THREE VERSIONS, SAID APART. The page moves with the site, the engine
+         moves with puttypng.js, and the protocol moves only on a breaking
+         byte-layout change. A gate check compares the last two against the
+         engine, so this cannot drift.
+         RULE: the page version below is the one the commit carries. -->
+    <div class="foot" id="foot">
+      <div class="line">
+        <b>PuttyPNG</b>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Page v2.6.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Engine v2.1.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Protocol v1</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>MIT License</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="line">
+        <span><img class="flag" src="assets/flag.svg" width="19" height="10" alt="The flag of the United States of America">Made in USA</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Absolutely NONE of your data is collected.</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>&copy; 2026 Aaron Michael Harris</span>
+      </div>
+    </div>
+    <!-- /SYNC:footer -->
+  </div>
+
+  <!-- ==========================================================================
+       SECTION 6 - OVERLAYS
+       Nodes that sit above the page. Not shared: only a page that can take a
+       dropped file carries the veil.
+       ========================================================================== -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ==========================================================================
+       SECTION 7 - SCRIPTS
+       This page cannot use the engine, so it does not load it.
+       ========================================================================== -->
+  <script src="scripts.js"></script>
+</body>
+</html>

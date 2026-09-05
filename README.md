@@ -17,18 +17,29 @@ a browser blocks `fetch` against a `file://` path. Making and reading a
 PuttyPNG works either way, but the engine source card on the How it works tab
 can only fill itself over HTTP.
 
-## The four files
+## The files
 
 | File | Holds |
 |---|---|
-| `index.html` | Page structure only. Seven sections. |
+| `index.html` | The board: make a PuttyPNG, read one back. Seven sections. |
+| `docs.html` | API, protocol, cover styles, error codes, recipes. Seven sections. |
+| `how-it-works.html` | The tutorial, a live drop zone, and the code to copy. Seven sections. |
+| `download.html` | Two ways to the code. Seven sections. |
+| `about.html` | The idea, the author, the licence. Seven sections. |
 | `styles.css` | All presentation. Seven sections. |
 | `scripts.js` | All page behavior. Seven sections. |
 | `puttypng.js` | The engine. Nine sections. |
 
-Beside them sits `fonts/`, which holds the one display face the page sets its
-name and its two column headings in. It is served from the folder and never
-over a network. Delete it and the page falls back to a system face.
+Every page carries the same head, masthead, navigation, and footer, marked with
+`SYNC` comments. `.devtools/sync-chrome.mjs` checks the five copies agree.
+
+Only `index.html` and `how-it-works.html` load `puttypng.js`, because the other
+three cannot use it.
+
+Beside them sit `fonts/`, which holds the one display face the page sets its
+name and its two column headings in, and `assets/`, which holds the icons and
+the flag. Both are served from the folder and never over a network. Delete
+`fonts/` and the page falls back to a system face.
 
 No build step and no dependencies. Drop the folder on any static host and it
 runs.

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The five pages of PuttyPNG. Every URL here matches the canonical tag on
+     the page it names, and both use the .html form the links use. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://puttypng.com/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://puttypng.com/docs.html</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://puttypng.com/how-it-works.html</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://puttypng.com/download.html</loc>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://puttypng.com/about.html</loc>
+    <priority>0.4</priority>
+  </url>
+</urlset>

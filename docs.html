@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  docs.html - The API reference, the protocol, the error codes, and the recipes.
+
+  One of five pages. The head, masthead, navigation, and footer are the same on
+  all of them and are marked SYNC so .devtools/sync-chrome.mjs can prove it.
+  Presentation is in styles.css, behavior in scripts.js, and the steganography
+  in puttypng.js, which stands alone.
+-->
+  <!-- ==========================================================================
+       SECTION 1 - HEAD / SETUP
+       Shared metadata first, so the character set is declared before anything
+       else. This page's own identity follows it.
+       ========================================================================== -->
+<head>
+  <!-- SYNC:head -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="assets/puttypng-mark.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/puttypng-icon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/puttypng-icon-180.png">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://puttypng.com/assets/puttypng-social-card.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="PuttyPNG disc with a clay peel that reveals binary data.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://puttypng.com/assets/puttypng-social-card.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <!-- /SYNC:head -->
+
+  <!-- This page's own identity. Every line below differs from page to page,
+       which is why none of it sits inside the SYNC block above. -->
+  <title>Docs - PuttyPNG</title>
+  <meta name="description" content="The PuttyPNG API, the v1 byte protocol, cover styles, every error code, and recipes for calling the engine directly.">
+  <link rel="canonical" href="https://puttypng.com/docs.html">
+  <meta property="og:url" content="https://puttypng.com/docs.html">
+  <meta property="og:title" content="Docs - PuttyPNG">
+  <meta property="og:description" content="The PuttyPNG API, the v1 byte protocol, cover styles, every error code, and recipes for calling the engine directly.">
+  <meta name="twitter:title" content="Docs - PuttyPNG">
+  <meta name="twitter:description" content="The PuttyPNG API, the v1 byte protocol, cover styles, every error code, and recipes for calling the engine directly.">
+</head>
+
+<!-- The class says which page this is. The stylesheet reads it to mark the
+     current link, so the navigation block itself stays identical everywhere. -->
+<body class="p-docs">
+  <div class="wrap">
+
+  <!-- ==========================================================================
+       SECTION 2 - MASTHEAD
+       The page's title block.
+       ========================================================================== -->
+    <!-- SYNC:masthead -->
+    <header class="masthead">
+
+      <!-- A corner note, not a claim on the title. It is taken out of the flow
+           so the name stays centred on the page, and put back into it on a
+           narrow screen where a floating corner would sit on the title. -->
+      <aside class="made">
+        <p class="made-mark">
+          <img class="flag" src="assets/flag.svg" width="34" height="18"
+               alt="The flag of the United States of America">
+          <span>Made in USA</span>
+        </p>
+        <p class="made-note">Absolutely NONE of your data is collected. This is a free MIT
+          license project for fun. Enjoy! -- AMH</p>
+      </aside>
+      <h1>Putty<span class="png">PNG</span></h1>
+      <div class="subtitle">Press your data into a PNG. Hand it to anyone.</div>
+      <p class="byline">Designed by <a href="https://aaronmichaelharris.com/" target="_blank" rel="noreferrer">Aaron M. Harris</a></p>
+    </header>
+    <!-- /SYNC:masthead -->
+
+  <!-- ==========================================================================
+       SECTION 3 - NAVIGATION
+       Five links to five pages. No script is needed to move between them.
+       ========================================================================== -->
+    <!-- SYNC:nav -->
+    <nav class="tabs" id="tabs" aria-label="PuttyPNG sections">
+      <a href="index.html" data-page="index">PuttyPNG</a>
+      <a href="docs.html" data-page="docs">Docs</a>
+      <a href="how-it-works.html" data-page="howitworks">How it works</a>
+      <a href="download.html" data-page="download">Download</a>
+      <a href="about.html" data-page="about">About</a>
+    </nav>
+    <!-- /SYNC:nav -->
+
+  <!-- ==========================================================================
+       SECTION 4 - DOCS
+       The API reference, the protocol, the error codes, and the recipes.
+       ========================================================================== -->
+    <main class="panel" id="docs">
+      <h2>Docs</h2>
+      <p class="lede">The whole engine is one dependency-free file. These are its four functions, the protocol it speaks, and the ways to wire it into your own project.</p>
+      <nav class="subnav" aria-label="Docs sections">
+        <a href="#docs-api">API</a>
+        <a href="#docs-protocol">Protocol</a>
+        <a href="#docs-covers">Cover styles</a>
+        <a href="#docs-errors">Error codes</a>
+        <a href="#docs-recipes">Recipes</a>
+        <a href="#docs-prompt">Custom prompt</a>
+        <a href="#docs-changelog">Changelog</a>
+      </nav>
+
+      <!-- API -->
+      <div class="doc-section" id="docs-api">
+        <h2>API reference</h2>
+        <p>Everything hangs off the global <span class="mono">PuttyPNG</span>. Both <span class="mono">encode</span> and <span class="mono">decode</span> return promises.</p>
+
+        <div class="card">
+          <h3>PuttyPNG.encode(input, options?)</h3>
+          <div class="api-sig">await PuttyPNG.encode(data, { password, depth, compress, tag, cover, ... }) &rarr; result</div>
+          <p class="small">Hides <span class="mono">input</span> (a string, plain object, <span class="mono">Uint8Array</span>, <span class="mono">ArrayBuffer</span>, or <span class="mono">File</span>/<span class="mono">Blob</span>) inside a PNG.</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">password</td><td class="mono">none</td><td>If set, encrypts with AES-256-GCM (key from PBKDF2-SHA-256). Filename &amp; type are hidden too.</td></tr>
+              <tr><td class="mono">depth</td><td class="mono">"standard"</td><td><span class="mono">"standard"</span> = 1 byte/pixel (roomy). <span class="mono">"subtle"</span> = 3 bits/pixel (invisible).</td></tr>
+              <tr><td class="mono">compress</td><td class="mono">true</td><td>Auto gzip, kept only when it makes the data smaller.</td></tr>
+              <tr><td class="mono">tag</td><td class="mono">""</td><td>Plaintext developer tag, readable later via <span class="mono">peek()</span> without decrypting.</td></tr>
+              <tr><td class="mono">cover</td><td class="mono">none</td><td>A PNG (File/Blob/URL/Image) to hide the data in. Default is generated noise. Resampled with high-quality smoothing; a transparent cover is auto-hardened so no data pixel borders a soft edge.</td></tr>
+              <tr><td class="mono">coverFit</td><td class="mono">"crop"</td><td>How a cover fills the frame: <span class="mono">crop</span>, <span class="mono">keepRatio</span> (non-square, original shape), <span class="mono">scale</span>, <span class="mono">center</span>, <span class="mono">stretch</span>.</td></tr>
+              <tr><td class="mono">size</td><td class="mono">auto</td><td>Fixed square side in pixels. Omit to auto-size to the data. What it promises depends on the cover. <strong>Noise</strong> uses it exactly and raises <span class="mono">PTY-E04</span> if the data will not fit. <strong>CD</strong> treats it as a starting size and grows past it when the data will not fit, so set <span class="mono">maxSize</span> to the same value to pin it. <strong>Custom</strong> uses it exactly, except that it is still raised to <span class="mono">minSize</span>.</td></tr>
+              <tr><td class="mono">sizeMode</td><td class="mono">"auto"</td><td><span class="mono">"pow2"</span> rounds the auto size up to a power of two.</td></tr>
+              <tr><td class="mono">minSize</td><td class="mono">256</td><td>Floor for auto-sizing (px), so a small payload still makes a shareable image. The noise and CD covers let an explicit <span class="mono">size</span> go below this floor. A custom cover is still raised to it.</td></tr>
+              <tr><td class="mono">maxSize</td><td class="mono">4096</td><td>Ceiling for the finished image (px). It caps auto-sizing, and it is also what stops the CD cover growing past an explicit <span class="mono">size</span>. Past it the engine raises <span class="mono">PTY-E04</span> rather than making a larger picture.</td></tr>
+              <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
+              <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
+              <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
+              <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: set the disc in a light grey jewel case, lying on white, instead of leaving the corners transparent. Every pixel opaque &rarr; the whole square carries data, and it survives being flattened onto a background. The page turns this on by default.</td></tr>
+              <tr><td class="mono">imprint</td><td class="mono">none</td><td>CD only: an image (File/Blob/URL/Image) etched onto the disc as a grayscale stipple, beneath the label.</td></tr>
+              <tr><td class="mono">fontFamily</td><td class="mono">system</td><td>CD only: the label font.</td></tr>
+              <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: label size: <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span> (each scales with the disc size; still shrinks/wraps to fit).</td></tr>
+              <tr><td class="mono">rimText</td><td class="mono">auto</td><td>CD only: the mirrored microtext around the inner rim. Defaults to <span class="mono">"Paste into PuttyPNG.com to decode!"</span>. The text shrinks to fit if it is long.</td></tr>
+              <tr><td class="mono">rimSize</td><td class="mono">13</td><td>CD only: rim microtext size in <strong>points measured on a 256px disc</strong>, then scaled to the real disc, so the text keeps its proportion at every size. A name (<span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, <span class="mono">"xlarge"</span>) picks a fraction of the disc instead.</td></tr>
+              <tr><td class="mono">rimSpacing</td><td class="mono">0</td><td>CD only: extra space after each rim letter, in px on a 256px disc, scaled the same way. Negative values tighten the text.</td></tr>
+              <tr><td class="mono">rimTwoSided</td><td class="mono">false</td><td>CD only: always print the rim text at the top and the bottom, shrinking it to fit each half. Left off, text that outgrows one half wraps once around the rim instead.</td></tr>
+              <tr><td class="mono">splat</td><td class="mono">branding</td><td>CD only: the default "putty splat" imprint (our reusable Gak-like silhouette, stippled into the surface across the full lobe extent; dots stay 5% clear of the disc edge and the hub). <span class="mono">{ points, curve, waviness, amplitude, seed, size, dotColor, dotMin, dotMax, separation, textBuffer, textClear }</span>. <span class="mono">textBuffer</span> is how far the dot-clearing reaches past the text, in px on a 256px disc and scaled from there (default 4); <span class="mono">textClear</span> is how much of that space is emptied, from 0 to 1 (default 0.25). <span class="mono">dotColor</span> is a palette (default <span class="mono">"rainbowSoft"</span>; also rainbowStrong, black, white, dkgray, ltgray, blue, red, orange, yellow, green). A custom <span class="mono">imprint</span> image overrides it.</td></tr>
+              <tr><td class="mono">hub</td><td class="mono">round</td><td>CD only: the round clamping centre. <span class="mono">{ size, holeSize, outerThickness, innerThickness }</span> (fractions of the disc). The spindle hole is transparent.</td></tr>
+            </tbody>
+          </table></div>
+          <p class="small muted">Result: <span class="mono">{ dataUrl, blob, width, height, depth, compressed, encrypted, bytesHidden, capacityBytes, usedPercent }</span></p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-encode">Copy</button></div>
+<pre id="ex-encode">const png = await PuttyPNG.encode("hello", { password: "s3cret", depth: "subtle" });
+document.querySelector("img").src = png.dataUrl;   // show it
+// png.blob is a PNG Blob you can upload, download, or copy to the clipboard</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.decode(source, options?)</h3>
+          <div class="api-sig">await PuttyPNG.decode(pngSource, { password, autoDownload }) &rarr; result</div>
+          <p class="small"><span class="mono">source</span> may be a <span class="mono">File</span>/<span class="mono">Blob</span>, an <span class="mono">&lt;img&gt;</span>, a <span class="mono">&lt;canvas&gt;</span>, an <span class="mono">ImageData</span>, or a data-URL / URL string.</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Option</th><th>Default</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">password</td><td class="mono">none</td><td>Needed for encrypted PuttyPNGs. If omitted, <span class="mono">passwordPrompt</span> is called.</td></tr>
+              <tr><td class="mono">autoDownload</td><td class="mono">false</td><td>If the payload is a binary file, also save it to disk.</td></tr>
+            </tbody>
+          </table></div>
+          <p class="small muted">Result: <span class="mono">{ type, name, mime, bytes, text?, json?, tag, encrypted, compressed, depth, width, height }</span>. <span class="mono">type</span> is <span class="mono">"text"</span>, <span class="mono">"json"</span>, or <span class="mono">"binary"</span>.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-decode">Copy</button></div>
+<pre id="ex-decode">const result = await PuttyPNG.decode(file);
+if (result.type === "binary") PuttyPNG.download(result);
+else console.log(result.text, result.json);</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.peek(source)</h3>
+          <div class="api-sig">await PuttyPNG.peek(pngSource) &rarr; { isPuttyPNG, version, encrypted, compressed, depth, tag, payloadBytes }</div>
+          <p class="small">Reads the header and the plaintext developer tag <em>without decrypting</em>. Returns <span class="mono">{ isPuttyPNG: false }</span> for anything that is not a PuttyPNG.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-peek">Copy</button></div>
+<pre id="ex-peek">const info = await PuttyPNG.peek(file);
+if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre>
+        </div>
+
+        <div class="card">
+          <h3>PuttyPNG.download(result, filename?) &middot; PuttyPNG.passwordPrompt</h3>
+          <p class="small"><span class="mono">download()</span> saves a decoded result (or a raw Blob) to disk. <span class="mono">passwordPrompt</span> is the override point for password entry. It defaults to the browser's native <span class="mono">prompt()</span>. Replace it with your own UI (see <a href="#docs-prompt">Custom prompt</a>).</p>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Also on PuttyPNG</th><th>What it is</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">PuttyPNG.version</td><td>Engine version string (e.g. <span class="mono">"1.0.0"</span>).</td></tr>
+              <tr><td class="mono">PuttyPNG.protocolVersion</td><td>Protocol version number (<span class="mono">1</span>).</td></tr>
+              <tr><td class="mono">PuttyPNG.errors</td><td>The <span class="mono">{ "PTY-E00": "...", ... }</span> code table (see below).</td></tr>
+              <tr><td class="mono">PuttyPNG.selfTest()</td><td>Runs the built-in test battery; returns <span class="mono">{ passed, failed, results }</span>.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PROTOCOL -->
+      <div class="doc-section" id="docs-protocol">
+        <h2>Protocol v1</h2>
+        <p>Data is written into the low bits of the R, G, B channels of <strong>fully opaque</strong> pixels (alpha = 255), in raster order. Multi-byte integers are big-endian.</p>
+        <div class="card">
+          <h3>Fixed header: 18 bytes, always at 1-1-1 depth (first 48 opaque pixels)</h3>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Offset</th><th>Size</th><th>Field</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">0</td><td>4</td><td>Magic <span class="mono">PPNG</span></td></tr>
+              <tr><td class="mono">4</td><td>1</td><td>Protocol version (decoders reject a higher number &rarr; PTY-E01)</td></tr>
+              <tr><td class="mono">5</td><td>1</td><td>Flags: bit0 compressed, bit1 encrypted, bit2 subtle depth</td></tr>
+              <tr><td class="mono">6</td><td>2</td><td>Developer-tag length</td></tr>
+              <tr><td class="mono">8</td><td>2</td><td>Outer-metadata length</td></tr>
+              <tr><td class="mono">10</td><td>4</td><td>Payload length</td></tr>
+              <tr><td class="mono">14</td><td>4</td><td>CRC32 of the payload (as embedded)</td></tr>
+            </tbody>
+          </table></div>
+          <h3 style="margin-top:18px;">Body: at the flag-declared depth</h3>
+          <p class="small mono">[dev tag][outer metadata][payload]</p>
+          <p class="small">The <strong>outer metadata</strong> is empty unless encrypted, in which case it holds the (plaintext) crypto parameters: <span class="mono">{ enc, kdf, iterations, salt, iv }</span>. The <strong>payload</strong> is the processed inner container.</p>
+          <h3 style="margin-top:18px;">Inner container (protected content)</h3>
+          <p class="small mono">[uint16 metadata length][metadata JSON: {name, type, mime}][data bytes]</p>
+          <p class="small">Because the inner container lives <em>inside</em> the compress/encrypt envelope, an encrypted PuttyPNG reveals no filename or type.</p>
+        </div>
+        <div class="card">
+          <h3>Depths, opacity &amp; transparency</h3>
+          <p class="small"><strong>Standard</strong> packs 3 bits into R, 2 into G, 3 into B, one byte per pixel. <strong>Subtle</strong> uses one bit per channel, three bits per pixel, invisible even on flat art. Only alpha = 255 pixels carry data; alpha is never modified.</p>
+          <p class="small" style="margin-top:8px;"><strong>Transparency is hardened.</strong> Semi-transparent, anti-aliased fringe pixels (alpha 1 to 254) are the ones platforms silently rewrite, so a custom cover is snapped to <em>binary</em> alpha: every fringe pixel becomes fully opaque, while genuinely transparent (alpha 0) regions are kept. No data-bearing pixel ever borders fractional alpha, so a lossless round-trip, or a flatten onto any background, leaves every hidden byte intact.</p>
+          <h3 style="margin-top:16px;">Order of operations</h3>
+          <p class="small">Encode: build inner container &rarr; gzip (if it helps) &rarr; encrypt (if a password is given) &rarr; CRC32 &rarr; embed. Decode reverses it, and the CRC is checked <em>before</em> any password is requested.</p>
+          <h3 style="margin-top:16px;">Versioning</h3>
+          <p class="small">The version <em>byte</em> bumps only on a breaking byte-layout change. An old engine refuses a newer PuttyPNG (PTY-E01) instead of emitting garbage. Backwards-compatible growth happens by adding optional keys to the metadata JSON, which old decoders ignore.</p>
+        </div>
+      </div>
+
+      <!-- COVER STYLES -->
+      <div class="doc-section" id="docs-covers">
+        <h2>Cover styles</h2>
+        <p>When you do not supply your own <span class="mono">cover</span> image, PuttyPNG draws one for you. Pick with <span class="mono">coverStyle</span>.</p>
+        <div class="card">
+          <div class="grid2">
+            <div>
+              <h3>Noise</h3>
+              <p class="small">A fully opaque square of random pixels, auto-sized to the smallest that fits the data (min 32&times;32). Invisible embedding, robust everywhere.</p>
+            </div>
+            <div>
+              <h3>CD</h3>
+              <p class="small">A reflective disc drawn in canvas, the flagship example of a JS-generated cover. By default it carries the PuttyPNG <strong>"putty splat"</strong> branding (a reusable Gak-like silhouette stippled into the surface) and an informational rim (<span class="mono">PuttyPNG | size | contents</span>). Add a curved <span class="mono">label</span>, replace the splat with your own <span class="mono">imprint</span> image, or tune the hub. Auto-sizes from 32&times;32 up (a little larger than noise, since the transparent corners and spindle hole hold no data). Defaults to subtle depth for a smooth sheen.</p>
+            </div>
+          </div>
+          <h3 style="margin-top:16px;">Transparent vs solid, and a flattening caveat</h3>
+          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a light grey jewel case instead, lying on white paper that runs to the corners. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Transparent switch under the Make button turns it off. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
+        </div>
+      </div>
+
+      <!-- ERRORS -->
+      <div class="doc-section" id="docs-errors">
+        <h2>Error codes</h2>
+        <p>Every failure is one short, documented code, logged to the console and thrown as a <span class="mono">PuttyPNGError</span> whose <span class="mono">.code</span> you can branch on. There are two families, and one event always has exactly one code.</p>
+
+        <h3>Engine errors: <span class="mono">PTY-</span></h3>
+        <p class="small">Thrown by the engine. These are the 13 codes in <span class="mono">PuttyPNG.errors</span>. A gate check compares this table against the engine, so the two cannot drift apart.</p>
+        <div class="card"><div class="tablewrap"><table class="doc" id="errorTable">
+          <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+          <tbody id="errorTableBody">
+            <tr><td class="err-code">PTY-E00</td><td>Not a PuttyPNG (magic not found)</td></tr>
+            <tr><td class="err-code">PTY-E01</td><td>Protocol version is newer than this engine can read</td></tr>
+            <tr><td class="err-code">PTY-E02</td><td>Data is corrupted (checksum or structure mismatch)</td></tr>
+            <tr><td class="err-code">PTY-E03</td><td>This browser cannot decompress (CompressionStream missing)</td></tr>
+            <tr><td class="err-code">PTY-E04</td><td>Data is too large for the cover image or the size cap</td></tr>
+            <tr><td class="err-code">PTY-E05</td><td>Wrong password, or the data could not be decrypted</td></tr>
+            <tr><td class="err-code">PTY-E06</td><td>Encryption is not available (Web Crypto missing)</td></tr>
+            <tr><td class="err-code">PTY-E07</td><td>A password is required but none was provided</td></tr>
+            <tr><td class="err-code">PTY-E08</td><td>Invalid input or options</td></tr>
+            <tr><td class="err-code">PTY-E09</td><td>The image could not be loaded or read</td></tr>
+            <tr><td class="err-code">PTY-E10</td><td>The cover image has too few opaque pixels to use</td></tr>
+            <tr><td class="err-code">PTY-E11</td><td>The developer tag is too long (max 65535 bytes)</td></tr>
+            <tr><td class="err-code">PTY-E99</td><td>The engine failed in a way it did not classify</td></tr>
+          </tbody>
+        </table></div></div>
+
+        <h3>Page errors: <span class="mono">DRP-</span></h3>
+        <p class="small">Raised by the page, not the engine, when a drop cannot mean anything. These never reach your code if you call the engine yourself. They stop before a file is handed over, which is why a bad drop cannot disturb a result already on screen.</p>
+        <div class="card"><div class="tablewrap"><table class="doc">
+          <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+          <tbody id="dropTableBody">
+            <tr><td class="err-code">DRP-E00</td><td>That is not a file.</td></tr>
+            <tr><td class="err-code">DRP-E01</td><td>That is a folder. Drop a single file.</td></tr>
+            <tr><td class="err-code">DRP-E02</td><td>One file at a time.</td></tr>
+            <tr><td class="err-code">DRP-E03</td><td>That file is empty.</td></tr>
+            <tr><td class="err-code">DRP-E04</td><td>That file is too large to read here.</td></tr>
+            <tr><td class="err-code">DRP-E05</td><td>That PNG could not be opened as an image.</td></tr>
+            <tr><td class="err-code">DRP-E06</td><td>Wait for the current drop to finish.</td></tr>
+            <tr><td class="err-code">DRP-E99</td><td>That drop failed for an unknown reason.</td></tr>
+          </tbody>
+        </table></div></div>
+
+      </div>
+
+      <!-- RECIPES -->
+      <div class="doc-section" id="docs-recipes">
+        <h2>Recipes</h2>
+        <p>Skip the drop-in importer/exporter and drive the engine directly however your app needs.</p>
+
+        <div class="card">
+          <h3>Call the engine directly</h3>
+          <p class="small">No widgets. Encode and decode in your own flow.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-direct">Copy</button></div>
+<pre id="rec-direct">// Export whatever your app holds:
+const save = { level: 7, score: 9001, items: ["sword"] };
+const png = await PuttyPNG.encode(save, { name: "save.json" });
+uploadOrShare(png.blob);
+
+// Import from anywhere you already have the image:
+const result = await PuttyPNG.decode(pastedImageElement);
+applySave(result.json);</pre>
+        </div>
+
+        <div class="card">
+          <h3>Your own cover art</h3>
+          <p class="small">Hand PuttyPNG a picture to hide the data in. By default it is resampled (high quality) to the <strong>smallest</strong> size that still fits the data. The source resolution is ignored, so a huge photo will not make a huge PuttyPNG. Raise <span class="mono">minSize</span> or set a fixed <span class="mono">size</span> to keep the art larger; use <span class="mono">keepRatio</span> to preserve the original (non-square) shape.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-cover">Copy</button></div>
+<pre id="rec-cover">// Smallest square that fits, cropped, fringe auto-hardened:
+await PuttyPNG.encode(data, { cover: "logo.png" });
+
+// Keep the picture's original shape, and don't shrink below 256px:
+await PuttyPNG.encode(data, { cover: "banner.png", coverFit: "keepRatio", minSize: 256 });
+
+// Lock a fixed size regardless of data:
+await PuttyPNG.encode(data, { cover: "logo.png", size: 512 });</pre>
+        </div>
+
+        <div class="card">
+          <h3>Generate your own cover in JS</h3>
+          <p class="small">The CD style is a canvas drawn in code. You can do the same: draw an <span class="mono">ImageData</span> (or a canvas / data-URL) and pass it as the <span class="mono">cover</span>. PuttyPNG hardens any transparency and hides the data in the opaque pixels. Use the built-in <span class="mono">"cd"</span> style for a ready-made disc.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-gen">Copy</button></div>
+<pre id="rec-gen">// Built-in reflective CD with a label + a burned-in imprint:
+await PuttyPNG.encode(data, { coverStyle: "cd", label: "My Album", imprint: "logo.png" });
+
+// ...or draw your own cover on a canvas and hand it over:
+const c = document.createElement("canvas"); c.width = c.height = 256;
+const x = c.getContext("2d");
+const g = x.createLinearGradient(0, 0, 256, 256);
+g.addColorStop(0, "#1b2a4a"); g.addColorStop(1, "#c96f52");
+x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+await PuttyPNG.encode(data, { cover: c.toDataURL("image/png") });</pre>
+        </div>
+
+        <div class="card">
+          <h3>Recognize your own PuttyPNGs with the dev tag</h3>
+          <p class="small">Stamp a plaintext tag on export, then <span class="mono">peek()</span> on import to route it. No password is needed to know it is yours. Great for versioning an app's own format (a chess game, a doc editor, ...).</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-tag">Copy</button></div>
+<pre id="rec-tag">await PuttyPNG.encode(move, { tag: "chess v3", password: userPw });
+
+// Later, on any dropped image:
+const info = await PuttyPNG.peek(image);
+if (!info.isPuttyPNG || !/^chess /.test(info.tag)) return ignore();
+const move = (await PuttyPNG.decode(image)).json;   // prompts for the password</pre>
+        </div>
+
+        <div class="card">
+          <h3>Encryption tiers: good, better, best</h3>
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Tier</th><th>How</th><th>Protects against</th></tr></thead>
+            <tbody>
+              <tr><td>Good</td><td>No password (default)</td><td>Nothing. The data is open</td></tr>
+              <tr><td>Better</td><td>A key baked into your page's JS</td><td>Casual snooping (keeps honest people honest)</td></tr>
+              <tr><td>Best</td><td>A password the user sets/enters</td><td>Real protection. Only the password holder can open it</td></tr>
+            </tbody>
+          </table></div>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-tiers">Copy</button></div>
+<pre id="rec-tiers">// Better: a fixed page key (anyone reading your source can find it)
+const PAGE_KEY = "our-club-2026";
+await PuttyPNG.encode(data, { password: PAGE_KEY });
+
+// Best: a real per-user secret
+await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
+        </div>
+      </div>
+
+      <!-- CUSTOM PROMPT -->
+      <div class="doc-section" id="docs-prompt">
+        <h2>A custom password prompt</h2>
+        <p>The engine never prompts on its own. It calls <span class="mono">PuttyPNG.passwordPrompt(context)</span>, which by default is the plain browser <span class="mono">prompt()</span>. Replace it with a styled modal by assigning your own async function that resolves to the password (or <span class="mono">null</span> to cancel). Here is a complete, chic one you can paste in.</p>
+        <div class="card">
+          <div class="row" style="justify-content:space-between; align-items:center;">
+            <button class="btn btn-clay btn-sm" type="button" id="tryPromptBtn">Preview the styled prompt</button>
+            <button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-prompt">Copy</button>
+          </div>
+          <div class="small muted" id="tryPromptOut" style="margin-top:8px;"></div>
+<pre id="rec-prompt" style="margin-top:10px;">PuttyPNG.passwordPrompt = function (context) {
+  return new Promise(function (resolve) {
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;" +
+      "align-items:center;justify-content:center;z-index:9999";
+    wrap.innerHTML =
+      "&lt;form style='background:#fff;border-radius:14px;padding:22px;width:300px;" +
+      "font-family:system-ui;box-shadow:0 20px 60px rgba(0,0,0,.3)'&gt;" +
+      "&lt;h3 style='margin:0 0 10px'&gt;Password&lt;/h3&gt;" +
+      "&lt;p style='margin:0 0 12px;color:#666;font-size:14px'&gt;" + (context.message || "") + "&lt;/p&gt;" +
+      "&lt;input type='password' autofocus style='width:100%;padding:10px;border:1px solid #ccc;" +
+      "border-radius:8px;font-size:15px'&gt;" +
+      "&lt;div style='display:flex;gap:8px;justify-content:flex-end;margin-top:14px'&gt;" +
+      "&lt;button type='button' data-x style='padding:8px 14px'&gt;Cancel&lt;/button&gt;" +
+      "&lt;button style='padding:8px 14px;background:#111;color:#fff;border:none;" +
+      "border-radius:999px'&gt;Open&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;";
+    const input = wrap.querySelector("input");
+    function close(value) { wrap.remove(); resolve(value); }
+    wrap.querySelector("[data-x]").onclick = function () { close(null); };
+    wrap.querySelector("form").onsubmit = function (e) { e.preventDefault(); close(input.value); };
+    document.body.appendChild(wrap);
+    input.focus();
+  });
+};</pre>
+        </div>
+      </div>
+
+      <!-- CHANGELOG -->
+      <div class="doc-section" id="docs-changelog">
+        <h2>Changelog</h2>
+        <div class="card">
+          <div class="tablewrap"><table class="doc">
+            <thead><tr><th>Version</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">Engine 2.1.0<br>Protocol 1</td><td><strong>The solid background became a jewel case.</strong> <span class="mono">solidBackground</span> now sets the disc in a light grey case lying on white paper, instead of filling the corners with a soft gradient. Every pixel of the square is opaque, the spindle hole included, so a 256px cover carries <strong>65,425 bytes</strong> rather than about 64,348. The disc itself is drawn a little smaller so the case shows around it, which costs no room because the case carries data too. No function signature changed and the byte layout did not move, so every existing PuttyPNG still decodes.</td></tr>
+              <tr><td class="mono">Engine 2.0.0<br>Protocol 1</td><td>First release. <span class="mono">PPNG</span> header with a version byte and CRC32; standard and subtle depths; opaque-only embedding with transparency hardening; automatic gzip; AES-256-GCM with a PBKDF2-SHA-256 derived key, private by default; a plaintext developer tag readable with <span class="mono">peek()</span>; CD, noise, or custom covers; error codes <span class="mono">PTY-E00</span> to <span class="mono">PTY-E11</span>, plus <span class="mono">PTY-E99</span> for a failure the engine did not classify. Page-level drop failures use the separate <span class="mono">DRP-</span> family.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </main>
+
+  <!-- ==========================================================================
+       SECTION 5 - FOOTER
+       The three version numbers, the licence, and the promise.
+       ========================================================================== -->
+    <!-- SYNC:footer -->
+    <!-- THREE VERSIONS, SAID APART. The page moves with the site, the engine
+         moves with puttypng.js, and the protocol moves only on a breaking
+         byte-layout change. A gate check compares the last two against the
+         engine, so this cannot drift.
+         RULE: the page version below is the one the commit carries. -->
+    <div class="foot" id="foot">
+      <div class="line">
+        <b>PuttyPNG</b>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Page v2.6.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Engine v2.1.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Protocol v1</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>MIT License</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="line">
+        <span><img class="flag" src="assets/flag.svg" width="19" height="10" alt="The flag of the United States of America">Made in USA</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>Absolutely NONE of your data is collected.</span>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <span>&copy; 2026 Aaron Michael Harris</span>
+      </div>
+    </div>
+    <!-- /SYNC:footer -->
+  </div>
+
+  <!-- ==========================================================================
+       SECTION 6 - OVERLAYS
+       Nodes that sit above the page. Not shared: only a page that can take a
+       dropped file carries the veil.
+       ========================================================================== -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ==========================================================================
+       SECTION 7 - SCRIPTS
+       This page cannot use the engine, so it does not load it.
+       ========================================================================== -->
+  <script src="scripts.js"></script>
+</body>
+</html>

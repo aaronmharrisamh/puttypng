@@ -170,14 +170,18 @@ nav.tabs {
   padding-top: 6px; z-index: 10;
 }
 
-nav.tabs button {
-  border: none; background: none; font: inherit; font-size: 15px;
-  color: var(--muted); padding: 12px 16px; cursor: pointer;
+/* A link to another page, dressed as the tab it used to be. text-decoration
+   is turned off because these are navigation, not prose links. */
+nav.tabs a {
+  font: inherit; font-size: 15px; text-decoration: none;
+  color: var(--muted); padding: 12px 16px;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
   transition: color .15s ease, border-color .15s ease;
 }
 
-.tab-panel { display: none; padding-bottom: 100px; }
+/* ONE PANEL PER PAGE. Nothing is hidden any more, so there is no active
+   state to switch and no display rule to carry. */
+.panel { padding-bottom: 100px; }
 
 /* Cards / sections */
 .card {
@@ -598,17 +602,6 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 
    z-index 1 puts them level with the disc and below the slot face, so a piece
    that falls goes behind the face instead of over it. */
-/* Fixed and unclipped, so a kill crosses the whole page instead of stopping
-   at the edge of the deck. Above the drop overlay at 60, below the toast at
-
-
-/* A digit culled before it lands. The move and the fade are pinned in the page
-   code, because the value they are pinned at is only known while it runs.
-   Only the flare belongs here, and it is a filter rather than a text shadow
-
-/* The paperclip sits inside the data box.
-   It is top right, not bottom right, because the textarea resize grip owns
-
 .dropzone {
   border: 2px dashed var(--line-strong); border-radius: var(--radius);
   padding: 30px 20px; text-align: center; cursor: pointer; background: #fcfcfc;
@@ -660,6 +653,42 @@ table.doc td.mono, table.doc td .mono { font-family: ui-monospace, SFMono-Regula
 
 .license { font-size: 12.5px; line-height: 1.7; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-soft); }
 
+
+/* THE LIVE ZONE AND ITS CODE. A working drop zone on the left, the code that
+   builds one on the right. They are not the same code, and the page says so
+   in words rather than leaving the reader to assume. */
+.tut-split {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  align-items: start; margin-top: 14px;
+}
+
+.tut-live { display: flex; flex-direction: column; gap: 10px; }
+
+/* The snippet carries a vertical margin of its own for the copy-paste kit,
+   where the three cards stack. Beside the zone it would sit 14px low, so the
+   margin is dropped and the two columns start on the same line. */
+.tut-split .snippet { margin: 0; }
+
+/* What came out of the last file read here. It always holds a word, so it can
+   never look like a piece of the page that failed to load. */
+.zone-result {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px; font-size: 13px; color: var(--muted);
+  background: var(--paper, #fbfbfc);
+}
+
+.zone-result.ok { border-color: var(--clay); color: var(--ink-soft); }
+
+.zone-result.bad { border-color: var(--soft-red, #c0574a); color: var(--ink-soft); }
+
+.zone-result p { margin: 0 0 6px; }
+
+.zone-text {
+  margin: 0; padding: 10px; border-radius: 8px; background: #fff;
+  border: 1px solid var(--line); max-height: 190px; overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+}
 
 /* Collapsible section, built on the browser's own details element. It needs no
    script, so it still opens and closes if scripts.js fails to load. */
@@ -1096,13 +1125,21 @@ details.sect > summary::-webkit-details-marker { display: none; }
    ========================================================================== */
 
 /* Tabs */
-nav.tabs button:hover { color: var(--ink); }
+nav.tabs a:hover { color: var(--ink); }
 
-nav.tabs button.active { color: var(--clay); border-bottom-color: var(--clay); font-weight: 600; }
+/* THE CURRENT PAGE IS MARKED BY THE BODY, NOT BY THE LINK. The navigation
+   block is byte for byte the same on all five pages, which is what lets one
+   tool prove the five copies agree. The page says which one it is, and the
+   cascade does the rest. */
+.p-index      nav.tabs a[data-page="index"],
+.p-docs       nav.tabs a[data-page="docs"],
+.p-howitworks nav.tabs a[data-page="howitworks"],
+.p-download   nav.tabs a[data-page="download"],
+.p-about      nav.tabs a[data-page="about"] {
+  color: var(--clay); border-bottom-color: var(--clay); font-weight: 600;
+}
 
-nav.tabs button:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 6px; }
-
-.tab-panel.active { display: block; }
+nav.tabs a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 6px; }
 
 /* Buttons */
 .btn:active { transform: scale(0.98); }
@@ -1178,15 +1215,6 @@ textarea:focus, input:focus, select:focus {
    it leans. There is no third state and no script, which is why it cannot get
    stuck.
    The whole deck is the target, not only the picture, so it is easy to hit. */
-
-
-/* THE RAW PIXELS BUTTON, in the corner of the recess.
-   A hairline ring with no fill, so it reads as etched into the machine rather
-   than sitting on it. It is offered only while a picture is on show, because
-
-
-/* THE RAW PIXELS VIEW. The deck draws the picture smoothed, because it is
-   drawn smaller than it really is. This shows it at its true size with no
 
 
 .subtabs button:hover { color: var(--ink); }
@@ -1376,9 +1404,19 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 /* Fields */
 @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
 
+/* Two columns need room for a drop zone and a block of code. Below this the
+   code goes under the zone it explains. */
+@media (max-width: 820px) { .tut-split { grid-template-columns: 1fr; } }
+
 /* Side by side needs room for two buttons and their words. Below this the
    two choices stack, still equal, one after the other. */
 @media (max-width: 700px) { .getcode { grid-template-columns: 1fr; } }
+
+/* MOVING BETWEEN PAGES USED TO BE A TAB CLICK. This makes the navigation fade
+   instead of flashing white, so five pages still feel like one place. Chrome
+   and Edge honor it. Everything else navigates as normal, with no fallback
+   needed and nothing to detect. */
+@view-transition { navigation: auto; }
 
 /* Snippets */
 .hidden { display: none !important; }
