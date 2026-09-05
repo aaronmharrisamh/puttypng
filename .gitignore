@@ -50,3 +50,6 @@ npm-debug.log*
 .env.local
 
 .claude/claude.hooks.system/claude.hooks.signals/
+
+# Temporary browser render profiles.
+/tmp/
