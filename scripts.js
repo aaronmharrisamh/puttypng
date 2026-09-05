@@ -150,23 +150,21 @@
   // Phase 2 Part 3 adds the controls and the storage. This part only reads the
   // browser's own reduced-motion setting and honours it.
   var animationsOn = true;
-  var celebrationOn = true;
+
+  /* THE CELEBRATION, OFF FOR NOW.
+     One switch, and this is it. It decides what a person gets before they
+     have chosen anything. The Advanced control still turns the confetti on,
+     and a choice made there is remembered on that device and beats this.
+     It is declared above what reads it on purpose: var hoists, so the other
+     way round this would read undefined without a word. */
+  var CELEBRATION_DEFAULT = false;
+  var celebrationOn = CELEBRATION_DEFAULT;
 
   // The formation, as it is running now. The defaults are the FORM_ constants
   // and a stored choice replaces them at startup.
   var formStyle = "fade";
   var formMs = 620;
   var formOverlap = 20;
-
-    '<path d="M12 5v13m0 0l-5-5m5 5l5-5" fill="none" stroke="currentColor" ' +
-    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    '<path d="M12 19V6m0 0l-5 5m5-5l5 5" fill="none" stroke="currentColor" ' +
-    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-
-
-
-
-
 
   // The celebration. Ribbons only, with a ripple, from mockup F.
   var CONFETTI_COUNT = 60;
@@ -2245,7 +2243,7 @@
     var savedAnim = readPref("animations");
     animationsOn = (savedAnim === null) ? !prefersLessMotion() : (savedAnim === "on");
     var savedCeleb = readPref("celebration");
-    celebrationOn = (savedCeleb === null) ? true : (savedCeleb === "on");
+    celebrationOn = (savedCeleb === null) ? CELEBRATION_DEFAULT : (savedCeleb === "on");
 
     wireTabs();
     wireHome();
