@@ -1227,22 +1227,99 @@
     wireHomeDisc();
     wireHomeLoad();
 
+    // Before the first paint of the board, because both of these decide which
+    // card a control is drawn in, and a control that arrives and then jumps
+    // has already been read in the wrong place.
+    placeWayOut();
+    placeSolidSwitch();
+
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
     setBoardSizes(0);
     updateHomeMeter(true);
     growMakeBox();
+    paintPlaceholder();
     paintGlow();
     wirePeek();
     paintMakeSay(false);
     window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
-       on its own, so the sizes have to be asked for again when it does.
+       on its own, so everything that reads it has to be asked again when it
+       does. That is the sizes, the box height, the placeholder, and the three
+       controls that live in a different card on each shape.
        The listener takes no argument from the event: setBoardSizes reads a rung
        index, and handing it a MediaQueryListEvent would clamp to NaN and size
        the board in NaN pixels. */
-    touchPointer.addEventListener("change", function () { setBoardSizes(homeShownRung); growMakeBox(); });
+    touchPointer.addEventListener("change", function () {
+      placeWayOut();
+      placeSolidSwitch();
+      setBoardSizes(homeShownRung);
+      growMakeBox();
+      paintPlaceholder();
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     WHERE A CONTROL LIVES DEPENDS ON WHAT THE PERSON IS HOLDING.
+
+     THE ELEMENTS ARE MOVED, NEVER COPIED. There is one of each in the page and
+     the gate counts them. A second copy would mean a repeated id, two sets of
+     listeners on one job, and a screen reader reading the same button twice.
+     A listener is held against the element, so it survives the move and does
+     not have to be attached again.
+     ------------------------------------------------------------------------ */
+
+  /* THE WAY OUT OF MAKE.
+     A desktop shows Make and Load side by side, so the two Load buttons belong
+     in the Load column beside the drop zone they share. A phone shows one
+     screen at a time, so the same two buttons have to be reachable from Make.
+     R5 puts them under the Make button, behind a divider that says they are
+     an alternative and not a leftover. */
+  function placeWayOut() {
+    var ordiv = $("ordiv"), chips = $("loadChips"), openIn = $("openIn");
+    var bar = document.querySelector(".actbar");
+    var adv = document.querySelector(".actbar .adv-row");
+    var note = document.querySelector(".col.load .dropnote");
+    if (!ordiv || !chips || !bar || !adv || !note || !openIn) return;
+    if (touchPointer.matches) {
+      // Ahead of the Advanced row, so the reading order is the button, the
+      // divider, the two buttons, then Advanced: the order the eye takes them.
+      bar.insertBefore(ordiv, adv);
+      bar.insertBefore(chips, adv);
+    } else {
+      // Ahead of the hidden file input, which is where they started, so the
+      // column reads the same after a move back as it did before the move.
+      note.insertBefore(ordiv, openIn);
+      note.insertBefore(chips, openIn);
+    }
+  }
+
+  /* THE BACKGROUND SWITCH BELONGS BESIDE THE PICTURE IT DESCRIBES.
+     A desktop shows the switch and the finished picture together, so the
+     switch stays under the Make button where the rest of the settings are.
+     A phone makes them two screens. A switch on the first one asks a person to
+     decide something about a picture they have not seen yet, so it moves to
+     the screen that has the picture on it. */
+  function placeSolidSwitch() {
+    var wrap = $("solidWrap");
+    var board = $("boardGrid");
+    var deck = document.querySelector(".deckrow");
+    var adv = document.querySelector(".actbar .adv-row");
+    if (!wrap || !board || !deck || !adv) return;
+    if (touchPointer.matches) board.insertBefore(wrap, deck);
+    else adv.insertBefore(wrap, adv.firstChild);
+  }
+
+  /* WHAT THE EMPTY BOX ASKS FOR. A finger cannot drop a file, so the phone is
+     not offered it. The sheet already hides four other lines that name a drop,
+     but a placeholder is an attribute and no rule can reach it. */
+  function paintPlaceholder() {
+    var ta = $("makeText");
+    if (!ta) return;
+    ta.placeholder = touchPointer.matches
+      ? "Paste some text or attach a file, then hit 'Make a PuttyPNG'"
+      : "Type, paste, or drop in an attachment!";
   }
 
   /* THE BOX GROWS DOWNWARD ON A PHONE. A textarea will not size itself to its
@@ -1328,11 +1405,22 @@
     note.hidden = backgroundIsSolid() || !homeDiscOut;
   }
 
+  /* PRESSING THE SWITCH REMAKES THE PICTURE. IT DOES NOT THROW IT AWAY.
+     The switch used to sit on the Make screen, where a press rarely had a
+     finished picture to spoil, so emptying the tray was enough. On a phone it
+     now stands beside the picture, and a control that empties the tray it is
+     standing next to reads as a fault rather than a setting.
+     pressHomeDisc() encodes with whatever Advanced currently says, and this
+     switch is kept in step with Advanced, so pressing it again is the whole of
+     the work. Nothing here waits on it: it is a promise, the button says it is
+     working, and the disc arrives when it arrives.
+     setView("made") inside it is a no-op while the phone is already on that
+     screen, so focus stays on the switch the person pressed. */
   function afterBackgroundChange() {
     paintSolidWord();
-    if (homeDiscOut) tossDisc();
     paintTransNote();
     updateHomeMeter(true);
+    if (homeDiscOut) pressHomeDisc();
   }
 
   /* WHAT THE MAKE COLUMN SAYS. Derived, like the glow: the board is read and
@@ -1918,6 +2006,10 @@
      sits under the same column the donut takes its share of. On a touch screen
      they must not: the donut shares a row with a button that holds words, and
      the disc has a row to itself, so each reads its own tuning. */
+  // True once the sizes have been written at least once. The first write
+  // happens on arrival and must not animate. See setBoardSizes.
+  var boardSized = false;
+
   function setBoardSizes(k) {
     homeShownRung = Math.min(k, RUNGS.length - 1);
     var col = document.querySelector(".col.make");
@@ -1936,8 +2028,30 @@
     // reads them resolves. Setting them on the column would leave the deck
     // behind.
     var root = document.documentElement.style;
+
+    /* THE FIRST WRITE MUST NOT ANIMATE. The stylesheet has to declare some
+       value for --meter-col before script runs, and it declares the desktop's.
+       A phone therefore paints a 116px donut, gets told 60px here, and the
+       action bar transitions between the two over 520ms while a person is
+       reading the screen for the first time.
+       Suppressing the transition for this one write turns that slide into a
+       single frame nobody sees. Later writes still animate, because a donut
+       growing as the disc fills is the thing the animation is for.
+       The read of offsetWidth is what forces the change to apply while the
+       transition is still off. Without it both writes are one style pass and
+       the animation runs anyway. */
+    var bar = document.querySelector(".actbar");
+    var first = bar && !boardSized;
+    if (first) bar.style.transition = "none";
+
     root.setProperty("--meter-col", meter + "px");
     root.setProperty("--slot-w", slot + "px");
+
+    if (first) {
+      void bar.offsetWidth;
+      bar.style.transition = "";
+      boardSized = true;
+    }
   }
 
   // Draw one ring layout. Returns where the cut ended up, in degrees, so a

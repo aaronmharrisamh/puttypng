@@ -116,50 +116,6 @@ code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, m
    clear the fold at 1366x768, which is the common laptop size. */
 header.masthead { text-align: center; padding: 28px 0 16px; }
 
-/* THE CORNER NOTE. Out of the flow, so the name stays centred on the page and
-   not on whatever space the note leaves it. */
-.made {
-  position: absolute; right: 0; top: 14px; z-index: 3;
-  width: min(250px, 30vw);
-  text-align: right;
-}
-
-.made-mark {
-  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-  margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .01em; color: var(--ink);
-}
-
-/* A hairline, because the white stripes and the page are the same white and
-   the flag would otherwise lose its edge. */
-.made .flag {
-  flex: none; border-radius: 2px; display: block;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.16), 0 1px 3px rgba(0,0,0,.14);
-}
-
-/* ONE CLAIM PER LINE, NOT A BULLET LIST. A wrapped bullet list can leave the
-   separator at the end of a line or the start of the next, and neither is
-   wanted. This column is 250px, so every claim would wrap. Stacking them
-   removes the question. The footer is wide and centred, so it keeps bullets. */
-.made-note {
-  display: flex; flex-direction: column; align-items: flex-end;
-  margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--muted);
-}
-
-/* Back into the flow on a narrow screen, where the block is centred under the
-   flag rather than hung in a corner. */
-@media (max-width: 700px) { .made-note { align-items: center; } }
-
-/* Underlined by a border rather than by text-decoration, so the rule sits
-   clear of the descenders at this size. */
-.made-note a {
-  color: var(--muted); text-decoration: none;
-  border-bottom: 1px solid var(--line-strong);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .made-note a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
-}
-
 /* The name is two different materials. Putty takes the display face and the
    clay; PNG stays the body face in black. It leads the page, so it is set
    well above the two column headings under it rather than beside them. */
@@ -183,14 +139,6 @@ header.masthead .subtitle {
   margin-top: 8px;
   font-weight: 400;
   color: var(--ink);
-}
-
-header.masthead .byline { font-size: 14px; color: var(--muted); margin-top: 10px; }
-
-header.masthead .byline a {
-  color: var(--clay-deep); font-weight: 600; text-decoration-color: rgba(168,83,47,.45);
-  text-decoration-thickness: 1px; text-underline-offset: 3px;
-  transition: color .15s ease, text-decoration-color .15s ease;
 }
 
 /* Tabs */
@@ -230,16 +178,25 @@ nav.tabs a {
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* Snippets */
-/* Two lines: what the page is, and what it does not do. The separators are
-   spans rather than text, so a line can wrap without leaving a dot stranded
-   at the start of the next one. */
+/* THE FOOTER CARRIES THE PROMISE NOW. Three lines: what the site promises,
+   what version it is, and who made it. The corner note that used to hang in
+   the masthead said the first of those a second time. */
 .foot { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 60px; }
 
-.foot .line { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 10px; }
+/* ORDINARY CENTRED TEXT, NOT A ROW OF BOXES. As a flex row each claim was an
+   unbreakable item, so a narrow screen wrapped between items and left a
+   separator alone at the end of a row with nothing after it. As text the line
+   wraps at a space, the way a sentence does, and the separator stays between
+   the two things it separates. */
+.foot .line { line-height: 1.7; }
 
-.foot .line + .line { margin-top: 6px; }
+.foot .line + .line { margin-top: 4px; }
 
-.foot .sep { color: var(--line-strong); }
+/* The gap on the right is the whole gap on that side, because the markup puts
+   no space after the dot. On the left the source newline already supplies a
+   space, so only a little is added to match. See the RULE comment on the
+   footer in index.html. */
+.foot .sep { color: var(--line-strong); margin: 0 6px 0 2px; }
 
 .foot .flag { vertical-align: -2px; margin-right: 5px; border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(0,0,0,.16); }
@@ -248,8 +205,15 @@ nav.tabs a {
 
 .foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
 
+/* THE NAME KEEPS THE CLAY IT HAD IN THE MASTHEAD. It moved down the page, not
+   into the small print, so it is still the one link here worth pressing. */
+.foot .byline a { color: var(--clay-deep); font-weight: 600; border-bottom-color: rgba(168,83,47,.45); }
+
+.foot a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
+
 @media (hover: hover) and (pointer: fine) {
   .foot a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+  .foot .byline a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 }
 
 
@@ -1333,10 +1297,8 @@ textarea:focus, input:focus, select:focus {
 
 /* Header */
 @media (hover: hover) and (pointer: fine) {
-  header.masthead .byline a:hover { color: var(--ink); text-decoration-color: currentColor; }
 }
 
-header.masthead .byline a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
 
 /* A collapsible section turns its chevron when the browser opens it. */
 details.sect[open] .chev-d { transform: rotate(90deg); }
@@ -1536,6 +1498,22 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    chip would lose its green while the pointer rested on it, which is the
    moment a person is looking at it. */
 
+/* FIVE TABS, ONE ROW.
+   The row used to wrap and About sat alone on a second row, which cost 106px
+   at the top of every phone screen. The row no longer wraps. A tab that runs
+   out of width wraps its own words instead, which is what R5 does with How it
+   works.
+   Each tab keeps a 46px target, so WCAG 2.5.5 holds at two lines and at one.
+   The words shrink, the target does not. */
+@media (hover: none), (pointer: coarse) {
+  nav.tabs { flex-wrap: nowrap; gap: 0; }
+  nav.tabs a {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 13.5px; line-height: 1.2; padding: 6px 7px;
+    min-height: 46px; min-width: 0;
+  }
+}
+
 /* THE MAKE COLUMN ON A TOUCH SCREEN.
    The box grows downward with the note instead of scrolling inside a fixed
    height, because a phone has the page to grow into and a scroll inside a
@@ -1550,10 +1528,49 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .makebox { flex: none; }
   #makeText { flex: none; min-height: 168px; max-height: 380px; height: auto; overflow-y: auto; }
 
-  /* THE TWO CHIPS BECOME ONE PILL. They are the same two buttons the desktop
-     has, in the one place they exist, wearing the shape R5 gave them. */
-  .dropnote .chips { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 232px; margin: 0 auto; }
-  .dropnote .chips .chip { min-height: 48px; border-radius: 999px; font-weight: 700; }
+  /* THE ACTION BAR CARRIES THE WAY OUT TOO.
+     The donut keeps column one and the button keeps column two. Under the
+     button, in the same column, come the divider and the two Load buttons,
+     then Advanced. That is R5's shape: one card holds both making a PuttyPNG
+     and receiving one, and the second card the phone used to draw around two
+     buttons is gone.
+     The reading shares row two with the divider, directly under the donut,
+     which is where R5 puts it.
+     placeWayOut() in scripts.js moves the two elements in here. Without
+     script they stay in the Load column, which the make screen hides. Nothing
+     on this board works without script, so there is no state to design for. */
+  .actbar {
+    grid-template-areas:
+      "donut make"
+      "bytes or"
+      ".     chips"
+      ".     adv";
+  }
+
+  .actbar > .ordiv { grid-area: or; display: flex; width: 50%; margin: 10px auto; }
+  .actbar > .chips { grid-area: chips; }
+
+  /* The reading drops the rung name. Four lines in a 60px column is a
+     paragraph, and which disc it landed on is a maker's detail rather than
+     something a first-time reader needs. It is still in Advanced. */
+  .readbox .rungno { display: none; }
+
+  /* THE TWO CHIPS BECOME ONE PILL. One border, one radius, and a hairline
+     between the halves, which is the control R5 drew. The rule that used to
+     sit here claimed the same thing and stacked them instead. */
+  .chips {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--line-strong); border-radius: 999px;
+    overflow: hidden; background: #fff;
+  }
+
+  .chips .chip {
+    min-height: 48px; justify-content: center;
+    border: 0; border-radius: 0; font-size: 13px; font-weight: 700;
+    white-space: nowrap; padding: 6px 10px;
+  }
+
+  .chips .chip + .chip { border-left: 1px solid var(--line-strong); }
 }
 
 /* WHAT A FINGER CANNOT DO. These four lines name an action no touch screen
@@ -1581,10 +1598,17 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    Every region below already exists once in the markup. Nothing here builds a
    second copy of anything, and no later part may. What each view shows:
 
-     make    the Make heading, the Make column, Advanced, and the two Load
-             chips only
-     made    the Make heading, reading Made!, and the deck
-     loaded  the Load heading, reading Loaded!, and the whole Load column
+     make    the Make heading and the Make column, with the divider and the
+             two Load buttons inside its action bar, and Advanced
+     made    the Make heading reading Made!, the background switch, and the deck
+     loaded  the Load heading reading Loaded!, and the whole Load column
+
+   THREE CONTROLS ARE NOT WHERE THE MARKUP PUTS THEM. The divider, the two
+   Load buttons and the background switch are moved by placeWayOut() and
+   placeSolidSwitch() in scripts.js when the pointer is coarse, and moved back
+   when it is not. They are moved, never copied, so each still exists once.
+   That is why the make screen no longer has to keep the Load column alive for
+   two buttons: the buttons are in the Make card.
 
    A region the grid does not ask for is removed with display:none rather than
    hidden, because only display:none takes it out of the accessibility tree.
@@ -1594,12 +1618,19 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   .board { grid-template-columns: 1fr; }
 
-  .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad" "cl"; }
-  .board[data-view="made"]   { grid-template-areas: "hm" "sm"; }
+  .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad"; }
+  .board[data-view="made"]   { grid-template-areas: "hm" "tr" "sm"; }
   .board[data-view="loaded"] { grid-template-areas: "hl" "cl"; }
 
+  /* The switch is a direct child of the board only while the pointer is
+     coarse. The child combinator keeps this rule off it on a desktop, where it
+     sits inside the action bar and takes that grid's placement instead. */
+  .board > #solidWrap { grid-area: tr; justify-self: end; margin: 0 2px 6px 0; }
+
   .board[data-view="make"]   > .head.hl,
+  .board[data-view="make"]   > .col.load,
   .board[data-view="make"]   > .deckrow,
+  .board[data-view="make"]   > #solidWrap,
   .board[data-view="made"]   > .col.make,
   .board[data-view="made"]   > .drawer,
   .board[data-view="made"]   > .head.hl,
@@ -1607,18 +1638,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .board[data-view="loaded"] > .head.hm,
   .board[data-view="loaded"] > .col.make,
   .board[data-view="loaded"] > .drawer,
-  .board[data-view="loaded"] > .deckrow { display: none; }
-
-  /* THE MAKE SCREEN KEEPS THE LOAD COLUMN FOR TWO BUTTONS AND NOTHING ELSE.
-     Open a PuttyPNG and Paste from Clipboard exist once, and they live in that
-     column, so a phone with an empty board can still reach one somebody sent.
-     Everything around them goes, so the screen reads as a way out of Make
-     rather than as a second column.
-     A later part that needs a third thing on this screen adds it to the
-     contract above and to this list, here, and not in its own file. */
-  .board[data-view="make"] > .col.load > .body > *:not(.dropnote) { display: none; }
-  .board[data-view="make"] .dropnote > *:not(.chips):not(.ordiv) { display: none; }
-  .board[data-view="make"] .dropnote > .ordiv { display: flex; }
+  .board[data-view="loaded"] > .deckrow,
+  .board[data-view="loaded"] > #solidWrap { display: none; }
 
   /* The heading names the screen. The first word is the desktop's, the second
      belongs to the screen this phone has arrived at. */
@@ -1664,16 +1685,6 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 /* THE HOME BOARD, ON A NARROW SCREEN.
    Make and its deck come first as one block, then Load under them, so a
    column can never be separated from the heading that names it. */
-/* Below this there is no corner to sit in: the note would land on the title.
-   It goes back into the flow, above the name, centred like everything else. */
-@media (max-width: 820px) {
-  .made {
-    position: static; width: auto; max-width: 420px;
-    margin: 0 auto 14px; text-align: center;
-  }
-  .made-mark { justify-content: center; }
-}
-
 @media (max-width: 760px) {
   .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "ad" "sm" "hl" "cl"; }
 
@@ -1698,6 +1709,24 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 /* display:flex on the class beats the browser's own [hidden] rule, so hiding
    it has to be said here or the notice never goes away. */
 .transnote[hidden] { display: none; }
+
+/* THE NOTICE GOES UNDER THE TIP AND THE BIN, NOT ON TOP OF THEM.
+   A wide screen puts the tip beside the disc, so the band under the disc holds
+   the bin and then the notice, and none of them meet. Below 760px there is no
+   room beside the disc, so the rule above moves the tip under it, into the
+   band the notice was already using.
+   Measured on 2026-09-07 with .devtools/r5-deck.js: the notice and the bin
+   overlapped by 17px, and the tip sat behind both.
+
+   THIS IS A WIDTH QUERY AND NOT A POINTER QUERY, because the rule that causes
+   the collision is a width query. A tablet at 800px keeps the tip beside the
+   disc and needs none of this.
+   The row grows only while the notice is showing, so a solid PuttyPNG is not
+   charged for space it does not use. */
+@media (max-width: 760px) {
+  .transnote { top: calc(var(--slot-w) + 112px); }
+  .deckrow:has(.transnote:not([hidden])) { height: calc(var(--slot-w) + 196px); }
+}
 .transnote svg { flex: none; margin-top: 1px; color: #b8860b; }
 .transnote b { font-weight: 700; }
 

@@ -58,27 +58,17 @@
        The page's title block.
        ========================================================================== -->
     <!-- SYNC:masthead -->
+    <!-- THE NAME AND THE PROMISE, AND NOTHING ELSE.
+         A corner note used to hang here with the country, the licence and the
+         host in it. The footer already said all three, so the page made the
+         same promise twice and charged a phone 123px at the top of every
+         screen for the second copy. The note is gone and the footer keeps the
+         promise, which is where a person looks for one.
+         The byline went with it, to the last line of the footer beside the
+         copyright, because both name the same person. -->
     <header class="masthead">
-
-      <!-- A corner note, not a claim on the title. It is taken out of the flow
-           so the name stays centred on the page, and put back into it on a
-           narrow screen where a floating corner would sit on the title. -->
-      <aside class="made">
-        <p class="made-mark">
-          <img class="flag" src="assets/flag.svg" width="34" height="18"
-               alt="The flag of the United States of America">
-          <span>Made in USA</span>
-        </p>
-        <p class="made-note">
-          <span>NONE of your data is collected</span>
-          <span>MIT licensed, for fun</span>
-          <span>Hosted free on <a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">GitHub Pages</a></span>
-          <span>Enjoy! -- A.M.H.</span>
-        </p>
-      </aside>
       <h1>Putty<span class="png">PNG</span></h1>
       <div class="subtitle">Press your data into a PNG. Hand it to anyone.</div>
-      <p class="byline">Designed by <a href="https://aaronmichaelharris.com/" target="_blank" rel="noreferrer">Aaron M. Harris</a></p>
     </header>
     <!-- /SYNC:masthead -->
 
@@ -274,28 +264,34 @@
          byte-layout change. A gate check compares the last two against the
          engine, so this cannot drift.
          RULE: the page version below is the one the commit carries. -->
+    <!-- THREE LINES, IN THIS ORDER: the promise, then the versions, then the
+         name. The promise leads because it is the thing a stranger wants to
+         know, and it is the only part of this that used to be said twice.
+         The copyright used to ride on the end of the promise line, where a
+         separator made it read as one more claim about the site. -->
+    <!-- WHERE THE LINE IS ALLOWED TO BREAK. Each separator has a space before
+         it and none after it, so the only break the browser can take is the
+         one in front of the dot. A dot that wraps therefore travels down with
+         the words it introduces. Break after it instead and a row ends on a
+         separator with nothing following it, which reads as a missing word.
+         RULE: do not reformat this block. The whitespace is the rule. -->
     <div class="foot" id="foot">
-      <div class="line">
-        <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Page v2.7.0</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Engine v2.1.0</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Protocol v1</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>MIT License</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <div class="line promise">
+        <span><img class="flag" src="assets/flag.svg" width="19" height="10" alt="The flag of the United States of America">Made in USA</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>NONE of your data is collected</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Hosted free on GitHub Pages</span>
       </div>
       <div class="line">
-        <span><img class="flag" src="assets/flag.svg" width="19" height="10" alt="The flag of the United States of America">Made in USA</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>NONE of your data is collected</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Hosted free on GitHub Pages</span>
-        <span class="sep" aria-hidden="true">&middot;</span>
-        <span>&copy; 2026 Aaron Michael Harris</span>
+        <b>PuttyPNG</b>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.8.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.1.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
+        <span class="sep" aria-hidden="true">&middot;</span><a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <div class="line byline">
+        <span>Designed by <a href="https://aaronmichaelharris.com/" target="_blank" rel="noreferrer">Aaron M. Harris</a></span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>&copy; 2026 Aaron Michael Harris</span>
       </div>
     </div>
     <!-- /SYNC:footer -->
