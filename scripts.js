@@ -1203,6 +1203,7 @@
     // empty box starts at a drawn ring rather than a blank one.
     setBoardSizes(0);
     updateHomeMeter(true);
+    growMakeBox();
     window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
@@ -1210,11 +1211,31 @@
        The listener takes no argument from the event: setBoardSizes reads a rung
        index, and handing it a MediaQueryListEvent would clamp to NaN and size
        the board in NaN pixels. */
-    touchPointer.addEventListener("change", function () { setBoardSizes(homeShownRung); });
+    touchPointer.addEventListener("change", function () { setBoardSizes(homeShownRung); growMakeBox(); });
+  }
+
+  /* THE BOX GROWS DOWNWARD ON A PHONE. A textarea will not size itself to its
+     content, so the height is set from what the content needs.
+     The floor and the ceiling live in styles.css, and this reads them back
+     rather than repeating them, so there is one place to change a number.
+     On a desktop the box keeps the fixed height its card gives it, and this
+     does nothing. */
+  function growMakeBox() {
+    var ta = $("makeText");
+    if (!ta) return;
+    if (!touchPointer.matches) { ta.style.height = ""; return; }
+    var cs = getComputedStyle(ta);
+    var min = parseFloat(cs.minHeight) || 0;
+    var max = parseFloat(cs.maxHeight) || Infinity;
+    // Measured from zero, or the box can only ever get taller.
+    ta.style.height = "0px";
+    ta.style.height = Math.min(max, Math.max(min, ta.scrollHeight)) + "px";
   }
 
   function wireHomeMake() {
-    $("makeText").addEventListener("input", function () { noteHomeInput(); updateHomeMeter(); });
+    $("makeText").addEventListener("input", function () {
+      noteHomeInput(); updateHomeMeter(); growMakeBox();
+    });
 
     $("homeAttachBtn").addEventListener("click", function () { $("attachIn").click(); });
     $("attachIn").addEventListener("change", function () {

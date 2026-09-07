@@ -777,7 +777,10 @@ details.sect > summary::-webkit-details-marker { display: none; }
    the pointer to say what it is. */
 .makebox { position: relative; flex: 1; display: flex; min-height: 0; }
 
-#makeText { flex: 1; resize: none; min-height: 0; padding-bottom: 44px; }
+/* THE BOX NO LONGER HOLDS THE ATTACH CHIP, so it needs no room reserved at its
+   foot. overflow-wrap keeps a long unbroken word inside the box instead of
+   pushing a horizontal scroll bar across the card. */
+#makeText { flex: 1; resize: none; min-height: 0; overflow-wrap: anywhere; }
 
 /* The answer to a file held over the box. It matches what the Load zone does
    with a disc, so the two sides of the page behave alike. */
@@ -805,11 +808,17 @@ details.sect > summary::-webkit-details-marker { display: none; }
 }
 
 /* Held clear of the scrollbar, which appears as soon as the box fills. */
+/* ITS OWN ROW, UNDER THE BOX, ON THE LEFT. That is as far as it gets from the
+   Make button, so a thumb reaching for one cannot find the other. */
+.attachrow { display: flex; justify-content: flex-start; margin-top: 8px; }
+
+/* IT LOOKS 34px AND IT IS 44px TO A THUMB. The padding carries the target and
+   the border carries the look, so WCAG 2.5.5 is met without a heavy control. */
 .attach {
-  position: absolute; right: 24px; bottom: 12px;
   display: flex; align-items: center; gap: 0;
   font: inherit; font-size: 12.5px; font-weight: 600;
   border-radius: 999px; padding: 6px 8px; overflow: hidden;
+  min-height: 44px; min-width: 44px; justify-content: center;
 }
 
 .attach svg { flex: none; }
@@ -892,14 +901,23 @@ details.sect > summary::-webkit-details-marker { display: none; }
    The donut takes more of the row at every rung, so the button has to give
    the width up. It wraps rather than overflows, and at the tightest rung it
    comes apart to one word a line, which is the point being made. */
+/* THE BOX TREATMENT. Two columns inside the button: the mark keeps a column of
+   its own and the words take the rest. Each centres in its own column, so a
+   label that wraps to two lines makes the button taller and moves neither.
+   The corner is 26px rather than 999px. A pill looks stretched once the button
+   is 64px tall, which is what the joke above makes it at the tightest rung. */
 .act {
   grid-area: make; align-self: center;
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px;
   font: inherit; font-weight: 700; font-size: clamp(12.5px, 1.05vw + 3px, 15px);
-  line-height: 1.25; padding: 12px 14px; border-radius: 999px; min-width: 0;
+  line-height: 1.25; padding: 12px 14px; border-radius: 26px; min-width: 0;
   border: 1px solid transparent; background: var(--ink); color: #fff; cursor: pointer;
-  overflow-wrap: anywhere; text-wrap: balance;
+  overflow-wrap: anywhere; text-wrap: balance; text-align: center;
   transition: background .15s, transform .08s;
 }
+
+.act .ic { display: grid; place-items: center; width: 22px; }
+.act .ic svg { width: 22px; height: 22px; display: block; }
 
 .act em {
   font-family: var(--display-font), cursive; font-style: italic;
@@ -1329,11 +1347,14 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .makebox.over .makeveil { opacity: 1; }
 
 /* The invitation steps aside while the answer to the drop is showing. */
-.makebox.over .attach { opacity: 0; }
+.col.make .body.over .attach { opacity: 0; }
 
 /* An attachment is what will be pressed, so it takes the box over. */
 .makebox.has .attached { display: grid; }
-.makebox.has #makeText, .makebox.has .attach { visibility: hidden; }
+/* The chip is outside the box now, so only the box's own contents hide when an
+   attachment takes it over. The chip stays reachable, which is how a person
+   swaps one attachment for another. */
+.makebox.has #makeText { visibility: hidden; }
 
 .ghost:focus-visible { color: var(--ink); border-color: var(--ink); }
 @media (hover: hover) and (pointer: fine) {
@@ -1502,6 +1523,26 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    chip would lose its green while the pointer rested on it, which is the
    moment a person is looking at it. */
 
+/* THE MAKE COLUMN ON A TOUCH SCREEN.
+   The box grows downward with the note instead of scrolling inside a fixed
+   height, because a phone has the page to grow into and a scroll inside a
+   scroll is the worst of both. The ceiling is what keeps the Make button on
+   screen: without it a long note pushes the button off the bottom and the tool
+   looks broken.
+   These numbers are R5's and they are for a phone. The desktop keeps its
+   fixed 250px box, because that box shares a card height with the Load column
+   beside it, and growing one would stretch both. */
+@media (hover: none), (pointer: coarse) {
+  .col.make .body { flex: none; }
+  .makebox { flex: none; }
+  #makeText { flex: none; min-height: 168px; max-height: 380px; height: auto; overflow-y: auto; }
+
+  /* THE TWO CHIPS BECOME ONE PILL. They are the same two buttons the desktop
+     has, in the one place they exist, wearing the shape R5 gave them. */
+  .dropnote .chips { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 232px; margin: 0 auto; }
+  .dropnote .chips .chip { min-height: 48px; border-radius: 999px; font-weight: 700; }
+}
+
 /* WHAT A FINGER CANNOT DO. These four lines name an action no touch screen
    offers. They are hidden, not removed: the markup stays, so a crawler still
    reads it, and Googlebot renders with a mobile viewport. */
@@ -1511,6 +1552,13 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .makeveil .big,
   .veil .big { display: none; }
 }
+
+/* THE OR DIVIDER. A rule, the word, a rule. It is off on a desktop, where the
+   Load column stands beside Make and needs no introduction, and it comes on
+   inside the touch query for the make screen only. */
+.ordiv { display: none; align-items: center; gap: 12px; margin: 18px auto 12px; width: 116px; }
+.ordiv::before, .ordiv::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); }
+.ordiv span { font-family: var(--display-font), cursive; font-style: italic; font-size: 15px; color: var(--muted); }
 
 /* ONE SCREEN AT A TIME. THIS BLOCK IS THE VIEW CONTRACT.
    The desktop shows Make, Load and the deck at once and never matches this
@@ -1556,7 +1604,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      A later part that needs a third thing on this screen adds it to the
      contract above and to this list, here, and not in its own file. */
   .board[data-view="make"] > .col.load > .body > *:not(.dropnote) { display: none; }
-  .board[data-view="make"] .dropnote > *:not(.chips) { display: none; }
+  .board[data-view="make"] .dropnote > *:not(.chips):not(.ordiv) { display: none; }
+  .board[data-view="make"] .dropnote > .ordiv { display: flex; }
 
   /* The heading names the screen. The first word is the desktop's, the second
      belongs to the screen this phone has arrived at. */
