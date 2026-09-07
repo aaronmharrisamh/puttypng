@@ -95,7 +95,16 @@
     loaded:   "PuttyPNG loaded successfully!",
     reading:  "Decoding...",
     plain:    "That is a plain picture. Nothing was hidden in it.",
-    noPaste:  "There was no PuttyPNG on the clipboard. Copy the picture, then press Paste one!"
+    noPaste:  "There was no PuttyPNG on the clipboard. Copy the picture, then press Paste one!",
+    /* A picture that holds nothing is still a good thing to hide, so it is
+       attached rather than refused. The second half of the sentence is the
+       important half: it says what became of the words it covered up. */
+    tookPlain: "Attached successfully! Nothing was hidden in that picture, so it " +
+               "became the file to hide. Your note is still here, and it comes " +
+               "back if you remove the file.",
+    askPlain:  "Nothing is hidden in that picture. Do you want to embed the picture " +
+               "instead? Your note stays, and it comes back if you remove the file.",
+    contents:  "The PuttyPNG&rsquo;s contents:"
   };
 
   /* HOW BIG THE METER IS. One rule for both shapes: the meter takes a share of
@@ -151,6 +160,10 @@
   var D_X = "M7.5 7.5l9 9M16.5 7.5l-9 9";
   var D_FILE = "M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5zM13.5 3v5.5H19";
   var D_TICK = "M5 12.5l4.5 4.5L19 7.5";
+  // R5's marks for the phone's Made screen. Each is one path with two
+  // subpaths, because homeIcon draws one path and both of these are stroked.
+  var D_AGAIN = "M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5";
+  var D_PLANE = "M21 3 10.5 13.5M21 3 14.5 21l-4-7.5L3 9.5z";
 
   var SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -283,6 +296,13 @@
   // it: a drop from another tab comes in through readSource and
   // takeHomeAttachment, and both of those go through the board's own code.
   var homeAttached = null;   // when set, Make presses this file instead of the text
+  /* Which sentence the attach reading uses. Attaching from the paperclip is
+     plain good news. Attaching a picture that turned out to hold nothing has
+     to say what became of the words it covered up. */
+  var homeAttachedSay = "";
+  // What came out of the last PuttyPNG read, for Copy Contents. Null for a
+  // file, which has a chip of its own instead.
+  var homeLoadedText = null;
   var homeLastBlob = null;   // the disc in the tray, for Copy, Save, and Load
   var homeLoadedBlob = null; // the disc showing in Load, for its own Copy and Save
   var homeDiscOut = false;   // a disc is sitting in the tray
@@ -345,7 +365,7 @@
     focusView(name);
     paintGlow();
     paintMakeSay(false);
-    paintTransNote();
+    paintMadeScreen();
   }
 
   /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
@@ -1232,6 +1252,7 @@
     // has already been read in the wrong place.
     placeWayOut();
     placeSolidSwitch();
+    placeMadeActions();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -1254,6 +1275,7 @@
     touchPointer.addEventListener("change", function () {
       placeWayOut();
       placeSolidSwitch();
+      placeMadeActions();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
@@ -1303,12 +1325,32 @@
      the screen that has the picture on it. */
   function placeSolidSwitch() {
     var wrap = $("solidWrap");
-    var board = $("boardGrid");
-    var deck = document.querySelector(".deckrow");
+    var win = $("discWin");
     var adv = document.querySelector(".actbar .adv-row");
-    if (!wrap || !board || !deck || !adv) return;
-    if (touchPointer.matches) board.insertBefore(wrap, deck);
+    if (!wrap || !win || !adv) return;
+    // Inside the window, top right, which is where R5 puts it: the switch is
+    // about the picture, so it belongs in the frame the picture is in.
+    if (touchPointer.matches) win.insertBefore(wrap, win.firstChild);
     else adv.insertBefore(wrap, adv.firstChild);
+  }
+
+  /* DOWNLOAD AND COPY ARE NOT NEW CONTROLS. They are the two buttons a
+     desktop reveals by hovering the disc. A phone cannot hover, so the same
+     two move out of the overlay into a row under the window.
+     They are moved, never copied. The gate counts them. */
+  function placeMadeActions() {
+    var save = $("cdSave"), copy = $("cdCopy");
+    var row = $("madeActs"), tools = document.querySelector(".cdtools");
+    var cd = $("cd");
+    if (!save || !copy || !row || !tools) return;
+    if (touchPointer.matches) { row.appendChild(save); row.appendChild(copy); }
+    else { tools.appendChild(copy); tools.appendChild(save); }
+    // The alt text names what a person can do with it, and that differs.
+    if (cd) {
+      cd.alt = touchPointer.matches
+        ? "The PuttyPNG you made. Download it or copy it with the buttons below."
+        : "Your PuttyPNG. Drag it into Load, or press the bin to throw it away.";
+    }
   }
 
   /* WHAT THE EMPTY BOX ASKS FOR. A finger cannot drop a file, so the phone is
@@ -1416,11 +1458,119 @@
      working, and the disc arrives when it arrives.
      setView("made") inside it is a no-op while the phone is already on that
      screen, so focus stays on the switch the person pressed. */
+  /* THE CORNER, WHICH IS ONE SLOT WITH TWO JOBS.
+     It is derived from the same two facts as the reading under the heading:
+     which screen this is, and whether the board is carrying anything. The two
+     must never disagree, so they are painted together.
+     On Make it says Clear, and it is not there at all while the board is
+     empty: a screen with nothing on it must not offer a way to empty it.
+     On Made it says Close. A desktop shows every region at once, so it has no
+     screen to close, and the stylesheet keeps the whole control off there. */
+  function paintCorner() {
+    var btn = $("cornerBtn");
+    if (!btn) return;
+    var grid = $("boardGrid");
+    var view = grid ? grid.getAttribute("data-view") : "make";
+    var ta = $("makeText");
+    var carrying = !!(ta && ta.value.length) || !!homeAttached;
+    var job = view === "make" ? (carrying ? "clear" : "")
+            : view === "made" ? "close" : "closeload";
+
+    /* THE CORNER BELONGS TO THE HEADING THAT IS ON SCREEN, and there is one of
+       it. The loaded screen shows the Load heading, so the button moves there
+       and comes back when the board does. It goes in front of the reading,
+       which takes a row of its own below both of them. */
+    var sayEl = $(view === "loaded" ? "loadSay" : "makeSay");
+    if (sayEl && btn.nextElementSibling !== sayEl) {
+      sayEl.parentElement.insertBefore(btn, sayEl);
+    }
+
+    btn.hidden = !job;
+    /* Nothing to rewrite while the job is the same. This runs on every
+       keystroke, and rebuilding the mark each time is work for no change. */
+    if (!job || btn.dataset.job === job) return;
+    btn.dataset.job = job;
+    btn.innerHTML = '<span class="pill">' + homeIcon(D_X, 15) +
+                    (job === "clear" ? "Clear" : "Close") + "</span>";
+    btn.setAttribute("aria-label", job === "clear"
+      ? "Clear the board"
+      : job === "close"
+        ? "Close this PuttyPNG and go back to Make"
+        : "Close the PuttyPNG you opened and go back to Make");
+  }
+
+  /* CLOSE GOES BACK TO MAKE, AND THE WORDS ARE STILL THERE.
+     Nothing clears the text box when a PuttyPNG is pressed, so what a person
+     typed is still in it. Closing is a change of screen and not a loss. */
+  function closeToMake() {
+    tossDisc();
+    setView("make");
+    paintMadeScreen();
+  }
+
+  /* CLEAR EMPTIES THE BOARD AND LEAVES THE PERSON WHERE THEY ARE.
+     It is a white control and not a red one: nothing here can be lost that
+     was not the person's own to begin with. */
+  function clearBoard() {
+    if (homeAttached) dropHomeAttachment();
+    var ta = $("makeText");
+    if (ta) { ta.value = ""; ta.focus(); }
+    noteHomeInput();
+    growMakeBox();
+    updateHomeMeter(true);
+    paintGlow();
+    paintMakeSay(false);
+  }
+
+  /* WHAT THE PHONE'S MADE SCREEN SHOWS. Derived from two facts: which screen
+     the board is on, and whether a disc is out. The stylesheet keeps every one
+     of these elements off on a desktop, so this runs there and a person sees
+     no difference. */
+  function paintMadeScreen() {
+    paintTransNote();
+    var grid = $("boardGrid");
+    var on = (grid ? grid.getAttribute("data-view") : "make") === "made" && homeDiscOut;
+    ["discNote", "sendIt", "madeActs", "againRow"].forEach(function (id) {
+      var el = $(id);
+      if (el) el.hidden = !on;
+    });
+    paintDiscNote();
+  }
+
+  /* WHAT THE PICTURE IS. The engine returns a data URL and a blob and no
+     dimensions, so the width and the height are read off the image the board
+     is already showing. One line of copy is not a reason to move puttypng.js. */
+  function paintDiscNote() {
+    var note = $("discNote"), cd = $("cd");
+    if (!note || !cd) return;
+    note.textContent = (cd.naturalWidth && homeLastBlob)
+      ? cd.naturalWidth + " x " + cd.naturalHeight +
+        " · " + homeFmt(homeLastBlob.size) + " on disk"
+      : "";
+  }
+
   function afterBackgroundChange() {
     paintSolidWord();
-    paintTransNote();
+    paintMadeScreen();
     updateHomeMeter(true);
     if (homeDiscOut) pressHomeDisc();
+  }
+
+  /* THE READING UNDER A HEADING, AND THE ONLY THING THAT WRITES ONE.
+     Two states, which are R5's: "quiet" while a person is working, and "ok"
+     once something has finished, which is green and carries a tick.
+     The tick is aria-hidden. The words beside it already say the same thing,
+     and #loadSay is a live region, so a reader that announced both would say
+     it twice in one breath.
+     RULE: callers pass a string from SAY and nothing else. This writes HTML so
+     the Made line can carry its peek button, and a string from anywhere else
+     would be markup a person supplied. */
+  function paintSay(line, kind, html) {
+    if (!line) return;
+    line.className = "say" + (kind === "ok" ? " ok" : "");
+    line.innerHTML = (kind === "ok"
+      ? '<span class="mark" aria-hidden="true">' + homeIcon(D_TICK, 15) + "</span>"
+      : "") + "<span>" + html + "</span>";
   }
 
   /* WHAT THE MAKE COLUMN SAYS. Derived, like the glow: the board is read and
@@ -1428,13 +1578,16 @@
   function paintMakeSay(over) {
     var line = $("makeSay");
     if (!line) return;
+    // The corner reads the same two facts as the line and must never
+    // disagree with it, so it is painted here and not on its own timer.
+    paintCorner();
     var grid = $("boardGrid");
     var view = grid ? grid.getAttribute("data-view") : "make";
-    if (view === "made") { line.innerHTML = SAY.made; wirePeekLink(); return; }
-    if (over) { line.textContent = SAY.over; return; }
-    if (homeAttached) { line.textContent = SAY.attached; return; }
+    if (view === "made") { paintSay(line, "ok", SAY.made); wirePeekLink(); return; }
+    if (over) { paintSay(line, "quiet", SAY.over); return; }
+    if (homeAttached) { paintSay(line, "ok", homeAttachedSay); return; }
     var ta = $("makeText");
-    line.textContent = (ta && ta.value.length) ? SAY.fits : SAY.empty;
+    paintSay(line, "quiet", (ta && ta.value.length) ? SAY.fits : SAY.empty);
   }
 
   /* THE CONTENTS PANEL. It decodes the finished PuttyPNG and shows what came
@@ -1504,6 +1657,10 @@
   function wireHomeMake() {
     $("makeText").addEventListener("input", function () {
       noteHomeInput(); updateHomeMeter(); growMakeBox(); noteGlowTyping();
+      /* The corner is a control, not a reading. The reading is painted inside
+         the meter's settle, which is right for a line that changes on every
+         key, and too late for a button a person is looking for. */
+      paintCorner();
     });
 
     $("homeAttachBtn").addEventListener("click", function () { $("attachIn").click(); });
@@ -1567,6 +1724,15 @@
     }
 
     $("homeMakeBtn").addEventListener("click", pressHomeDisc);
+
+    /* ONE LISTENER FOR ONE CONTROL. Which job it does is read off the button
+       when it is pressed, so the two jobs cannot drift apart from the label
+       paintCorner wrote on it. */
+    $("cornerBtn").addEventListener("click", function () {
+      if (this.dataset.job === "clear") clearBoard();
+      else if (this.dataset.job === "closeload") clearHomeLoaded();
+      else closeToMake();
+    });
   }
 
   function wireHomeDisc() {
@@ -1576,6 +1742,46 @@
     $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
     $("cdCopy").innerHTML = homeIcon(D_COPY, 13) + "<span>Copy</span>";
     $("cdSave").innerHTML = homeIcon(D_DOWN, 13) + "<span>Download</span>";
+
+    /* THE LOADED SCREEN'S TWO CONTROLS. Copy Contents takes what the engine
+       returned, not what is on screen: the box is read only from v2.9.1, so
+       the two can never disagree, and reading the element back would have been
+       reading our own rendering rather than the PuttyPNG.
+       OK, done! and the corner's Close do the same job, offered at the top and
+       at the bottom, and neither touches the Make box. */
+    $("copyContents").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy Contents</span>";
+    $("doneBtn").innerHTML = homeIcon(D_TICK, 15) + "<span>OK, done!</span>";
+
+    $("copyContents").addEventListener("click", async function () {
+      if (homeLoadedText == null) return;      // the guard, not a courtesy
+      try {
+        await navigator.clipboard.writeText(homeLoadedText);
+        confirmDone(this, "Copied!");
+      } catch (err) {
+        toast("This browser would not let the page copy it.", "bad");
+      }
+    });
+
+    $("doneBtn").addEventListener("click", clearHomeLoaded);
+
+    $("plainYes").addEventListener("click", function () {
+      var f = plainPending;
+      closePlainAsk();
+      if (f) takeHomeAttachment(f, SAY.tookPlain);
+    });
+
+    $("plainNo").addEventListener("click", function () {
+      closePlainAsk();
+      var ta = $("makeText");
+      if (ta) ta.focus();
+    });
+
+    // The phone's Made screen. Both marks are drawn once: neither changes.
+    $("sendItMark").innerHTML = homeIcon(D_PLANE, 18);
+    $("againBtn").innerHTML = homeIcon(D_AGAIN, 16) + "<span>Make another one!</span>";
+    // The same action the corner's Close does, offered again at the bottom so
+    // a person who has scrolled does not have to scroll back up to leave.
+    $("againBtn").addEventListener("click", closeToMake);
 
     /* THE LAST STOP. Copy is what leads somewhere, a message to a friend, so it
        is the one that ends the chain. Download leads to a folder and never
@@ -1598,10 +1804,16 @@
        the tray. tossDisc is also how a new press clears the old disc, which is
        why the flag moves here and not inside it. */
     $("bin").addEventListener("click", function () {
-      tossDisc(); setView("make"); paintTransNote();
+      tossDisc(); setView("make"); paintMadeScreen();
     });
 
     cd.addEventListener("pointerdown", function (e) {
+      /* NO DRAGGING ON A PHONE. Carrying the disc into Load is a mouse
+         gesture: it needs somewhere to carry it to, and a phone shows one
+         screen at a time. The Make another one! button is the way back there.
+         The matching half of this is in styles.css, where touch-action goes
+         back to auto so a thumb on the disc can scroll the page again. */
+      if (touchPointer.matches) return;
       if (!homeDiscOut || e.button !== 0) return;
       e.preventDefault();
       homeDrag = { x: e.clientX, y: e.clientY, live: false, ghost: null, r: cd.getBoundingClientRect() };
@@ -2308,8 +2520,9 @@
     paintMakeSay(false);
   }
 
-  async function takeHomeAttachment(f) {
+  async function takeHomeAttachment(f, sayWhat) {
     if (!f) return;
+    homeAttachedSay = sayWhat || SAY.attached;
     homeAttached = {
       name: f.name,
       mime: f.type || "application/octet-stream",
@@ -2379,6 +2592,9 @@
         // whatever an unfinished toss left behind.
         homeDiscRun++;
         resetDisc();
+        // The width and the height are read off the image, so the reading has
+        // to wait for the image. once:true, or every press adds another.
+        cd.addEventListener("load", paintDiscNote, { once: true });
         cd.src = png.dataUrl;
         // The PuttyPNG exists and the tray is where it lives. On a phone that
         // is a screen of its own, so the flag moves before the disc ejects
@@ -2388,8 +2604,8 @@
         // in a headless test, and the disc would then never be told to come out.
         setTimeout(function () {
           cd.classList.add("out"); homeDiscOut = true;
-          // The notice can only be right once there is a disc to be right about.
-          paintTransNote();
+          // The screen can only be right once there is a disc to be right about.
+          paintMadeScreen();
         }, DISC_EJECT_MS);
       });
     } catch (err) {
@@ -2453,7 +2669,7 @@
       if (homeReadDepth > 0) {
         $("zone").classList.add("reading");
         // The spinner is decoration. This line is the board's one voice.
-        if ($("loadSay")) $("loadSay").textContent = SAY.reading;
+        paintSay($("loadSay"), "quiet", SAY.reading);
       }
     }, READING_DELAY_MS);
   }
@@ -2466,28 +2682,60 @@
     }
   }
 
+  /* PEEK BEFORE YOU DECODE.
+     Until v2.9.1 this decoded first and caught the failure, so a picture with
+     nothing in it opened the Loaded screen with an empty box. The How it works
+     page has always peeked, and R5 peeks, and the board was the odd one out.
+     Peeking here covers every way in that a person has: the drop on the Load
+     zone, Load one!, and Paste one! all arrive at this function.
+     The Loaded screen now means one thing, which is what lets its line be
+     green and be true. */
   async function readHomeFile(file) {
     if (!file) return;
     if (!/png/i.test(file.type) && !/\.png$/i.test(file.name || "")) {
       toast("That is not a PNG. A PuttyPNG has to stay a PNG.", "bad");
       return;
     }
-    var url = URL.createObjectURL(file);
     startReading();
     try {
+      var head = await PuttyPNG.peek(file);
+      if (!head.isPuttyPNG) { offerPlain(file); return; }
       var res = await PuttyPNG.decode(file);
-      showHomeLoaded(url, file.name || "pasted.png", res, file);
+      showHomeLoaded(URL.createObjectURL(file), file.name || "pasted.png", res, file);
     } catch (err) {
-      if (err && err.code === "PTY-E00") {
-        // A plain PNG is still worth showing. It is empty.
-        showHomeLoaded(url, file.name || "pasted.png", null, file);
-        toast(friendly(err), "bad");
-        return;
-      }
       toast(friendly(err), "bad");
     } finally {
       stopReading();
     }
+  }
+
+  /* WHAT TO DO WITH A PICTURE THAT HOLDS NOTHING. It is not a failure: it is a
+     perfectly good thing to hide something inside, so it becomes the file to
+     hide.
+     THE QUESTION IS ASKED ONLY WHEN THERE IS SOMETHING TO COVER. Attaching
+     hides the text box, so an empty box has no answer worth asking for.
+     The words are never destroyed either way. They come back the moment the
+     file is taken off again, and the sentence says so. */
+  var plainPending = null;
+
+  function offerPlain(file) {
+    // The reading is left saying Decoding, and nothing is being decoded now.
+    paintSay($("loadSay"), "quiet", SAY.loadIdle);
+    var ta = $("makeText");
+    if (!ta || ta.value.trim() === "") {
+      takeHomeAttachment(file, SAY.tookPlain);
+      return;
+    }
+    plainPending = file;
+    $("plainAskBody").textContent = SAY.askPlain;
+    $("plainAsk").hidden = false;
+    $("plainAsk").focus();
+  }
+
+  function closePlainAsk() {
+    plainPending = null;
+    var ask = $("plainAsk");
+    if (ask) ask.hidden = true;
   }
 
   async function loadHomeFromSrc(src, name, blob) {
@@ -2507,6 +2755,7 @@
      it can be taken on its own rather than through the picture. */
   function showHomeLoaded(url, name, res, blob) {
     homeLoadedBlob = blob || null;
+    homeLoadedText = null;
     $("gotImg").src = url;
     $("gotName").textContent = name;
     $("gotFiles").textContent = "";
@@ -2514,40 +2763,60 @@
 
     if (res === null) {
       $("gotSize").textContent = "no PuttyPNG data inside";
-    } else if (res.text != null) {
-      text = res.text;
-      $("gotSize").textContent = homeFmt(res.bytes.length) + " of text inside";
     } else {
-      $("gotSize").textContent = "one file inside";
-      addHomeFileChip(res.name || "a file", res.bytes, res.mime);
+      /* WHAT CAME OUT, AGAINST WHAT CARRIED IT. R5's line, and the ratio is
+         the interesting part: a small note inside a large picture is the whole
+         point of the thing. */
+      var payload = res.bytes ? res.bytes.length : 0;
+      $("gotSize").textContent = homeFmt(payload) +
+        (homeLoadedBlob ? " out of " + homeFmt(homeLoadedBlob.size) : " inside");
+      if (res.text != null) { text = res.text; homeLoadedText = res.text; }
+      else addHomeFileChip(res.name || "a file", res.bytes, res.mime);
     }
     // All of it. The panel is meant to hold a whole book if one went in.
     $("gotText").textContent = text === null ? "" : text;
     $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
+    // The label and Copy Contents belong to text. A file has its own chip.
+    $("gotLabel").hidden = !text;
+    paintCopyContents();
     $("zone").classList.add("has");
-    $("loadSay").textContent = res === null ? SAY.plain : SAY.loaded;
+    /* A null result means the picture held nothing. From v2.9.1 the load
+       paths peek first, so that no longer arrives here from the board's own
+       controls, and this stays as the answer for a disc dragged in that will
+       not read. It is not a success, so it is not green. */
+    if (res === null) paintSay($("loadSay"), "quiet", SAY.plain);
+    else paintSay($("loadSay"), "ok", SAY.loaded);
     setView("loaded");
+  }
+
+  /* R5's rule: a PuttyPNG that carries a file has nothing to copy as text, and
+     the chip beside this is how that one is taken away instead. */
+  function paintCopyContents() {
+    var btn = $("copyContents");
+    if (btn) btn.hidden = homeLoadedText == null;
   }
 
   // The whole chip takes the file. Nothing asks for a small target inside it.
   function addHomeFileChip(name, bytes, mime) {
     var chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "pill";
+    chip.className = "filechip";
     chip.title = "Press to save " + name;
-    chip.innerHTML = '<span class="ic">' + homeIcon(D_FILE, 15) + "</span>" +
-      '<span class="nm"></span><span class="sz"></span>' +
-      '<span class="act-ic">' + homeIcon(D_DOWN, 14) + "</span>";
-    chip.querySelector(".nm").textContent = name;
-    chip.querySelector(".sz").textContent = homeFmt(bytes.length);
+    /* "Press", not R5's "tap", because one chip serves both pointers now and
+       tap is not true of a mouse. Press is true of both. */
+    chip.innerHTML = '<span class="dl">' + homeIcon(D_DOWN, 19) + "</span>" +
+      '<span class="nm"><b></b><span></span></span>';
+    chip.querySelector("b").textContent = name;
+    chip.querySelector(".nm span").textContent =
+      homeFmt(bytes.length) + " · press to save it";
     chip.addEventListener("click", function () {
       var href = URL.createObjectURL(new Blob([bytes], { type: mime || "application/octet-stream" }));
       saveBytes(href, name, true);
-      var slot = chip.querySelector(".act-ic");
-      slot.innerHTML = homeIcon(D_TICK, 14);
+      var slot = chip.querySelector(".dl");
+      slot.innerHTML = homeIcon(D_TICK, 19);
       slot.style.color = "var(--ok)";
       setTimeout(function () {
-        slot.innerHTML = homeIcon(D_DOWN, 14);
+        slot.innerHTML = homeIcon(D_DOWN, 19);
         slot.style.color = "";
       }, HOME_CONFIRM_MS);
     });
@@ -2555,7 +2824,7 @@
   }
 
   function clearHomeLoaded() {
-    $("loadSay").textContent = SAY.loadIdle;
+    paintSay($("loadSay"), "quiet", SAY.loadIdle);
     setView("make");
     homeLoadedBlob = null;
     $("zone").classList.remove("has");

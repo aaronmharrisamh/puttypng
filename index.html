@@ -113,12 +113,22 @@
                Both words stay in the markup and CSS chooses, because a word
                written by JavaScript is a word some crawlers never read. -->
           <h2 id="headMake" tabindex="-1"><span class="w-a">Make</span><span class="w-b">Made!</span></h2>
+          <!-- ONE CORNER, TWO JOBS, NAMED BY THE SCREEN IT IS ON.
+               On Make it reads Clear and empties the board, and it is not
+               there at all while the board is already empty: a screen with
+               nothing on it must not offer a way to empty it.
+               On Made it reads Close and goes back to Make with the words
+               still in the box.
+               This is R5's control. It is a phone control: a desktop shows
+               every region at once, so it has no screen to close.
+               Its label and its mark are written by paintCorner(). -->
+          <button type="button" class="corner" id="cornerBtn" hidden></button>
           <!-- THE MAKE READING. It is not a live region. It changes on every
                keystroke, and a screen reader that spoke each one would bury
                the thing the person is doing. The meter beside it says the same
                in numbers, and the screen change is announced by focus landing
                on the heading above. -->
-          <p class="say" id="makeSay">Whatever you embed will go inside the PuttyPNG image!</p>
+          <p class="say" id="makeSay"><span>Whatever you embed will go inside the PuttyPNG image!</span></p>
         </div>
 
         <div class="head hl">
@@ -131,7 +141,7 @@
                a person rather than because of them, so it is the one that has
                to speak. The decode spinner below lost its role to this line, so
                there is one voice in this column and not two. -->
-          <p class="say" id="loadSay" role="status">Drop a PuttyPNG here, or open one.</p>
+          <p class="say" id="loadSay" role="status"><span>Drop a PuttyPNG here, or open one.</span></p>
         </div>
 
         <section class="col make">
@@ -163,6 +173,22 @@
                  It looks 34px and it is 44px to a thumb: the padding carries
                  the target, so it satisfies WCAG 2.5.5 without looking heavy.
                  The paperclip carries no words, so it carries a name. -->
+            <!-- A PICTURE THAT HOLDS NOTHING IS STILL A GOOD THING TO HIDE,
+                 so it becomes the file to hide rather than an error. Attaching
+                 covers the box, so this asks first, and only when there are
+                 words in the box to cover.
+                 It takes focus when it opens, which is how the board announces
+                 a change of screen too. It is not a live region: the board has
+                 one and this is not it. -->
+            <div class="ask" id="plainAsk" tabindex="-1" hidden>
+              <b>That is not a PuttyPNG</b>
+              <p id="plainAskBody"></p>
+              <div class="askrow">
+                <button type="button" class="btn dark" id="plainYes">Yes, attach it</button>
+                <button type="button" class="btn ghost" id="plainNo">Cancel</button>
+              </div>
+            </div>
+
             <div class="attachrow">
               <button type="button" class="attach ghost" id="homeAttachBtn"
                       aria-label="Attach a file" title="Attach a file">
@@ -275,10 +301,26 @@
                   <div class="sz" id="gotSize"></div>
                 </div>
               </div>
+              <!-- WHAT THE BOX BELOW HOLDS. R5 names it, and an unnamed box of
+                   monospace text under a picture could be anything. -->
+              <p class="clabel" id="gotLabel">The PuttyPNG&rsquo;s contents:</p>
               <div class="gotbody" id="gotBody">
                 <div class="gotfiles" id="gotFiles"></div>
-                <pre id="gotText" contenteditable="plaintext-only" spellcheck="false"
-                     aria-label="What came out. You can select and correct it here."></pre>
+                <!-- READ ONLY. It was contenteditable until v2.9.1, and the
+                     label promised a person could correct what came out. The
+                     correction went nowhere: nothing ever read this element
+                     back. A box you can type into beside a Copy button that
+                     ignores the typing is worse than either on its own. -->
+                <pre id="gotText" tabindex="0" aria-label="What came out of the PuttyPNG"></pre>
+              </div>
+
+              <!-- COPY CONTENTS ON BOTH SHAPES, because until v2.9.1 neither
+                   could copy what came out of a PuttyPNG at all. OK, done! is
+                   the phone's way back: a desktop has the corner cross on this
+                   panel and does not need a second one. -->
+              <div class="gotacts" id="gotActs">
+                <button type="button" class="btn dark" id="copyContents"></button>
+                <button type="button" class="btn ghost" id="doneBtn"></button>
               </div>
             </div>
             <div class="again">Make another one!</div>
@@ -596,17 +638,14 @@
           </div>
 
         <div class="deckrow">
-          <!-- THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
-               when the board loads, and it goes the moment the switch goes back
-               to Solid. A warning that outlives its cause is noise.
-               It sits on the picture, because it is about the picture. -->
-          <div class="transnote" id="transNote" hidden>
-            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
-                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span><b>Note:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
-          </div>
+          <!-- THE PICTURE WINDOW. On a desktop this element has no box at all:
+               display:contents takes it out of the box tree, so the tray keeps
+               positioning against the deck row exactly as it did before and
+               the desktop is unmoved.
+               On a phone it becomes R5's window. The slot lip is its top edge,
+               the disc ejects down into it and rests inside it, and the window
+               is what clips the disc while it is still above the lip. -->
+          <div class="discwin" id="discWin">
           <div class="tray">
             <div class="lip"></div>
             <img class="cd" id="cd" alt="Your PuttyPNG. Drag it into Load, or press the bin to throw it away.">
@@ -629,6 +668,46 @@
                 ...or trash me!
               </button>
             </div>
+          </div>
+          <!-- WHAT THE PICTURE IS, inside the frame with it, which is where R5
+               puts it. It is a caption, so it belongs to the picture and not
+               to the column of things to do next. -->
+          <div class="discnote" id="discNote" hidden></div>
+          </div>
+
+          <!-- EVERYTHING BELOW IS THE PHONE'S MADE SCREEN, and it is R5's, in
+               R5's order: what the picture is, the notice if it applies, the
+               sign off, the two things to do with it, then the way back.
+               A desktop never shows any of it. It says what the deck, the tip
+               beside the disc and the bin already say there, and saying it
+               twice in one region is how two designs start. -->
+          <!-- THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
+               when the board loads, and it goes the moment the switch goes back
+               to Solid. A warning that outlives its cause is noise.
+               A desktop hangs it under the disc, still inside the deck row, so
+               moving it out of the window above changed nothing there: the
+               window has no box on a desktop. A phone puts it in the column. -->
+          <div class="transnote" id="transNote" hidden>
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span><b>Note:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+          </div>
+
+
+          <div class="signoff" id="sendIt" hidden>
+            <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Send it</b>
+            <span>You can now download or copy the image above to a friend!</span>
+          </div>
+
+          <!-- Download and Copy are not new. They are #cdSave and #cdCopy,
+               moved out of the overlay on the disc by placeMadeActions().
+               There is one of each in the page and the gate counts them. -->
+          <div class="madeacts" id="madeActs" hidden></div>
+
+          <div class="againrow" id="againRow" hidden>
+            <button type="button" class="btn ghost" id="againBtn"></button>
           </div>
         </div>
 
@@ -665,7 +744,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.8.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.9.1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
