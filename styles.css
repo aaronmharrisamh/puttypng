@@ -150,7 +150,9 @@ header.masthead { text-align: center; padding: 28px 0 16px; }
   border-bottom: 1px solid var(--line-strong);
 }
 
-.made-note a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+@media (hover: hover) and (pointer: fine) {
+  .made-note a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+}
 
 /* The name is two different materials. Putty takes the display face and the
    clay; PNG stays the body face in black. It leads the page, so it is set
@@ -240,7 +242,9 @@ nav.tabs a {
 
 .foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--line-strong); }
 
-.foot a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+@media (hover: hover) and (pointer: fine) {
+  .foot a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+}
 
 
 /* Docs */
@@ -1149,7 +1153,9 @@ details.sect > summary::-webkit-details-marker { display: none; }
    ========================================================================== */
 
 /* Tabs */
-nav.tabs a:hover { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  nav.tabs a:hover { color: var(--ink); }
+}
 
 /* THE CURRENT PAGE IS MARKED BY THE BODY, NOT BY THE LINK. The navigation
    block is byte for byte the same on all five pages, which is what lets one
@@ -1170,11 +1176,17 @@ nav.tabs a:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; 
 
 .btn:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 
-.btn-primary:hover { background: #000; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { background: #000; }
+}
 
-.btn-clay:hover { background: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-clay:hover { background: var(--clay-deep); }
+}
 
-.btn-ghost:hover { border-color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-ghost:hover { border-color: var(--ink); }
+}
 
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 
@@ -1241,7 +1253,9 @@ textarea:focus, input:focus, select:focus {
    The whole deck is the target, not only the picture, so it is easy to hit. */
 
 
-.subtabs button:hover { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .subtabs button:hover { color: var(--ink); }
+}
 
 .subtabs button.active { color: var(--clay-deep); border-bottom-color: var(--clay); font-weight: 600; }
 
@@ -1253,7 +1267,9 @@ textarea:focus, input:focus, select:focus {
 .subtabs button[disabled] { opacity: .38; cursor: default; }
 
 
-.dropzone:hover { border-color: var(--clay); background: var(--clay-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .dropzone:hover { border-color: var(--clay); background: var(--clay-soft); }
+}
 
 .dropzone.drag-over { border-color: var(--clay); background: var(--clay-soft); box-shadow: 0 0 0 3px rgba(201,111,82,.12); }
 
@@ -1267,10 +1283,14 @@ textarea:focus, input:focus, select:focus {
 #toast.ok { background: var(--ok); }
 
 /* Docs */
-.subnav a:hover { border-color: var(--clay); color: var(--clay-deep); background: var(--clay-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .subnav a:hover { border-color: var(--clay); color: var(--clay-deep); background: var(--clay-soft); }
+}
 
 /* Header */
-header.masthead .byline a:hover { color: var(--ink); text-decoration-color: currentColor; }
+@media (hover: hover) and (pointer: fine) {
+  header.masthead .byline a:hover { color: var(--ink); text-decoration-color: currentColor; }
+}
 
 header.masthead .byline a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
 
@@ -1279,7 +1299,9 @@ details.sect[open] .chev-d { transform: rotate(90deg); }
 
 details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 6px; }
 
-details.sect > summary:hover .sect-title { color: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  details.sect > summary:hover .sect-title { color: var(--clay-deep); }
+}
 
 /* ==========================================================================
    HOME - MAKE
@@ -1300,27 +1322,41 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 .makebox.has .attached { display: grid; }
 .makebox.has #makeText, .makebox.has .attach { visibility: hidden; }
 
-.ghost:hover, .ghost:focus-visible { color: var(--ink); border-color: var(--ink); }
+.ghost:focus-visible { color: var(--ink); border-color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .ghost:hover { color: var(--ink); border-color: var(--ink); }
+}
 .ghost:active { transform: scale(.97); }
 
-.attach:hover .say, .attach:focus-visible .say { max-width: 190px; opacity: 1; margin-left: 7px; }
+.attach:focus-visible .say { max-width: 190px; opacity: 1; margin-left: 7px; }
+@media (hover: hover) and (pointer: fine) {
+  .attach:hover .say { max-width: 190px; opacity: 1; margin-left: 7px; }
+}
 
-.chip:hover { color: var(--clay-deep); border-color: var(--clay); background: var(--clay-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover { color: var(--clay-deep); border-color: var(--clay); background: var(--clay-soft); }
+}
 
 /* On the Make side the chip takes the attachment off, so it warns in red. */
-.pill:hover { border-color: var(--soft-red); background: #fdf0ef; }
-.pill:hover .act-ic { color: var(--soft-red); }
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover { border-color: var(--soft-red); background: #fdf0ef; }
+  .pill:hover .act-ic { color: var(--soft-red); }
+}
 .pill:active { transform: scale(.985); }
 
 /* The Load side removes nothing, it hands the file over. */
-.gotfiles .pill:hover { border-color: var(--clay); background: var(--clay-soft); }
-.gotfiles .pill:hover .act-ic { color: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  .gotfiles .pill:hover { border-color: var(--clay); background: var(--clay-soft); }
+  .gotfiles .pill:hover .act-ic { color: var(--clay-deep); }
+}
 
 /* ==========================================================================
    HOME - THE METER
    ========================================================================== */
 
-.act:hover { background: #000; }
+@media (hover: hover) and (pointer: fine) {
+  .act:hover { background: #000; }
+}
 .act:active { transform: scale(.99); }
 .act[disabled] { opacity: .45; cursor: not-allowed; }
 
@@ -1367,8 +1403,10 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 }
 
 .cd.out ~ .cdtools { pointer-events: auto; }
-.tray:hover .cd.out ~ .cdtools { opacity: 1; }
-.cdtools button:hover { background: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  .tray:hover .cd.out ~ .cdtools { opacity: 1; }
+  .cdtools button:hover { background: var(--clay-deep); }
+}
 .cdtools button.done { background: var(--ok); }
 
 .cd.out ~ .cdtip { opacity: 1; transform: none; pointer-events: auto; }
@@ -1378,11 +1416,15 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
    down again, and both come back if it returns to its slot. */
 .cd.lifted ~ .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
 
-.cdtip .say:hover { background: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  .cdtip .say:hover { background: var(--clay-deep); }
+}
 .cdtip .say:active { transform: scale(.97); }
 .cdtip .say.done { background: var(--ok); }
 
-.bin:hover { color: var(--bad); border-color: var(--bad); }
+@media (hover: hover) and (pointer: fine) {
+  .bin:hover { color: var(--bad); border-color: var(--bad); }
+}
 
 /* ==========================================================================
    HOME - LOAD
@@ -1404,18 +1446,58 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
 
 #gotText:focus-visible { outline: 2px solid var(--clay); outline-offset: 1px; }
 
-.thumb:hover .thumbtools { opacity: 1; }
-.thumbtools button:hover { background: var(--clay-deep); }
+@media (hover: hover) and (pointer: fine) {
+  .thumb:hover .thumbtools { opacity: 1; }
+  .thumbtools button:hover { background: var(--clay-deep); }
+}
 
-.xbtn:hover { background: #c1443e; transform: translate(50%, -50%) scale(1.09); }
-.pill .xbtn:hover { transform: scale(1.12); }
+@media (hover: hover) and (pointer: fine) {
+  .xbtn:hover { background: #c1443e; transform: translate(50%, -50%) scale(1.09); }
+  .pill .xbtn:hover { transform: scale(1.12); }
+}
 
 .zone.reading .decoding { display: grid; }
 
 /* ==========================================================================
    SECTION 7 - RESPONSIVE AND UTILITIES
-   The one breakpoint, plus the small single-purpose helper classes.
+   The interaction queries, the width breakpoints, and the small
+   single-purpose helper classes.
    ========================================================================== */
+
+/* THE POINTER DECIDES, NOT THE WIDTH.
+   A tablet is wide and has no mouse. A small laptop window is narrow and has
+   one. Width answers neither case. These two queries ask the browser what the
+   person is holding:
+
+     @media (hover: hover) and (pointer: fine)    a mouse
+     @media (hover: none), (pointer: coarse)      a finger
+
+   Note the comma in the second. It is "or", not "and". A device counts as
+   touch if it cannot hover OR its pointer is coarse.
+
+   The primary pointer is the test, not any-pointer. A laptop with a
+   touchscreen reports a fine primary pointer and a coarse secondary one. It
+   has a mouse, so it gets the mouse layout. Someone using that laptop as a
+   tablet gets a drop zone they cannot use. There is no query that resolves
+   this, only a choice, and this is the choice.
+
+   THE MOUSE QUERY IS NOT WRITTEN HERE. Every hover rule carries its own copy,
+   in place, beside the component it belongs to. Gathering all 27 into one
+   block here would move them to the end of the sheet, and four of them would
+   then beat a rule that beats them today: .subtabs button.active,
+   .dropzone.drag-over, .cdtools button.done and .cdtip .say.done. A copied
+   chip would lose its green while the pointer rested on it, which is the
+   moment a person is looking at it. */
+
+/* WHAT A FINGER CANNOT DO. These four lines name an action no touch screen
+   offers. They are hidden, not removed: the markup stays, so a crawler still
+   reads it, and Googlebot renders with a mobile viewport. */
+@media (hover: none), (pointer: coarse) {
+  .dropnote .big,
+  .dropnote .sub,
+  .makeveil .big,
+  .veil .big { display: none; }
+}
 
 /* Cards / sections */
 .muted { color: var(--muted); }
