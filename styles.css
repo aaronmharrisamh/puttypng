@@ -823,6 +823,11 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .attach svg { flex: none; }
 
+/* THE WRAPPER HAS NO BOX ON A DESKTOP. display:contents takes it out of the
+   box tree, so the mark and the words stay the button's own flex items and
+   nothing here moves. On a phone it is R5's chip, in Section 7. */
+.attach .cip { display: contents; }
+
 .attach .say {
   max-width: 0; overflow: hidden; white-space: nowrap;
   opacity: 0; margin-left: 0;
@@ -1449,6 +1454,9 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .ghost:active { transform: scale(.97); }
 
 .attach:focus-visible .say { max-width: 190px; opacity: 1; margin-left: 7px; }
+/* The chip's ring, for a tablet with a keyboard. It is not inside the touch
+   query, because a focus rule is not a pointer rule. */
+.attach:focus-visible .cip { border-color: var(--ink); color: var(--ink); }
 @media (hover: hover) and (pointer: fine) {
   .attach:hover .say { max-width: 190px; opacity: 1; margin-left: 7px; }
 }
@@ -1621,19 +1629,32 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .panel { padding-bottom: 8px; }
 }
 
-/* FIVE TABS, ONE ROW.
-   The row used to wrap and About sat alone on a second row, which cost 106px
-   at the top of every phone screen. The row no longer wraps. A tab that runs
-   out of width wraps its own words instead, which is what R5 does with How it
-   works.
-   Each tab keeps a 46px target, so WCAG 2.5.5 holds at two lines and at one.
-   The words shrink, the target does not. */
+/* THE CHROME ON A PHONE.
+   Measured on a Galaxy S21+ on 2026-09-07: the masthead and the tabs took
+   198px of a 720px screen before the first heading, because none of them had
+   a phone rule. The wordmark's clamp floored at 40px there, the padding was
+   the desktop's, and the tabs kept a 22px margin under them. These are R5's
+   numbers and they take 80px off every screen. The clamps keep a tablet at
+   the desktop's sizes: 7.8vw is 30px at 384px and 40px from 513px up.
+
+   THE TABS DO NOT STAY PINNED ON A PHONE. Chrome hides its own bar on scroll
+   to give the page room, and a pinned row took 47px of it back on every
+   scrolled screen. The tabs are one flick away at the top. */
 @media (hover: none), (pointer: coarse) {
-  nav.tabs { flex-wrap: nowrap; gap: 0; }
+  header.masthead { padding: 12px 0 8px; }
+  header.masthead h1 { font-size: clamp(30px, 7.8vw, 40px); line-height: 1.15; }
+  header.masthead .subtitle { font-size: clamp(14.5px, 3.8vw, 16px); line-height: 1.4; margin-top: 4px; }
+
+  /* FIVE TABS, ONE ROW. The row used to wrap and About sat alone on a second
+     row, which cost 106px. The row no longer wraps. A tab that runs out of
+     width wraps its own words instead, which is what R5 does with How it
+     works. Each tab keeps a 44px target, so WCAG 2.5.5 holds at two lines and
+     at one. The words shrink, the target does not. */
+  nav.tabs { flex-wrap: nowrap; gap: 0; padding-top: 0; margin-bottom: 10px; position: static; }
   nav.tabs a {
     display: flex; align-items: center; justify-content: center; text-align: center;
     font-size: 13.5px; line-height: 1.2; padding: 6px 7px;
-    min-height: 46px; min-width: 0;
+    min-height: 44px; min-width: 0;
   }
 }
 
@@ -1647,9 +1668,54 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    fixed 250px box, because that box shares a card height with the Load column
    beside it, and growing one would stretch both. */
 @media (hover: none), (pointer: coarse) {
+  /* THE FLOOR IS A HOLE HERE. The desktop gives each column body 250px so two
+     columns share a height. A phone shows one column, and on a Galaxy S21+
+     the floor was 28px of nothing under the paperclip. 16px of card padding
+     is R5's; the desktop keeps its token. */
+  .col { padding: 16px; }
+  .col > .body { min-height: 0; }
   .col.make .body { flex: none; }
   .makebox { flex: none; }
   #makeText { flex: none; min-height: 168px; max-height: 380px; height: auto; overflow-y: auto; }
+
+  /* THE PAPERCLIP SAYS WHAT IT IS. Its words show on hover, and a phone
+     cannot hover, so a phone never saw them. Here the wrapper becomes R5's
+     34px chip with the words in it, and the button around it stays 44px to a
+     thumb. R5 chose the bare clip and let the placeholder say attach a file;
+     the placeholder is gone the moment a person types, so the words go on
+     the chip, which is R2's version. */
+  .attachrow { margin-top: 6px; }
+  .attach { min-width: 0; border: 0; background: none; padding: 0 4px; }
+  .attach .cip {
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 34px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid var(--line-strong); background: #fff; color: var(--ink-soft);
+  }
+  .attach .say { max-width: none; opacity: 1; margin-left: 0; }
+
+  /* A FILE AS A ROW, NOT A CHIP FLOATING IN A BOX. The box kept its 168px
+     while a file was in it, to hold a 36px chip, so the chip floated in 130px
+     of nothing. Typing is off while a file is in, so the box was holding
+     nothing else. The box leaves the flow and the pill takes its place as
+     R5's card: the file, its size, and the way to take it out, in 74px.
+     The textarea is taken out of the flow rather than hidden, so the height
+     growMakeBox() wrote on it is not measured while it is away and is still
+     there when the file comes off. */
+  .makebox.has #makeText { position: absolute; width: 100%; max-height: 100%; }
+  .makebox.has .attached { position: static; display: block; flex: 1; width: 100%; padding: 0; }
+  .makebox.has .pill {
+    display: grid; grid-template-columns: 50px minmax(0, 1fr) 44px;
+    grid-template-areas: "ic nm x" "ic sz x"; column-gap: 12px; align-items: center;
+    width: 100%; padding: 11px 6px 11px 12px; border-radius: 12px;
+  }
+  .makebox.has .pill .ic { grid-area: ic; width: 50px; height: 50px; border-radius: 12px; background: #fbfbfc; place-items: center; }
+  .makebox.has .pill .ic svg { width: 24px; height: 24px; }
+  .makebox.has .pill .nm { grid-area: nm; align-self: end; font-size: 14px; font-weight: 700; }
+  .makebox.has .pill .sz { grid-area: sz; align-self: start; font: 11px/1.5 ui-monospace, Consolas, monospace; }
+  /* R5's line. It is said here rather than written by script because only a
+     phone lays the size out as a line of its own under the name. */
+  .makebox.has .pill .sz::after { content: " goes inside"; }
+  .makebox.has .pill .act-ic { grid-area: x; width: 44px; height: 44px; place-items: center; }
 
   /* THE ACTION BAR CARRIES THE WAY OUT TOO.
      The donut keeps column one and the button keeps column two. Under the
@@ -1663,6 +1729,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      script they stay in the Load column, which the make screen hides. Nothing
      on this board works without script, so there is no state to design for. */
   .actbar {
+    margin-top: 12px;
     grid-template-areas:
       "donut make"
       "bytes or"
@@ -1677,6 +1744,18 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      paragraph, and which disc it landed on is a maker's detail rather than
      something a first-time reader needs. It is still in Advanced. */
   .readbox .rungno { display: none; }
+
+  /* THE READING NEVER BREAKS A LINE. Measured on a Galaxy S21+ on 2026-09-07:
+     the label came out as six lines, 0 / bytes / used / of / 63.9 / KB,
+     because Android's monospace face is 0.6em wide against Consolas's 0.55em,
+     and 0 bytes was one pixel wider than its 44px column there and not on a
+     PC. The label is as wide as its words, centred under the donut, and at
+     the smallest donut it hangs 10px past the column on each side, into the
+     card's own padding. The word used goes with it: the donut already shows
+     what is used, and "of 63.9 KB" is what every progress bar says. */
+  .readbox { justify-self: center; width: max-content; }
+  .usage, .usage i { white-space: nowrap; }
+  .usage .used { display: none; }
 
   /* THE TWO CHIPS BECOME ONE PILL. One border, one radius, and a hairline
      between the halves, which is the control R5 drew. The rule that used to
@@ -1742,6 +1821,14 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 @media (hover: none), (pointer: coarse) {
 
   .board { grid-template-columns: 1fr; }
+
+  /* THE HEADING ROW, TIGHTER. The desktop's 12px gap between the word and its
+     reading is a row gap on a phone, where the reading is always on a line of
+     its own. The corner pill centres against the word rather than sitting on
+     its baseline. The clamp keeps a tablet at the desktop's size. */
+  .head { align-items: center; gap: 4px 12px; }
+  .head h2 { font-size: clamp(26px, 4.5vw, 41px); }
+  .head .say { line-height: 1.45; }
 
   .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad"; }
   .board[data-view="made"]   { grid-template-areas: "hm" "sm"; }
@@ -1868,7 +1955,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   /* The panel stops being an overlay on the zone and joins the column, so the
      contents can grow the page instead of scrolling inside a fixed frame. */
   .board[data-view="loaded"] .zone.has .got {
-    display: flex; flex-direction: column; position: static; padding: 0; gap: 12px;
+    display: flex; flex-direction: column; position: static; padding: 0; gap: 10px;
   }
 
   /* THE CONTENTS FLOW DOWN TO A CEILING. The largest disc holds 4 MB, so a
@@ -1907,11 +1994,15 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   /* WHERE THE DISC COMES TO REST, measured from the top of the window. The
      number is read twice: once to place the disc, once to work out how far
-     above the lip it has to start from. One place to change it. */
+     above the lip it has to start from. One place to change it.
+     40px, not less: the switch is 24px tall at 15px, and the picture's box
+     has to start under it. A solid picture is a white square, so its box
+     is its edge, not only the circle drawn on it. v2.10.0 took 20px out of
+     the window that the disc was not using. */
   .discwin {
-    --disc-top: 48px;
+    --disc-top: 40px;
     display: block; position: relative; overflow: hidden; flex: none;
-    height: calc(var(--slot-w) + 96px);
+    height: calc(var(--slot-w) + 76px);
     border: 1px solid var(--line-strong); border-radius: 12px;
     background: #fbfbfc;
   }
@@ -1950,19 +2041,19 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   /* The caption sits at the foot of the window. The disc above it is placed
      rather than flowed, so this is placed too. */
   .discnote {
-    display: block; position: absolute; left: 0; right: 0; bottom: 11px;
+    display: block; position: absolute; left: 0; right: 0; bottom: 9px;
     text-align: center; font-size: 12px; color: var(--muted);
   }
   .discnote[hidden] { display: none; }
 
   .signoff {
-    display: block; padding: 12px 14px; border-radius: 12px;
+    display: block; padding: 10px 12px; border-radius: 12px; line-height: 1.45;
     background: #f2f8ec; border: 1px solid #d8ecc4;
   }
   .signoff[hidden] { display: none; }
   .signoff b {
     display: flex; align-items: center; gap: 8px;
-    font-size: 15px; font-weight: 700; color: #2f6b13; margin-bottom: 3px;
+    font-size: 15px; font-weight: 700; color: #2f6b13; margin-bottom: 2px;
   }
   .signoff .ic { display: flex; flex: none; }
   .signoff span { font-size: 13px; color: var(--ink-soft); }
@@ -1983,7 +2074,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   .againrow { display: block; }
   .againrow[hidden] { display: none; }
-  .againrow .btn { width: 100%; justify-content: center; min-height: 48px; font-size: 13.5px; font-weight: 700; }
+  .againrow .btn { width: 100%; justify-content: center; min-height: 44px; font-size: 13.5px; font-weight: 700; }
 
   /* THE CORNER. It keeps a 44px target while the pill it wears looks 34px. */
   .corner {

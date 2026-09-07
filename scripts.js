@@ -2466,7 +2466,13 @@
       $("usage").textContent = homeFmt(packed);
       var of = document.createElement("i");
       // "used of" rather than a bare "of", so the number reads as room left.
-      of.textContent = "used of " + homeFmt(total) + (over ? " max" : "");
+      // The word is a span of its own because a phone drops it: styles.css
+      // hides it in the touch block, so the label never breaks a line there.
+      var used = document.createElement("span");
+      used.className = "used";
+      used.textContent = "used ";
+      of.appendChild(used);
+      of.appendChild(document.createTextNode("of " + homeFmt(total) + (over ? " max" : "")));
       $("usage").appendChild(of);
       $("rungNo").textContent = over ? "(past the 2048 disc)" : "(" + RUNGS[k].px + " disc)";
 

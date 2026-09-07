@@ -190,13 +190,18 @@
             </div>
 
             <div class="attachrow">
+              <!-- THE WRAPPER IS FOR A PHONE. It has no box on a desktop, so the
+                   mark and the words stay the button's own flex items. On a
+                   phone it is R5's 34px chip, drawn in styles.css Section 7. -->
               <button type="button" class="attach ghost" id="homeAttachBtn"
                       aria-label="Attach a file" title="Attach a file">
+                <span class="cip">
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                   <path d="M21 11.5l-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-8.9 8.9a1.8 1.8 0 0 1-2.6-2.6l8.1-8.1"
                         fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span class="say">Attach a file</span>
+                </span>
               </button>
             </div>
           </div>
@@ -676,8 +681,8 @@
           </div>
 
           <!-- EVERYTHING BELOW IS THE PHONE'S MADE SCREEN, and it is R5's, in
-               R5's order: what the picture is, the notice if it applies, the
-               sign off, the two things to do with it, then the way back.
+               this order: what the picture is, the notice if it applies, the two
+               things to do with it, the sign off, then the way back.
                A desktop never shows any of it. It says what the deck, the tip
                beside the disc and the bin already say there, and saying it
                twice in one region is how two designs start. -->
@@ -696,15 +701,19 @@
           </div>
 
 
+          <!-- Download and Copy are not new. They are #cdSave and #cdCopy,
+               moved out of the overlay on the disc by placeMadeActions().
+               There is one of each in the page and the gate counts them.
+               THEY COME BEFORE THE NOTE. Measured on a Galaxy S21+ on
+               2026-09-07: with the note in front of them they were the one
+               thing under the fold on the screen that exists to press them.
+               The gate checks the order. -->
+          <div class="madeacts" id="madeActs" hidden></div>
+
           <div class="signoff" id="sendIt" hidden>
             <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Send it</b>
             <span>You can now download or copy the image above to a friend!</span>
           </div>
-
-          <!-- Download and Copy are not new. They are #cdSave and #cdCopy,
-               moved out of the overlay on the disc by placeMadeActions().
-               There is one of each in the page and the gate counts them. -->
-          <div class="madeacts" id="madeActs" hidden></div>
 
           <div class="againrow" id="againRow" hidden>
             <button type="button" class="btn ghost" id="againBtn"></button>
@@ -744,7 +753,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.9.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.10.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
