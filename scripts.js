@@ -115,6 +115,8 @@
   var DISSOLVE_MS = 250;       // a deleted stretch of band coming apart
   var DISSOLVE_BITS = 40;      // how many pieces it comes apart into
   var HOME_SETTLE_MS = 110;    // how long typing settles before the meter redraws
+  var GLOW_SETTLE_MS = 300;    // and how long before the glow comes back, which is
+                               // longer, so it never flickers on a keystroke
   var READING_DELAY_MS = 130;  // how long a decode runs before it says it is working
   var HOME_FLASH_MS = 30;      // long enough for one painted frame of white
   var HOME_CONFIRM_MS = 1500;  // how long a control says it did its job
@@ -274,6 +276,12 @@
   var homeReadTimer = 0;     // the wait before a decode says it is working
   var homeReadDepth = 0;     // how many decodes are running, so two cannot race
   var homeShownRung = 0;     // the rung the column width is currently set for
+
+  // The glow chain. Three flags, and stageFor() reads the board for the rest.
+  var glowTouched = false;   // the box has been typed in at least once
+  var glowSettled = true;    // typing has stopped for long enough to light up
+  var glowDone = false;      // the chain has been walked, and stays off
+  var glowTimer = 0;
   var homeShownBands = null; // the ring layout on screen, which a change eases away from
   var homeShownFrac = 0;
   var homeMoveTimer = 0;
@@ -318,6 +326,7 @@
     if (!grid || grid.getAttribute("data-view") === name) return;
     grid.setAttribute("data-view", name);
     focusView(name);
+    paintGlow();
   }
 
   /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
@@ -1204,6 +1213,7 @@
     setBoardSizes(0);
     updateHomeMeter(true);
     growMakeBox();
+    paintGlow();
     window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
@@ -1232,9 +1242,53 @@
     ta.style.height = Math.min(max, Math.max(min, ta.scrollHeight)) + "px";
   }
 
+  /* WHICH STOP IS LIT. A pure function of the board: no timer runs the chain
+     and nothing is stored about where it has got to, so it cannot get out of
+     step with what is on screen. A tutorial written as a sequence of timers is
+     a tutorial that ends up pointing at the wrong thing.
+
+     The order matters. Done beats everything, an unsettled box beats the rest
+     so the glow never flickers on a keystroke, and the view decides before the
+     box contents do. */
+  function stageFor() {
+    if (glowDone) return "done";
+    if (!glowSettled) return "idle";
+
+    var grid = $("boardGrid");
+    var view = grid ? grid.getAttribute("data-view") : "make";
+    if (view === "made") return "copy";
+    if (view === "loaded") return "done";
+
+    var ta = $("makeText");
+    var has = (ta && ta.value.length > 0) || !!homeAttached;
+    if (!glowTouched && !has) return "box";
+    return has ? "make" : "idle";
+  }
+
+  /* Light the one stop the board is at, and put the other two out. */
+  function paintGlow() {
+    if (!$("makeBox")) return;
+    var stage = stageFor();
+    $("makeBox").classList.toggle("glow", stage === "box");
+    var ic = document.querySelector(".act .ic");
+    if (ic) ic.classList.toggle("glow", stage === "make");
+    var copy = $("cdCopy");
+    if (copy) copy.classList.toggle("glow", stage === "copy");
+  }
+
+  /* A keystroke puts the chain out until the typing settles. The wait is
+     longer than the meter's, so the glow is not the thing that flickers. */
+  function noteGlowTyping() {
+    glowTouched = true;
+    glowSettled = false;
+    paintGlow();
+    clearTimeout(glowTimer);
+    glowTimer = setTimeout(function () { glowSettled = true; paintGlow(); }, GLOW_SETTLE_MS);
+  }
+
   function wireHomeMake() {
     $("makeText").addEventListener("input", function () {
-      noteHomeInput(); updateHomeMeter(); growMakeBox();
+      noteHomeInput(); updateHomeMeter(); growMakeBox(); noteGlowTyping();
     });
 
     $("homeAttachBtn").addEventListener("click", function () { $("attachIn").click(); });
@@ -1308,7 +1362,14 @@
     $("cdCopy").innerHTML = homeIcon(D_COPY, 13) + "<span>Copy</span>";
     $("cdSave").innerHTML = homeIcon(D_DOWN, 13) + "<span>Download</span>";
 
-    $("cdCopy").addEventListener("click", function () { copyHomeDisc(this, "Copied!"); });
+    /* THE LAST STOP. Copy is what leads somewhere, a message to a friend, so it
+       is the one that ends the chain. Download leads to a folder and never
+       glows: two lit controls side by side is a pair of distractions, not a
+       chain. The latch holds for the session and starts again on a reload. */
+    $("cdCopy").addEventListener("click", function () {
+      glowDone = true; paintGlow();
+      copyHomeDisc(this, "Copied!");
+    });
     $("cdTipCopy").addEventListener("click", function () { copyHomeDisc(this, "Copied!"); });
     $("cdSave").addEventListener("click", function () {
       if (!homeLastBlob) return;
@@ -1997,6 +2058,9 @@
     $("makeText").disabled = false;
     noteHomeInput();
     updateHomeMeter();
+    // An attachment counts as something to press, so taking one off can put
+    // the chain back to the empty box.
+    paintGlow();
   }
 
   async function takeHomeAttachment(f) {
@@ -2009,6 +2073,10 @@
     showHomeAttachment();
     noteHomeInput();
     updateHomeMeter();
+    // A file is something to press, so the chain moves to the Make button
+    // without a key ever being struck.
+    glowTouched = true;
+    paintGlow();
   }
 
   /* ==========================================================================

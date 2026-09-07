@@ -58,6 +58,12 @@
      grows with the donut borrows this, so they all move together. */
   --grow: 520ms cubic-bezier(.3, 0, .2, 1);
 
+  /* THE TUTORIAL GLOW. Pure lime, which is deliberately not the site's own
+     positive colour: --ok is a status, and this is a pointing finger. It never
+     carries information on its own, and every control it surrounds keeps its
+     own contrast, so WCAG 1.4.11 does not apply to it. */
+  --limergb: 0, 255, 0;
+
   /* The display face, served from fonts/. It carries the name and the two
      column headings and nothing else. */
   --display-font: 'Lobster';
@@ -1670,6 +1676,52 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .cdtip { left: 0; top: calc(var(--slot-w) + 20px); }
   .cdtip .arrow { display: none; }
   .bin { align-self: flex-start; }
+}
+
+/* ==========================================================================
+   THE GLOW CHAIN
+   Three stops that lead a first time person through one whole PuttyPNG: the
+   text box, then the mark on the Make button, then Copy in the tray.
+   Which stop is lit is worked out in scripts.js from the board itself, never
+   from a timer, so the chain cannot get out of step with what is on screen.
+
+   NOTHING HERE HAS TO TURN ITSELF OFF FOR THE ANIMATIONS PREFERENCE. The rule
+   at the foot of this file stops every animation under body.still, and it
+   reaches ::after as well, which is where the mark's glow lives. That rule was
+   repaired in v2.6.4, and this chain is the first thing to depend on it.
+   ========================================================================== */
+
+/* A ring for the things shaped like a box: the text box and the Copy chip. */
+.makebox.glow #makeText,
+#cdCopy.glow { animation: boxglow 1.68s ease-in-out infinite; }
+.makebox.glow #makeText { border-color: #3fbf00; }
+
+@keyframes boxglow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--limergb), .42); }
+  50%      { box-shadow: 0 0 0 9px rgba(var(--limergb), .14); }
+}
+
+/* A disc for the mark, which is round and sits inside a button. */
+.act .ic { position: relative; }
+.act .ic.glow::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 38px; height: 38px; margin: -19px 0 0 -19px;
+  border-radius: 50%; background: rgba(var(--limergb), .47);
+  animation: icglow 1.52s ease-out infinite; pointer-events: none;
+}
+
+@keyframes icglow {
+  0%   { transform: scale(.5);   opacity: 1; }
+  70%  { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+/* REDUCED MOTION IS NOT NO GLOW. Someone who has asked for less movement still
+   needs to know where to start, so the glow stops moving and stays lit. */
+@media (prefers-reduced-motion: reduce) {
+  .makebox.glow #makeText,
+  #cdCopy.glow { animation: none; box-shadow: 0 0 0 4px rgba(var(--limergb), .24); }
+  .act .ic.glow::after { animation: none; opacity: .6; transform: scale(1); }
 }
 
 /* TWO NAMES, ONE EFFECT: nothing on the page moves.
