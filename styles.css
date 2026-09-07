@@ -181,7 +181,15 @@ nav.tabs a {
 /* THE FOOTER CARRIES THE PROMISE NOW. Three lines: what the site promises,
    what version it is, and who made it. The corner note that used to hang in
    the masthead said the first of those a second time. */
-.foot { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0 60px; }
+/* A HAIRLINE ABOVE IT, THE SAME ONE THE NAVIGATION USES BELOW ITSELF.
+   The two rules bracket the page: content starts under one and ends above the
+   other. Without it the space over the footer reads as a hole rather than as
+   the end of the page, which is what it looked like on a phone. */
+.foot {
+  text-align: center; color: var(--muted); font-size: 13px;
+  border-top: 1px solid var(--line);
+  padding: 26px 0 60px;
+}
 
 /* ORDINARY CENTRED TEXT, NOT A ROW OF BOXES. As a flex row each claim was an
    unbreakable item, so a narrow screen wrapped between items and left a
@@ -1497,6 +1505,18 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    .dropzone.drag-over, .cdtools button.done and .cdtip .say.done. A copied
    chip would lose its green while the pointer rested on it, which is the
    moment a person is looking at it. */
+
+/* THE TAIL OF THE PAGE, ON A PHONE.
+   .panel ends with 100px so a desktop has room under the whole board, where
+   the deck sits below the Make card inside it. A phone shows one screen at a
+   time and the make screen has no deck, so that 100px landed straight under
+   the card and read as a hole rather than as spacing.
+   The closed Advanced drawer already contributes 18px below the card: 8px of
+   the board's row gap and its own 6px and 4px margins. 8px here brings the
+   space above the footer's rule to 26px, which is what sits below it. */
+@media (hover: none), (pointer: coarse) {
+  .panel { padding-bottom: 8px; }
+}
 
 /* FIVE TABS, ONE ROW.
    The row used to wrap and About sat alone on a second row, which cost 106px
