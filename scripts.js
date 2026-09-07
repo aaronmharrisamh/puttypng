@@ -1599,8 +1599,10 @@
     say("Reading " + safe(file.name || "the file") + "...");
     try {
       var res = await PuttyPNG.decode(file);
+      // The engine returns name, not filename. The board words a missing name
+      // as "a file", so both pages describe one PuttyPNG the same way.
       var body = res.type === "binary"
-        ? "<p class=\"small\">It holds a file: <strong>" + safe(res.filename || "unnamed") +
+        ? "<p class=\"small\">It holds a file: <strong>" + safe(res.name || "a file") +
           "</strong>, " + homeFmt(res.bytes ? res.bytes.length : 0) + ".</p>"
         : "<pre class=\"zone-text\">" + safe(String(res.text || "").slice(0, 600)) + "</pre>";
       say("<p class=\"small\"><strong>" + safe(file.name || "pasted.png") +

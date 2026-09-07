@@ -1476,3 +1476,7 @@ details.sect > summary:hover .sect-title { color: var(--clay-deep); }
    "pose" is the test aid, so a rendered page is the same every time it is
    measured. Nothing on the page ever adds that one. */
 body.still *, body.still *::before, body.still *::after,
+body.pose  *, body.pose  *::before, body.pose  *::after {
+  transition: none !important;
+  animation: none !important;
+}
