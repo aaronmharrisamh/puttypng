@@ -311,7 +311,14 @@ nav.tabs a {
 .board > .drawer { grid-area: ad; }
 .deckrow { grid-area: sm; }
 
-.head { display: flex; align-items: baseline; gap: 12px; }
+/* THE HEADING WRAPS SO ITS READING CAN SIT UNDER IT. The mark and the word
+   stay on one line, and the status line takes the whole of the next. */
+.head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.head .say { flex-basis: 100%; margin: 2px 0 0; font-size: 13px; color: var(--ink-soft); }
+.head .say .peeklink {
+  font: inherit; font-weight: 700; color: var(--clay-deep); background: none;
+  border: 0; border-bottom: 1px solid var(--clay); padding: 0; cursor: pointer;
+}
 
 /* THE SECOND WORD IS FOR ONE SCREEN ONLY. Each heading carries both the word
    the desktop uses and the word a phone needs once that screen is reached.
@@ -1677,6 +1684,48 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .cdtip .arrow { display: none; }
   .bin { align-self: flex-start; }
 }
+
+/* THE TRANSPARENCY NOTICE. A light notice with a mark, not a black bar, and it
+   sits on the picture because it is about the picture. It is shown only while
+   a see-thru PuttyPNG is in the tray, so it can never outlive its cause. */
+.transnote {
+  position: absolute; left: 0; top: calc(var(--slot-w) + 26px); z-index: 10;
+  display: flex; align-items: flex-start; gap: 7px;
+  width: min(300px, 100%); padding: 8px 10px;
+  border: 1px solid #e8dcae; border-radius: var(--radius-sm);
+  background: #fffaec; color: var(--ink); font-size: 12.5px; line-height: 1.45;
+}
+/* display:flex on the class beats the browser's own [hidden] rule, so hiding
+   it has to be said here or the notice never goes away. */
+.transnote[hidden] { display: none; }
+.transnote svg { flex: none; margin-top: 1px; color: #b8860b; }
+.transnote b { font-weight: 700; }
+
+/* WHAT CAME BACK OUT. One modal for both shapes. */
+.peek {
+  position: fixed; inset: 0; z-index: 120; display: grid; place-items: center;
+  padding: 18px; background: rgba(20, 20, 24, .45);
+}
+.peek.hidden { display: none; }
+.peek-card {
+  width: min(560px, 100%); max-height: 80vh; overflow: auto;
+  background: #fff; border-radius: 16px; padding: 18px 18px 14px;
+  box-shadow: var(--shadow-lift);
+}
+.peek-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.peek-head h3 { margin: 0; font-size: 17px; }
+.peek-x {
+  min-width: 44px; min-height: 44px; border: 0; background: none;
+  font-size: 26px; line-height: 1; color: var(--ink-soft); cursor: pointer;
+}
+.peek-body {
+  margin: 10px 0 0; max-height: 46vh; overflow: auto; white-space: pre-wrap;
+  overflow-wrap: anywhere; font-size: 13px; line-height: 1.55;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.peek-body:empty { display: none; }
+.peek-acts { display: flex; justify-content: flex-end; margin-top: 12px; }
 
 /* ==========================================================================
    THE GLOW CHAIN

@@ -81,6 +81,23 @@
   ];
   var RUNG_LABEL_OVER = "<em>TOO MUCH</em>";
 
+  /* WHAT THE BOARD SAYS. Every string a person reads on the board is here, so
+     the wording can be checked in one place rather than hunted through the
+     code that happens to print it. */
+  var SAY = {
+    empty:    "Whatever you embed will go inside the PuttyPNG image!",
+    fits:     "Everything fits so far. Make a PuttyPNG out of it!",
+    over:     "That is more than the largest disc holds. Take a little out and it will fit.",
+    nothing:  "You need to embed something first!",
+    attached: "Attached successfully!",
+    made:     'Your <button type="button" class="peeklink" id="peekOpen">content</button> is now in this PuttyPNG!',
+    loadIdle: "Drop a PuttyPNG here, or open one.",
+    loaded:   "PuttyPNG loaded successfully!",
+    reading:  "Decoding...",
+    plain:    "That is a plain picture. Nothing was hidden in it.",
+    noPaste:  "There was no PuttyPNG on the clipboard. Copy the picture, then press Paste one!"
+  };
+
   /* HOW BIG THE METER IS. One rule for both shapes: the meter takes a share of
      the column that holds it, inside a floor and a ceiling.
      The shares differ because the rows differ. A desktop column is about 410px
@@ -327,6 +344,8 @@
     grid.setAttribute("data-view", name);
     focusView(name);
     paintGlow();
+    paintMakeSay(false);
+    paintTransNote();
   }
 
   /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
@@ -1214,6 +1233,8 @@
     updateHomeMeter(true);
     growMakeBox();
     paintGlow();
+    wirePeek();
+    paintMakeSay(false);
     window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
@@ -1286,6 +1307,112 @@
     glowTimer = setTimeout(function () { glowSettled = true; paintGlow(); }, GLOW_SETTLE_MS);
   }
 
+  /* THE VISIBLE WORD REPORTS THE STATE. Solid while the picture is solid, and
+     the knob sits with it. The accessible name opens with the same word, which
+     is what WCAG 2.5.3 asks for, then says what pressing will do. */
+  function paintSolidWord() {
+    var vis = $("solidBg"), word = $("solidWord");
+    if (!vis || !word) return;
+    var solid = vis.checked;
+    word.textContent = solid ? "Solid" : "See-thru";
+    vis.setAttribute("aria-label", solid
+      ? "Solid. The picture has a white background. Uncheck to make it see-thru."
+      : "See-thru. The picture has no background. Check to make it solid.");
+  }
+
+  /* THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is shown only once a
+     see-thru PuttyPNG exists, and it goes the moment the switch goes back. */
+  function paintTransNote() {
+    var note = $("transNote");
+    if (!note) return;
+    note.hidden = backgroundIsSolid() || !homeDiscOut;
+  }
+
+  function afterBackgroundChange() {
+    paintSolidWord();
+    if (homeDiscOut) tossDisc();
+    paintTransNote();
+    updateHomeMeter(true);
+  }
+
+  /* WHAT THE MAKE COLUMN SAYS. Derived, like the glow: the board is read and
+     the line follows, so it cannot report a state the board has left. */
+  function paintMakeSay(over) {
+    var line = $("makeSay");
+    if (!line) return;
+    var grid = $("boardGrid");
+    var view = grid ? grid.getAttribute("data-view") : "make";
+    if (view === "made") { line.innerHTML = SAY.made; wirePeekLink(); return; }
+    if (over) { line.textContent = SAY.over; return; }
+    if (homeAttached) { line.textContent = SAY.attached; return; }
+    var ta = $("makeText");
+    line.textContent = (ta && ta.value.length) ? SAY.fits : SAY.empty;
+  }
+
+  /* THE CONTENTS PANEL. It decodes the finished PuttyPNG and shows what came
+     back out. It does not repeat what was typed: the app already knows that,
+     and showing it would prove nothing. Reading it back out of the picture is
+     the only version of this that is evidence. */
+  var peekLast = null;      // the text that came back, or null when a file did
+
+  function wirePeekLink() {
+    var link = $("peekOpen");
+    if (link) link.addEventListener("click", openPeek);
+  }
+
+  async function openPeek() {
+    var wrap = $("peekWrap");
+    if (!wrap || !homeLastBlob) return;
+    wrap.classList.remove("hidden");
+    $("peekWhat").textContent = "Reading it back out of the picture...";
+    $("peekBody").textContent = "";
+    $("peekCopy").hidden = true;
+    peekLast = null;
+    $("peekClose").focus();
+    try {
+      var res = await PuttyPNG.decode(homeLastBlob);
+      if (res.text != null) {
+        peekLast = res.text;
+        $("peekWhat").textContent = "This came back out of the picture, not out of the box you typed in.";
+        $("peekBody").textContent = res.text;
+        // Copy is offered only where there is text to copy. A file has none,
+        // and a button that copies an empty string and says it worked is worse
+        // than no button.
+        $("peekCopy").hidden = false;
+      } else {
+        $("peekWhat").textContent = "It holds a file: " + (res.name || "a file") +
+          ", " + homeFmt(res.bytes ? res.bytes.length : 0) + ".";
+        $("peekBody").textContent = "";
+      }
+    } catch (err) {
+      $("peekWhat").textContent = friendly(err);
+    }
+  }
+
+  function closePeek() {
+    var wrap = $("peekWrap");
+    if (wrap) wrap.classList.add("hidden");
+    var link = $("peekOpen");
+    if (link) link.focus();
+  }
+
+  function wirePeek() {
+    var wrap = $("peekWrap");
+    if (!wrap) return;
+    $("peekClose").addEventListener("click", closePeek);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) closePeek(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !wrap.classList.contains("hidden")) closePeek();
+    });
+    $("peekCopy").addEventListener("click", async function () {
+      if (peekLast == null) return;          // the guard, not a courtesy
+      try {
+        await navigator.clipboard.writeText(peekLast);
+        confirmDone(this, "Copied!");
+      } catch (err) { toast("This browser would not let the page copy it.", "bad"); }
+    });
+  }
+
   function wireHomeMake() {
     $("makeText").addEventListener("input", function () {
       noteHomeInput(); updateHomeMeter(); growMakeBox(); noteGlowTyping();
@@ -1333,22 +1460,22 @@
     var depth = $("optDepth");
     if (depth) depth.addEventListener("change", function () { updateHomeMeter(true); });
 
-    /* ONE SETTING, TWO CONTROLS. The switch under the button and the one in
-       Advanced are the same thing said two ways round, so each follows the
-       other and the reading is redrawn whichever was used. */
-    var clear = $("clearBg"), solid = $("optSolidBg");
-    if (clear && solid) {
-      clear.checked = !solid.checked;
-      clear.addEventListener("change", function () {
-        solid.checked = !clear.checked;
-        if (homeDiscOut) tossDisc();
-        updateHomeMeter(true);
+    /* ONE SETTING, TWO CONTROLS, AND NOW THEY AGREE. Until v2.6.11 the switch
+       under the button said Transparent and the one in Advanced said Solid, so
+       each had to invert the other. Both now say the same thing, so each
+       assigns and the mirroring is half the code it was. */
+    var vis = $("solidBg"), adv = $("optSolidBg");
+    if (vis && adv) {
+      vis.checked = adv.checked;
+      vis.addEventListener("change", function () {
+        adv.checked = vis.checked;
+        afterBackgroundChange();
       });
-      solid.addEventListener("change", function () {
-        clear.checked = !solid.checked;
-        if (homeDiscOut) tossDisc();
-        updateHomeMeter(true);
+      adv.addEventListener("change", function () {
+        vis.checked = adv.checked;
+        afterBackgroundChange();
       });
+      paintSolidWord();
     }
 
     $("homeMakeBtn").addEventListener("click", pressHomeDisc);
@@ -1382,7 +1509,9 @@
     /* THE BIN THROWS IT AWAY, so the phone goes back to Make with nothing in
        the tray. tossDisc is also how a new press clears the old disc, which is
        why the flag moves here and not inside it. */
-    $("bin").addEventListener("click", function () { tossDisc(); setView("make"); });
+    $("bin").addEventListener("click", function () {
+      tossDisc(); setView("make"); paintTransNote();
+    });
 
     cd.addEventListener("pointerdown", function (e) {
       if (!homeDiscOut || e.button !== 0) return;
@@ -1458,7 +1587,7 @@
             return;
           }
         }
-        toast("There is no picture on the clipboard.", "bad");
+        toast(SAY.noPaste, "bad");
       } catch (err) {
         toast("The clipboard was not shared. Press Ctrl+V instead.", "bad");
       }
@@ -1984,6 +2113,7 @@
       homeLastRung = k;
       setBoardSizes(k);
 
+      paintMakeSay(over);
       $("makeLabel").innerHTML = over ? RUNG_LABEL_OVER : RUNG_LABELS[k];
       // The adjective wears the colour of the rung that earned it.
       var word = $("makeLabel").querySelector("em");
@@ -2061,6 +2191,7 @@
     // An attachment counts as something to press, so taking one off can put
     // the chain back to the empty box.
     paintGlow();
+    paintMakeSay(false);
   }
 
   async function takeHomeAttachment(f) {
@@ -2077,6 +2208,7 @@
     // without a key ever being struck.
     glowTouched = true;
     paintGlow();
+    paintMakeSay(false);
   }
 
   /* ==========================================================================
@@ -2140,7 +2272,11 @@
         setView("made");
         // A timer, not requestAnimationFrame. The frame callback does not run
         // in a headless test, and the disc would then never be told to come out.
-        setTimeout(function () { cd.classList.add("out"); homeDiscOut = true; }, DISC_EJECT_MS);
+        setTimeout(function () {
+          cd.classList.add("out"); homeDiscOut = true;
+          // The notice can only be right once there is a disc to be right about.
+          paintTransNote();
+        }, DISC_EJECT_MS);
       });
     } catch (err) {
       toast(friendly(err), "bad");
@@ -2200,7 +2336,11 @@
     homeReadDepth++;
     clearTimeout(homeReadTimer);
     homeReadTimer = setTimeout(function () {
-      if (homeReadDepth > 0) $("zone").classList.add("reading");
+      if (homeReadDepth > 0) {
+        $("zone").classList.add("reading");
+        // The spinner is decoration. This line is the board's one voice.
+        if ($("loadSay")) $("loadSay").textContent = SAY.reading;
+      }
     }, READING_DELAY_MS);
   }
 
@@ -2271,6 +2411,7 @@
     $("gotText").textContent = text === null ? "" : text;
     $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
     $("zone").classList.add("has");
+    $("loadSay").textContent = res === null ? SAY.plain : SAY.loaded;
     setView("loaded");
   }
 
@@ -2300,6 +2441,7 @@
   }
 
   function clearHomeLoaded() {
+    $("loadSay").textContent = SAY.loadIdle;
     setView("make");
     homeLoadedBlob = null;
     $("zone").classList.remove("has");

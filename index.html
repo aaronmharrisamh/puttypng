@@ -123,6 +123,12 @@
                Both words stay in the markup and CSS chooses, because a word
                written by JavaScript is a word some crawlers never read. -->
           <h2 id="headMake" tabindex="-1"><span class="w-a">Make</span><span class="w-b">Made!</span></h2>
+          <!-- THE MAKE READING. It is not a live region. It changes on every
+               keystroke, and a screen reader that spoke each one would bury
+               the thing the person is doing. The meter beside it says the same
+               in numbers, and the screen change is announced by focus landing
+               on the heading above. -->
+          <p class="say" id="makeSay">Whatever you embed will go inside the PuttyPNG image!</p>
         </div>
 
         <div class="head hl">
@@ -131,6 +137,11 @@
             <path d="M3.2 16v3.3a1.5 1.5 0 0 0 1.5 1.5h14.6a1.5 1.5 0 0 0 1.5-1.5V16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
           <h2 id="headLoad" tabindex="-1"><span class="w-a">Load</span><span class="w-b">Loaded!</span></h2>
+          <!-- THE BOARD'S ONE LIVE REGION. Loading is the thing that happens to
+               a person rather than because of them, so it is the one that has
+               to speak. The decode spinner below lost its role to this line, so
+               there is one voice in this column and not two. -->
+          <p class="say" id="loadSay" role="status">Drop a PuttyPNG here, or open one.</p>
         </div>
 
         <section class="col make">
@@ -203,13 +214,19 @@
             <!-- Advanced sits in the one cell the action bar leaves empty,
                  under the button and hard against its right edge. -->
             <div class="row adv-row">
-              <!-- OFF BY DEFAULT, AND THAT IS THE POINT. A solid PuttyPNG can be
-                   flattened onto a background and still decode. A transparent
-                   one cannot, so fewer places will carry it safely. -->
-              <label class="switch" id="clearWrap"
-                     title="Leave the background out. Only do this where the picture keeps its alpha.">
-                <input type="checkbox" id="clearBg">
-                <span class="track"></span> Transparent
+              <!-- ON BY DEFAULT, AND THAT IS THE POINT. A solid PuttyPNG can be
+                   flattened onto a background and still decode. A see-thru one
+                   cannot, so fewer places will carry it safely.
+
+                   THE WORD REPORTS THE STATE, IT DOES NOT NAME THE ACTION. It
+                   reads Solid while the picture is solid, and the knob agrees
+                   with it. The accessible name opens with the same word, which
+                   WCAG 2.5.3 requires, then adds the half a word leaves out:
+                   what pressing will do. -->
+              <label class="switch" id="solidWrap">
+                <input type="checkbox" id="solidBg" checked
+                       aria-label="Solid. The picture has a white background. Uncheck to make it see-thru.">
+                <span class="track"></span> <span class="say" id="solidWord">Solid</span>
               </label>
               <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
                 <span class="chev">&rsaquo;</span> Advanced
@@ -236,13 +253,13 @@
                    It is listed in the contract's exception list in Section 7. -->
               <div class="ordiv" aria-hidden="true"><span>OR</span></div>
               <div class="chips">
-                <button type="button" class="chip" id="openBtn">Open a PuttyPNG</button>
-                <button type="button" class="chip" id="pasteBtn">Paste from Clipboard</button>
+                <button type="button" class="chip" id="openBtn">Load one!</button>
+                <button type="button" class="chip" id="pasteBtn">Paste one!</button>
               </div>
               <input type="file" id="openIn" accept="image/png" hidden>
             </div>
             <div class="veil"><div class="big">Let go</div></div>
-            <div class="decoding" id="decoding" role="status">
+            <div class="decoding" id="decoding" aria-hidden="true">
               <svg width="72" height="72" viewBox="0 0 48 48" aria-hidden="true">
                 <circle class="pulse" cx="24" cy="24" r="9" fill="none" stroke="var(--clay)" stroke-width="1.4"/>
                 <g class="spin">
@@ -273,7 +290,7 @@
                      aria-label="What came out. You can select and correct it here."></pre>
               </div>
             </div>
-            <div class="again">Drop another PuttyPNG</div>
+            <div class="again">Make another one!</div>
           </div>
         </section>
 
@@ -588,6 +605,17 @@
           </div>
 
         <div class="deckrow">
+          <!-- THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
+               when the board loads, and it goes the moment the switch goes back
+               to Solid. A warning that outlives its cause is noise.
+               It sits on the picture, because it is about the picture. -->
+          <div class="transnote" id="transNote" hidden>
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+              <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span><b>Note:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+          </div>
           <div class="tray">
             <div class="lip"></div>
             <img class="cd" id="cd" alt="Your PuttyPNG. Drag it into Load, or press the bin to throw it away.">
@@ -631,7 +659,7 @@
       <div class="line">
         <b>PuttyPNG</b>
         <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Page v2.6.10</span>
+        <span>Page v2.6.11</span>
         <span class="sep" aria-hidden="true">&middot;</span>
         <span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span>
@@ -659,6 +687,25 @@
        Nodes that sit above the page. Not shared: only a page that can take a
        dropped file carries the veil.
        ========================================================================== -->
+  <!-- WHAT CAME BACK OUT. The one doubt a first time person has is whether it
+       really worked, and the only answer that is evidence is the picture read
+       back. Showing what they typed would prove nothing: the app already knows
+       what they typed. This decodes the finished PuttyPNG.
+       It is one modal for both shapes, because there is one board. -->
+  <div class="peek hidden" id="peekWrap" role="dialog" aria-modal="true" aria-labelledby="peekTitle">
+    <div class="peek-card">
+      <div class="peek-head">
+        <h3 id="peekTitle">What is inside</h3>
+        <button type="button" class="peek-x" id="peekClose" aria-label="Close">&times;</button>
+      </div>
+      <p class="small muted" id="peekWhat">Reading it back out of the picture...</p>
+      <pre class="peek-body" id="peekBody"></pre>
+      <div class="peek-acts">
+        <button type="button" class="btn btn-ghost" id="peekCopy">Copy Contents</button>
+      </div>
+    </div>
+  </div>
+
   <!-- The page-wide drop target. One overlay for the whole window, raised
        while a file is over the page. Hidden until then. -->
   <div class="drop-veil hidden" id="dropVeil" aria-hidden="true">
