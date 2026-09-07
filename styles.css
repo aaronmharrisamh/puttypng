@@ -40,15 +40,19 @@
   --shadow-lift: 0 2px 6px rgba(0,0,0,.06), 0 18px 46px rgba(0,0,0,.09);
   --space: 16px;
 
-  /* THE HOME BOARD.
-     One token owns the meter column. The action bar and the deck under it
-     both read it, so the slot can never drift away from the donut the disc
-     comes out of. scripts.js sets it in pixels from the measured card, never
-     as a per cent, because those two rows are different widths and a per cent
-     would resolve differently in each of them. */
-  --meter-col: 116px;
+  /* THE HOME BOARD: TWO SIZES, TWO TOKENS.
+     The donut shares its row with the Make button, so its width is what the
+     button can spare. The disc has a row to itself, so its width is what the
+     picture is worth. On a wide screen both come out of the same column and
+     hold the same number, and 152px is 2 * 18 + 116 written out. On a narrow
+     screen they must not agree, and one token cannot say two things.
+
+     scripts.js sets both in pixels from the measured card, never as a per
+     cent, because those two rows are different widths and a per cent would
+     resolve differently in each of them. setBoardSizes is the only writer. */
+  --meter-col: 116px;   /* the donut column in the action bar */
   --card-pad: 18px;
-  --slot-w: calc(2 * var(--card-pad) + var(--meter-col));
+  --slot-w: 152px;      /* the deck slot, and the disc in it */
 
   /* How long the board takes to answer a change of disc size. Everything that
      grows with the donut borrows this, so they all move together. */

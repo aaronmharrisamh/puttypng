@@ -1145,9 +1145,9 @@
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
-    setMeterWidth(0);
+    setBoardSizes(0);
     updateHomeMeter(true);
-    window.addEventListener("resize", function () { setMeterWidth(homeShownRung); });
+    window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
   }
 
   function wireHomeMake() {
@@ -1631,22 +1631,33 @@
      record of the climb rather than a single bar.
      ========================================================================== */
 
-  /* THE SQUEEZE. Each rung gives the donut a larger share of the card, and the
-     button gives that width up. The share is turned into pixels from the
-     MEASURED card, because the action bar and the deck below it are different
-     widths and a per cent would resolve differently in each of them.
-     One token drives the donut, the slot, the disc, and the deck together. */
-  function setMeterWidth(k) {
+  /* THE SQUEEZE, AND THE PICTURE. Each rung gives the donut a larger share of
+     the card, and the button gives that width up. The disc grows with it. Both
+     are turned into pixels from the MEASURED card, because the action bar and
+     the deck below it are different widths and a per cent would resolve
+     differently in each of them.
+
+     The two are written apart. On this shape they agree, because the deck sits
+     under the same column the donut takes its share of. On a touch shape they
+     must not: the donut shares a row with a button that holds words, and the
+     disc has a row to itself. */
+  function setBoardSizes(k) {
     homeShownRung = Math.min(k, RUNG_SHARE.length - 1);
     var col = document.querySelector(".col.make");
     if (!col) return;
     var pad = parseFloat(getComputedStyle(col).paddingLeft) || 0;
     var inner = col.clientWidth - pad * 2;
     if (inner <= 0) return;
-    var px = Math.max(METER_MIN_PX, Math.round(inner * RUNG_SHARE[homeShownRung]));
-    // The token is set on the root, because that is where every rule that
-    // reads it resolves. Setting it on the column would leave the deck behind.
-    document.documentElement.style.setProperty("--meter-col", px + "px");
+
+    var meter = Math.max(METER_MIN_PX, Math.round(inner * RUNG_SHARE[homeShownRung]));
+    var slot = meter + pad * 2;
+
+    // Both tokens are set on the root, because that is where every rule that
+    // reads them resolves. Setting them on the column would leave the deck
+    // behind.
+    var root = document.documentElement.style;
+    root.setProperty("--meter-col", meter + "px");
+    root.setProperty("--slot-w", slot + "px");
   }
 
   // Draw one ring layout. Returns where the cut ended up, in degrees, so a
@@ -1820,7 +1831,7 @@
       // few bytes that did it were far too small to notice on their own.
       if (!force && k > homeLastRung) flashRing();
       homeLastRung = k;
-      setMeterWidth(k);
+      setBoardSizes(k);
 
       $("makeLabel").innerHTML = over ? RUNG_LABEL_OVER : RUNG_LABELS[k];
       // The adjective wears the colour of the rung that earned it.
