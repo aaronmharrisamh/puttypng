@@ -81,10 +81,34 @@
   ];
   var RUNG_LABEL_OVER = "<em>TOO MUCH</em>";
 
-  // What share of the Make column the donut takes at each rung, and the pixel
-  // width it can never drop below.
-  var RUNG_SHARE = [0.28, 0.39, 0.50, 0.60];
-  var METER_MIN_PX = 104;
+  /* HOW BIG THE METER IS. One rule for both shapes: the meter takes a share of
+     the column that holds it, inside a floor and a ceiling.
+     The shares differ because the rows differ. A desktop column is about 410px
+     and a phone row is about 303px, but the phone also has to leave the button
+     enough width to hold "Make a VERY MASSIVE PuttyPNG". The touch numbers were
+     tuned on the R5 mockup and reproduce its sizes at that width.
+     The ceiling stops a large phone or a small tablet growing the meter past
+     what the button can survive. The desktop has never had one, and Infinity
+     keeps it that way. */
+  var METER_TUNING = {
+    wide:  { share: [0.28,  0.39,  0.50,  0.60 ], min: 104, max: Infinity },
+    touch: { share: [0.145, 0.178, 0.211, 0.244], min: 40,  max: 96 }
+  };
+
+  /* HOW BIG THE FINISHED PUTTYPNG IS. It is not the meter. The meter shares a
+     row with a button that has to hold words, so it gives width up. The disc
+     has a row to itself, so it takes the width the picture is worth.
+     wide is null on purpose: the desktop disc is the donut plus the card
+     padding, worked out from the measured column, and writing it as four fixed
+     sizes would break the moment the window is resized. null means there is no
+     table here, and setBoardSizes says so in one branch.
+     The touch numbers are R5's own preview table, r-shell.js:16. They are
+     absolute pixels rather than a share, which is a departure from every other
+     size on this board, and the comment above is the whole defence. */
+  var DISC_TUNING = {
+    wide: null,
+    touch: [150, 190, 230, 268]
+  };
 
   // Timings for the home board, in milliseconds.
   var RUNG_MOVE_MS = 460;      // one rung sliding inward as the next grows out
@@ -1180,6 +1204,13 @@
     setBoardSizes(0);
     updateHomeMeter(true);
     window.addEventListener("resize", function () { setBoardSizes(homeShownRung); });
+
+    /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
+       on its own, so the sizes have to be asked for again when it does.
+       The listener takes no argument from the event: setBoardSizes reads a rung
+       index, and handing it a MediaQueryListEvent would clamp to NaN and size
+       the board in NaN pixels. */
+    touchPointer.addEventListener("change", function () { setBoardSizes(homeShownRung); });
   }
 
   function wireHomeMake() {
@@ -1672,20 +1703,23 @@
      the deck below it are different widths and a per cent would resolve
      differently in each of them.
 
-     The two are written apart. On this shape they agree, because the deck sits
-     under the same column the donut takes its share of. On a touch shape they
-     must not: the donut shares a row with a button that holds words, and the
-     disc has a row to itself. */
+     The two are written apart. On a wide screen they agree, because the deck
+     sits under the same column the donut takes its share of. On a touch screen
+     they must not: the donut shares a row with a button that holds words, and
+     the disc has a row to itself, so each reads its own tuning. */
   function setBoardSizes(k) {
-    homeShownRung = Math.min(k, RUNG_SHARE.length - 1);
+    homeShownRung = Math.min(k, RUNGS.length - 1);
     var col = document.querySelector(".col.make");
     if (!col) return;
     var pad = parseFloat(getComputedStyle(col).paddingLeft) || 0;
     var inner = col.clientWidth - pad * 2;
     if (inner <= 0) return;
 
-    var meter = Math.max(METER_MIN_PX, Math.round(inner * RUNG_SHARE[homeShownRung]));
-    var slot = meter + pad * 2;
+    var t = METER_TUNING[touchPointer.matches ? "touch" : "wide"];
+    var meter = Math.min(t.max, Math.max(t.min, Math.round(inner * t.share[homeShownRung])));
+
+    var discs = DISC_TUNING[touchPointer.matches ? "touch" : "wide"];
+    var slot = discs ? discs[homeShownRung] : meter + pad * 2;
 
     // Both tokens are set on the root, because that is where every rule that
     // reads them resolves. Setting them on the column would leave the deck
@@ -2228,6 +2262,10 @@
     window.PuttyPNGDebug = window.PuttyPNGDebug || {};
     window.PuttyPNGDebug.launchTransform = launchTransform;
     window.PuttyPNGDebug.setView = setView;
+    window.PuttyPNGDebug.tuning = function () {
+      return { rungs: RUNGS.length, wide: METER_TUNING.wide.share,
+               touch: METER_TUNING.touch.share, disc: DISC_TUNING.touch };
+    };
 
     // A choice made in Advanced wins, in both directions. With no choice
     // stored, the browser's own reduced-motion setting decides the movement,
