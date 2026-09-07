@@ -251,7 +251,7 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             </div>
           </div>
           <h3 style="margin-top:16px;">Transparent vs solid, and a flattening caveat</h3>
-          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a light grey jewel case instead, lying on white paper that runs to the corners. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Transparent switch under the Make button turns it off. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
+          <p class="small">On its own the CD has <strong>transparent</strong> corners, so it drops cleanly onto any background. Turn on <span class="mono">solidBackground</span> and the disc is set in a light grey jewel case instead, lying on white paper that runs to the corners. Every pixel of the square becomes opaque, so the whole square carries data (a 256px cover holds 65,425 bytes rather than 46,635) and the picture <strong>survives being flattened</strong>. The page turns it on by default, and the Solid switch under the Make button turns it off: the word reads Solid while it is on and See-thru while it is not. This matters: if a platform composites a transparent PuttyPNG onto an opaque background, the once-transparent pixels become opaque and shift the data's pixel indexing, so it will not decode. <strong>Use a transparent cover only where the image is kept with its alpha intact (lossless PNG); use a solid background (or the noise style) for anywhere that might flatten it.</strong></p>
         </div>
       </div>
 
@@ -447,7 +447,7 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
       <div class="line">
         <b>PuttyPNG</b>
         <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Page v2.6.11</span>
+        <span>Page v2.7.0</span>
         <span class="sep" aria-hidden="true">&middot;</span>
         <span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span>
