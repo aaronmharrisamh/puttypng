@@ -109,7 +109,7 @@
            #boardGrid is this grid. The grid needs a name of its own because the
            phone's view flag is set on it, and a flag on the region would match
            no rule and raise no error. -->
-      <div class="board" id="boardGrid">
+      <div class="board" id="boardGrid" data-view="make">
 
         <div class="head hm">
           <svg class="mark" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
@@ -117,7 +117,12 @@
             <circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
             <path d="M12 1.6v2.2M12 20.2v2.2M1.6 12h2.2M20.2 12h2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
-          <h2>Make</h2>
+          <!-- TWO WORDS, ONE HEADING. The desktop shows Make and Load beside each
+               other and never uses the second word. A phone shows one screen at
+               a time, so this heading has to say Made! once a PuttyPNG exists.
+               Both words stay in the markup and CSS chooses, because a word
+               written by JavaScript is a word some crawlers never read. -->
+          <h2 id="headMake" tabindex="-1"><span class="w-a">Make</span><span class="w-b">Made!</span></h2>
         </div>
 
         <div class="head hl">
@@ -125,7 +130,7 @@
             <path d="M12 2.5v11M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M3.2 16v3.3a1.5 1.5 0 0 0 1.5 1.5h14.6a1.5 1.5 0 0 0 1.5-1.5V16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
-          <h2>Load</h2>
+          <h2 id="headLoad" tabindex="-1"><span class="w-a">Load</span><span class="w-b">Loaded!</span></h2>
         </div>
 
         <section class="col make">
@@ -599,7 +604,7 @@
       <div class="line">
         <b>PuttyPNG</b>
         <span class="sep" aria-hidden="true">&middot;</span>
-        <span>Page v2.6.6</span>
+        <span>Page v2.6.7</span>
         <span class="sep" aria-hidden="true">&middot;</span>
         <span>Engine v2.1.0</span>
         <span class="sep" aria-hidden="true">&middot;</span>

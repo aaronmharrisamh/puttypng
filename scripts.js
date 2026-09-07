@@ -279,6 +279,38 @@
      so the presence of the board is the question every drop handler asks. */
   function onBoardPage() { return !!$("board"); }
 
+  /* WHAT THE PERSON IS HOLDING. A live query, not a stored flag: it re-answers
+     when the window changes and when a tablet rotates. The stylesheet asks the
+     same question in CSS, and this is the same question asked in JavaScript,
+     so the two can never disagree about the shape on screen. */
+  var touchPointer = window.matchMedia("(hover: none), (pointer: coarse)");
+
+  /* WHICH SCREEN THE PHONE IS ON. The desktop shows every region at once and
+     its CSS never reads this attribute. The phone shows the one region named
+     here. Setting it on a desktop is harmless and keeps one code path for both
+     shapes, which is the whole reason there is one block of markup. */
+  function setView(name) {
+    var grid = $("boardGrid");
+    if (!grid || grid.getAttribute("data-view") === name) return;
+    grid.setAttribute("data-view", name);
+    focusView(name);
+  }
+
+  /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
+     now on screen. It is the one element every screen has, it names the screen,
+     and tabindex="-1" lets it take focus without joining the tab order.
+     Without this, focus is left on a button that has left the page, and the
+     next tab starts again at the top of the document.
+     The desktop shows every region at once, so nothing moved and nothing is
+     focused there. */
+  var VIEW_HEAD = { make: "headMake", made: "headMake", loaded: "headLoad" };
+
+  function focusView(name) {
+    if (!touchPointer.matches) return;
+    var head = $(VIEW_HEAD[name]);
+    if (head) head.focus();
+  }
+
   // Show a short message at the bottom of the screen. kind is "ok" or "bad".
   function toast(message, kind) {
     toastEl.textContent = message;
@@ -1234,7 +1266,10 @@
 
     // The disc going takes its two chips with it, because the tip only shows
     // while the disc is out. Nothing else has to be cleared by hand.
-    $("bin").addEventListener("click", function () { tossDisc(); });
+    /* THE BIN THROWS IT AWAY, so the phone goes back to Make with nothing in
+       the tray. tossDisc is also how a new press clears the old disc, which is
+       why the flag moves here and not inside it. */
+    $("bin").addEventListener("click", function () { tossDisc(); setView("make"); });
 
     cd.addEventListener("pointerdown", function (e) {
       if (!homeDiscOut || e.button !== 0) return;
@@ -1976,6 +2011,10 @@
         homeDiscRun++;
         resetDisc();
         cd.src = png.dataUrl;
+        // The PuttyPNG exists and the tray is where it lives. On a phone that
+        // is a screen of its own, so the flag moves before the disc ejects
+        // into it. On a desktop nothing moves and the flag is a record.
+        setView("made");
         // A timer, not requestAnimationFrame. The frame callback does not run
         // in a headless test, and the disc would then never be told to come out.
         setTimeout(function () { cd.classList.add("out"); homeDiscOut = true; }, DISC_EJECT_MS);
@@ -2109,6 +2148,7 @@
     $("gotText").textContent = text === null ? "" : text;
     $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
     $("zone").classList.add("has");
+    setView("loaded");
   }
 
   // The whole chip takes the file. Nothing asks for a small target inside it.
@@ -2137,6 +2177,7 @@
   }
 
   function clearHomeLoaded() {
+    setView("make");
     homeLoadedBlob = null;
     $("zone").classList.remove("has");
     $("gotImg").removeAttribute("src");
@@ -2181,9 +2222,12 @@
     var hasEngine = typeof PuttyPNG !== "undefined";
 
     // A small development surface. The confetti's transform rule is exposed
-    // so a test can check it without waiting for a frame to run.
+    // so a test can check it without waiting for a frame to run, and the view
+    // flag so a test can change screen the way the board does rather than by
+    // writing the attribute and missing what setView does around it.
     window.PuttyPNGDebug = window.PuttyPNGDebug || {};
     window.PuttyPNGDebug.launchTransform = launchTransform;
+    window.PuttyPNGDebug.setView = setView;
 
     // A choice made in Advanced wins, in both directions. With no choice
     // stored, the browser's own reduced-motion setting decides the movement,

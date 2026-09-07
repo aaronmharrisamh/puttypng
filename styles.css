@@ -307,6 +307,19 @@ nav.tabs a {
 
 .head { display: flex; align-items: baseline; gap: 12px; }
 
+/* THE SECOND WORD IS FOR ONE SCREEN ONLY. Each heading carries both the word
+   the desktop uses and the word a phone needs once that screen is reached.
+   The desktop shows Make and Load beside each other and never uses the second,
+   so it is hidden here and turned back on inside the touch query in Section 7.
+   Both stay in the markup, so a crawler reads the heading whichever shape it
+   renders, and the word is never written by JavaScript. */
+.head h2 .w-b { display: none; }
+
+/* The heading takes focus when a phone changes screen. It is not in the tab
+   order, so it must not look like a control that is. */
+.head h2:focus { outline: none; }
+.head h2:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 4px; }
+
 .head h2 {
   font-family: var(--display-font), cursive;
   font-size: clamp(27px, 4.5vw, 41px);
@@ -1497,6 +1510,60 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .dropnote .sub,
   .makeveil .big,
   .veil .big { display: none; }
+}
+
+/* ONE SCREEN AT A TIME. THIS BLOCK IS THE VIEW CONTRACT.
+   The desktop shows Make, Load and the deck at once and never matches this
+   query, so none of it applies there. A phone shows the one region the
+   data-view flag on #boardGrid names.
+
+   Every region below already exists once in the markup. Nothing here builds a
+   second copy of anything, and no later part may. What each view shows:
+
+     make    the Make heading, the Make column, Advanced, and the two Load
+             chips only
+     made    the Make heading, reading Made!, and the deck
+     loaded  the Load heading, reading Loaded!, and the whole Load column
+
+   A region the grid does not ask for is removed with display:none rather than
+   hidden, because only display:none takes it out of the accessibility tree.
+   A screen reader then hears one screen, the same as the eye sees. Do not
+   soften it to visibility or opacity for an animation. */
+@media (hover: none), (pointer: coarse) {
+
+  .board { grid-template-columns: 1fr; }
+
+  .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad" "cl"; }
+  .board[data-view="made"]   { grid-template-areas: "hm" "sm"; }
+  .board[data-view="loaded"] { grid-template-areas: "hl" "cl"; }
+
+  .board[data-view="make"]   > .head.hl,
+  .board[data-view="make"]   > .deckrow,
+  .board[data-view="made"]   > .col.make,
+  .board[data-view="made"]   > .drawer,
+  .board[data-view="made"]   > .head.hl,
+  .board[data-view="made"]   > .col.load,
+  .board[data-view="loaded"] > .head.hm,
+  .board[data-view="loaded"] > .col.make,
+  .board[data-view="loaded"] > .drawer,
+  .board[data-view="loaded"] > .deckrow { display: none; }
+
+  /* THE MAKE SCREEN KEEPS THE LOAD COLUMN FOR TWO BUTTONS AND NOTHING ELSE.
+     Open a PuttyPNG and Paste from Clipboard exist once, and they live in that
+     column, so a phone with an empty board can still reach one somebody sent.
+     Everything around them goes, so the screen reads as a way out of Make
+     rather than as a second column.
+     A later part that needs a third thing on this screen adds it to the
+     contract above and to this list, here, and not in its own file. */
+  .board[data-view="make"] > .col.load > .body > *:not(.dropnote) { display: none; }
+  .board[data-view="make"] .dropnote > *:not(.chips) { display: none; }
+
+  /* The heading names the screen. The first word is the desktop's, the second
+     belongs to the screen this phone has arrived at. */
+  .board[data-view="made"]   .head.hm h2 .w-a,
+  .board[data-view="loaded"] .head.hl h2 .w-a { display: none; }
+  .board[data-view="made"]   .head.hm h2 .w-b,
+  .board[data-view="loaded"] .head.hl h2 .w-b { display: inline; }
 }
 
 /* Cards / sections */
