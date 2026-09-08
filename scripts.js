@@ -171,6 +171,7 @@
   var D_X = "M7.5 7.5l9 9M16.5 7.5l-9 9";
   var D_FILE = "M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5zM13.5 3v5.5H19";
   var D_TICK = "M5 12.5l4.5 4.5L19 7.5";
+  var D_WRITE = "m13.5 4.5 6 6M4 20l4.5-1 12-12a2.1 2.1 0 0 0-3-3l-12 12L4 20Z";
   // R5's marks for the phone's Made screen. Each is one path with two
   // subpaths, because homeIcon draws one path and both of these are stroked.
   var D_AGAIN = "M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5";
@@ -255,33 +256,252 @@
   // A drop has to fit in memory twice over, once as bytes and once as pixels.
   var MAX_DROP_BYTES = 64 * 1024 * 1024;
 
-  /* WHAT THE DISC SAYS WHEN NOBODY WROTE ON IT. None of these names what is
-     inside, so a saying can never give away what the picture is hiding. A
-     person who wants their own words types them in Advanced. */
-  var DISC_SAYINGS = [
-    "Something is hidden inside this PNG!",
-    "There's a secret in this picture!",
-    "This PNG is fuller than it looks!",
-    "Look closer. It's all in here!",
-    "Don't judge a PNG by its cover!",
-    "A whole file lives in this disc!",
-    "Yes, it's really all inside!",
-    "Pressed into a PNG, for you!",
-    "More in here than pixels!",
-    "This picture has something to say!"
-  ];
+  /* Ten sayings per family. Password protection selects the locked pool
+     before any filename or extension is read. */
+  var DISC_SAYINGS = {
+    "text": {
+      "extensions": [],
+      "sayings": [
+        "This picture has words inside!",
+        "A note lives in this PNG!",
+        "More than pixels. A message!",
+        "Your next read is in this image!",
+        "Words, tucked into a picture!",
+        "Open this PNG. Read the note!",
+        "This disc has something to say!",
+        "A whole message, pictured here!",
+        "Yes, you can read what's inside!",
+        "A little image. A real note!"
+      ]
+    },
+    "attachment": {
+      "extensions": [],
+      "sayings": [
+        "A whole file lives in this PNG!",
+        "This picture carries a file!",
+        "More in here than pixels!",
+        "One image. A file tucked inside!",
+        "Your file took the picture route!",
+        "Open this image. Get the file!",
+        "A little disc with a file inside!",
+        "There's an attachment in here!",
+        "This PNG comes with contents!",
+        "A file, pressed into a picture!"
+      ]
+    },
+    "pdf": {
+      "extensions": [
+        ".pdf"
+      ],
+      "sayings": [
+        "A whole PDF lives in this PNG!",
+        "This picture has pages inside!",
+        "Your PDF took the scenic route!",
+        "Open this image. Find the PDF!",
+        "Pages, tucked into a picture!",
+        "More than pixels. A PDF!",
+        "A little image. A whole PDF!",
+        "This disc is carrying a PDF!",
+        "Yes, there's a PDF in here!",
+        "A PDF, pressed into a picture!"
+      ]
+    },
+    "word": {
+      "extensions": [
+        ".doc",
+        ".docx",
+        ".docm"
+      ],
+      "sayings": [
+        "A Word document lives in here!",
+        "This PNG has a document inside!",
+        "Your document is in the picture!",
+        "Open this image. Find the doc!",
+        "A whole document, pictured here!",
+        "More than pixels. A Word file!",
+        "This little disc carries a doc!",
+        "A Word file took the image route!",
+        "Yes, the document is inside!",
+        "A document, pressed into a PNG!"
+      ]
+    },
+    "excel": {
+      "extensions": [
+        ".xls",
+        ".xlsx",
+        ".xlsm",
+        ".csv"
+      ],
+      "sayings": [
+        "A spreadsheet lives in this PNG!",
+        "This picture has cells inside!",
+        "Rows and columns, tucked inside!",
+        "Your spreadsheet is in the picture!",
+        "Open this PNG. Find the sheet!",
+        "More than pixels. A spreadsheet!",
+        "A whole sheet fits in here!",
+        "This disc is carrying a spreadsheet!",
+        "Yes, the spreadsheet is inside!",
+        "A spreadsheet, packed as a picture!"
+      ]
+    },
+    "slides": {
+      "extensions": [
+        ".ppt",
+        ".pptx",
+        ".pptm",
+        ".ppsx"
+      ],
+      "sayings": [
+        "A whole slide deck lives in here!",
+        "This picture has slides inside!",
+        "Your presentation is in this PNG!",
+        "Open this image. Find the slides!",
+        "A slide deck, tucked into a disc!",
+        "More than pixels. A presentation!",
+        "Slides took the picture route!",
+        "This little PNG carries a deck!",
+        "Yes, the presentation is inside!",
+        "A presentation, pressed into a PNG!"
+      ]
+    },
+    "odt": {
+      "extensions": [
+        ".odt",
+        ".ott"
+      ],
+      "sayings": [
+        "An OpenDocument lives in here!",
+        "This PNG carries an ODT file!",
+        "Your ODT document is in the picture!",
+        "Open this image. Find the ODT!",
+        "An ODT file, tucked into a disc!",
+        "More than pixels. An OpenDocument!",
+        "A document took the PNG route!",
+        "This picture holds your ODT file!",
+        "Yes, there's an OpenDocument inside!",
+        "An OpenDocument, pressed into a PNG!"
+      ]
+    },
+    "ods": {
+      "extensions": [
+        ".ods",
+        ".ots"
+      ],
+      "sayings": [
+        "An ODS spreadsheet lives in here!",
+        "This PNG carries an ODS file!",
+        "Your ODS sheet is in the picture!",
+        "Open this image. Find the ODS!",
+        "An ODS sheet, tucked into a disc!",
+        "More than pixels. An ODS sheet!",
+        "An open-format sheet fits in here!",
+        "This picture holds your ODS file!",
+        "Yes, there's an ODS file inside!",
+        "An ODS spreadsheet, pressed into a PNG!"
+      ]
+    },
+    "odp": {
+      "extensions": [
+        ".odp",
+        ".otp"
+      ],
+      "sayings": [
+        "An ODP presentation lives in here!",
+        "This PNG carries an ODP file!",
+        "Your ODP slides are in the picture!",
+        "Open this image. Find the ODP!",
+        "An ODP deck, tucked into a disc!",
+        "More than pixels. An ODP deck!",
+        "An open-format deck fits in here!",
+        "This picture holds your ODP file!",
+        "Yes, there's an ODP file inside!",
+        "An ODP presentation, pressed into a PNG!"
+      ]
+    },
+    "textfile": {
+      "extensions": [
+        ".txt",
+        ".md",
+        ".log"
+      ],
+      "sayings": [
+        "A whole text file lives in here!",
+        "This PNG has a text file inside!",
+        "Your text file is in the picture!",
+        "Open this image. Find the text!",
+        "A text file, tucked into a disc!",
+        "More than pixels. A text file!",
+        "A little picture carries this text!",
+        "This image has a file to read!",
+        "Yes, there's a text file in here!",
+        "A text file, pressed into a PNG!"
+      ]
+    },
+    "image": {
+      "extensions": [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".svg",
+        ".avif"
+      ],
+      "sayings": [
+        "There's another image inside!",
+        "A picture, tucked into a picture!",
+        "This PNG carries an image file!",
+        "Open this image. Find the other!",
+        "One picture with another inside!",
+        "More than a cover. An image file!",
+        "Your image is packed in this disc!",
+        "This picture has a picture to share!",
+        "Yes, a whole image lives in here!",
+        "An image file, pressed into a PNG!"
+      ]
+    },
+    "archive": {
+      "extensions": [
+        ".zip",
+        ".7z",
+        ".rar",
+        ".tar",
+        ".gz"
+      ],
+      "sayings": [
+        "An archive lives in this PNG!",
+        "This picture carries an archive!",
+        "A whole archive, tucked inside!",
+        "Open this image. Find the archive!",
+        "Your archive took the image route!",
+        "More than pixels. An archive!",
+        "An archive fits in this little disc!",
+        "This PNG has a package inside!",
+        "Yes, the archive is in here!",
+        "An archive, pressed into a picture!"
+      ]
+    },
+    "locked": {
+      "extensions": [],
+      "sayings": [
+        "Something is locked inside this PNG!",
+        "This picture opens with a password!",
+        "Locked contents, tucked inside!",
+        "A little image with a secret inside!",
+        "More than pixels. Locked contents!",
+        "This disc has a password on it!",
+        "A secret, pressed into a picture!",
+        "Open with a password to see inside!",
+        "Yes, there's something locked in here!",
+        "Your password opens what's inside!"
+      ]
+    }
+  };
 
-  // The same, for a disc with a password on it.
-  var DISC_LOCKED_SAYINGS = [
-    "Something secret fits inside this PNG!",
-    "Locked tight. Ask me for the key!",
-    "A secret, with a password on it!"
-  ];
-
-  /* THE LONGEST A FILE NAME MAY BE ON THE DISC. The info line has one arc and
-     no more, so a long name has to give. 28 characters leaves room for the
-     word count and the size beside it at the size the line is drawn. */
-  var DISC_NAME_MAX = 28;
+  // Keep both ends and the extension visible on the marker title.
+  var DISC_NAME_MAX = 42;
+  var DISC_TITLE_MAX = 64;
 
   /* THE TWO FACES THE DISC IS WRITTEN IN. A canvas cannot use a font the
      document has not fetched, and it falls back to another face without
@@ -307,6 +527,14 @@
      Typing something new clears it, so the next one gets its own. */
   var homeSaying = null;
   var homeSayingLocked = false;
+  var homeTitleFilename = false;
+  var homeEditedLabel = null;
+  var homeLabelLocked = false;
+  var homeMade = null;
+  var homeTitleDraft = null;
+  var homeTitleSaving = false;
+  var homeTitlePreviewRun = 0;
+  var homeTitlePreviewTimer = 0;
 
   // The faces, once. A promise, so a second press waits rather than refetching.
   var discFontsReady = null;
@@ -591,44 +819,79 @@
      draws them; everything here decides what they say.
      ------------------------------------------------------------------------ */
 
-  // One saying, from the pool that suits the disc.
-  function pickDiscSaying(locked) {
-    var pool = locked ? DISC_LOCKED_SAYINGS : DISC_SAYINGS;
-    return pool[Math.floor(Math.random() * pool.length)];
+  // Select the protected pool before inspecting the attachment.
+  function discCategory(attachment, locked) {
+    if (locked) return "locked";
+    if (!attachment) return "text";
+    var ext = discExtension(attachment.name);
+    var keys = Object.keys(DISC_SAYINGS);
+    for (var i = 0; i < keys.length; i++) {
+      if (DISC_SAYINGS[keys[i]].extensions.indexOf(ext) >= 0) return keys[i];
+    }
+    return "attachment";
+  }
+
+  function discExtension(name) {
+    var match = /\.[^.\\/]+$/.exec(String(name || ""));
+    return match ? match[0].toLowerCase() : "";
+  }
+
+  // Choose a different saying when one is already displayed.
+  function pickDiscSaying(locked, previous, category) {
+    var pool = DISC_SAYINGS[category || discCategory(homeAttached, locked)].sayings;
+    var choices = pool.filter(function (saying) { return saying !== previous; });
+    return choices[Math.floor(Math.random() * choices.length)];
   }
 
   /* A file name short enough for one arc, cut in the middle so both ends
      survive. A name is what a person recognises, and the start and the
      extension carry more of that than the middle does. */
   function shortDiscName(name) {
-    name = String(name || "");
-    if (name.length <= DISC_NAME_MAX) return name;
-    var dot = name.lastIndexOf(".");
-    var ext = dot > 0 ? name.slice(dot) : "";
-    var base = dot > 0 ? name.slice(0, dot) : name;
+    var characters = Array.from(String(name || ""));
+    if (characters.length <= DISC_NAME_MAX) return characters.join("");
+    var dot = characters.lastIndexOf(".");
+    var ext = dot > 0 ? characters.slice(dot) : [];
+    var base = dot > 0 ? characters.slice(0, dot) : characters;
     var keep = DISC_NAME_MAX - ext.length - 1;
-    if (keep < 4) return name.slice(0, DISC_NAME_MAX - 1) + "\u2026";
+    if (keep < 4) {
+      return characters.slice(0, 25).join("") + "\u2026" + characters.slice(-16).join("");
+    }
     var head = Math.ceil(keep * 0.62);
-    return base.slice(0, head) + "\u2026" + base.slice(base.length - (keep - head)) + ext;
+    return base.slice(0, head).join("") + "\u2026" + base.slice(base.length - (keep - head)).join("") + ext.join("");
   }
 
-  /* WHAT IS INSIDE, IN ONE LINE. A disc with a password says its size and
-     that it is locked, and nothing else: the name and the word count are
-     inside the picture, and printing either on the outside would undo the
-     password that hid them. */
+  // A protected disc names no content, size, type, or word count.
   function discInfoLine(input, locked) {
-    var bytes = typeof input === "string" ? new TextEncoder().encode(input).length : input.length;
-    var size = homeFmt(bytes);
-    if (locked) return size + ", locked";
-    var parts = [];
-    if (homeAttached) parts.push(shortDiscName(homeAttached.name));
+    if (locked) return "Locked contents inside!";
     if (typeof input === "string") {
       var found = input.trim().match(/\S+/g);
       var n = found ? found.length : 0;
-      parts.push(n.toLocaleString("en-US") + (n === 1 ? " word" : " words"));
+      return n.toLocaleString("en-US") + (n === 1 ? " word" : " words") + " of text inside!";
     }
-    parts.push(size);
-    return parts.join(" \u00b7 ");
+    var size = homeFmt(input.length).replace(/\.0+(?= KB| MB)/, "");
+    var category = discCategory(homeAttached, false);
+    var type = category === "attachment" ? "file" : discExtension(homeAttached.name).slice(1).toUpperCase();
+    return size + " " + type + " inside!";
+  }
+
+  // The board supplies wording; the engine draws and embeds it.
+  function applyDiscWriting(input, opts) {
+    var locked = !!opts.password;
+    if (!homeSaying || homeSayingLocked !== locked) {
+      homeSaying = pickDiscSaying(locked);
+      homeSayingLocked = locked;
+    }
+    if (locked) {
+      // A name or public title from an earlier press must not cross into a locked disc.
+      if (opts.label && opts.label.trim() && (!homeLabelLocked || homeTitleFilename)) opts.label = null;
+      homeTitleFilename = false;
+      if (opts.infoText !== " ") opts.infoText = discInfoLine(input, true);
+    } else if (homeTitleFilename && homeAttached && opts.label !== " ") {
+      opts.label = shortDiscName(homeAttached.name);
+    }
+    if (opts.label == null) opts.label = homeSaying;
+    if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
+    opts.infoArrow = true;
   }
 
   // The two faces, fetched once and awaited before a disc is pressed.
@@ -1279,6 +1542,7 @@
      unable to take a paste at all. */
   function wirePaste() {
     document.addEventListener("paste", function (e) {
+      if ($("titleDialog") && $("titleDialog").open) return;
       var items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
       if (onBoardPage()) {
@@ -1404,6 +1668,7 @@
     if (!onBoardPage()) return;
     wireHomeMake();
     wireHomeDisc();
+    wireTitleEditor();
     wireHomeLoad();
 
     // Before the first paint of the board, because both of these decide which
@@ -1412,6 +1677,7 @@
     placeWayOut();
     placeSolidSwitch();
     placeMadeActions();
+    placeDiscEdit();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -1435,6 +1701,7 @@
       placeWayOut();
       placeSolidSwitch();
       placeMadeActions();
+      placeDiscEdit();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
@@ -1510,6 +1777,21 @@
         ? "The PuttyPNG you made. Download it or copy it with the buttons below."
         : "Your PuttyPNG. Drag it into Load, or press the bin to throw it away.";
     }
+  }
+
+  // Move the same edit button into the phone's result window.
+  function placeDiscEdit() {
+    var button = $("discEdit"), win = $("discWin"), tip = document.querySelector(".cdtip");
+    if (!button || !win || !tip) return;
+    if (touchPointer.matches) win.appendChild(button);
+    else tip.insertBefore(button, $("bin"));
+  }
+
+  function paintDiscEdit() {
+    var button = $("discEdit");
+    if (!button) return;
+    button.hidden = !homeDiscOut || !homeMade || homeMade.opts.coverStyle !== "cd" || !!homeMade.opts.cover;
+    button.disabled = homePressing || homeTitleSaving;
   }
 
   /* WHAT THE EMPTY BOX ASKS FOR. A finger cannot drop a file, so the phone is
@@ -1687,6 +1969,7 @@
      no difference. */
   function paintMadeScreen() {
     paintTransNote();
+    paintDiscEdit();
     var grid = $("boardGrid");
     var on = (grid ? grid.getAttribute("data-view") : "make") === "made" && homeDiscOut;
     ["discNote", "sendIt", "madeActs", "againRow"].forEach(function (id) {
@@ -1896,6 +2179,7 @@
 
   function wireHomeDisc() {
     var cd = $("cd");
+    $("discEdit").innerHTML = homeIcon(D_WRITE, 16) + $("discEdit").innerHTML;
 
     // The tip is a button too, so the invitation and the act are one thing.
     $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
@@ -2003,6 +2287,202 @@
 
     document.addEventListener("pointerup", endDiscDrag);
     document.addEventListener("pointercancel", function () { endDiscDrag(null); });
+  }
+
+  /* ------------------------------------------------------------------------
+     THE TITLE EDITOR
+     Drafts preview separately. Saving re-encodes the finished disc's payload
+     and options, so changing the label cannot replace its contents.
+     ------------------------------------------------------------------------ */
+
+  function titleDraftWords(draft) {
+    return draft.filename ? shortDiscName(draft.made.name) : draft.text.trim().replace(/\s+/g, " ");
+  }
+
+  function titleEditorSize() {
+    var dialog = $("titleDialog");
+    if (!dialog || !dialog.open) return;
+    var viewport = window.visualViewport;
+    var height = viewport ? viewport.height : window.innerHeight;
+    var inset = viewport ? Math.max(0, window.innerHeight - height - viewport.offsetTop) : 0;
+    dialog.style.setProperty("--title-height", Math.max(160, height - 16) + "px");
+    dialog.style.setProperty("--title-keyboard-inset", inset + "px");
+  }
+
+  function openTitleEditor() {
+    if (!homeMade || !homeDiscOut || homePressing || homeTitleSaving) return;
+    var text = homeMade.customText || homeMade.opts.label.trim() || pickDiscSaying(!!homeMade.opts.password, null, homeMade.category);
+    homeTitleDraft = { text: text, filename: homeMade.filename, made: homeMade };
+    $("titlePreview").src = $("cd").src;
+    paintTitleDraft(true);
+    $("titleDialog").showModal();
+    titleEditorSize();
+    if (touchPointer.matches) $("titleHeading").focus();
+    else { $("titleInput").focus(); $("titleInput").select(); }
+  }
+
+  function paintTitleDraft(fillInput) {
+    var draft = homeTitleDraft;
+    if (!draft) return;
+    var input = $("titleInput"), locked = !!draft.made.opts.password;
+    var words = titleDraftWords(draft);
+    if (fillInput) input.value = draft.filename ? draft.made.name : draft.text;
+    input.readOnly = draft.filename;
+    $("titleFilename").checked = draft.filename;
+    $("titleFilename").disabled = locked || !draft.made.name || homeTitleSaving;
+    $("titleFilenameHelp").textContent = locked ? "Hidden while this disc is password protected."
+      : draft.made.name || "Typed text has no filename. Use a saying or your own title.";
+    $("titleHelp").textContent = draft.filename
+      ? "The disc shortens the middle to fit and keeps the extension. The original filename stays unchanged."
+      : "Start with our words, or write something of your own.";
+    var invalid = !words || (!draft.filename && draft.text.length > DISC_TITLE_MAX);
+    $("titleError").hidden = !invalid;
+    $("titleError").textContent = !words ? "Enter a title, or choose another saying."
+      : invalid ? "Keep the title to " + DISC_TITLE_MAX + " characters." : "";
+    input.setAttribute("aria-invalid", invalid ? "true" : "false");
+    $("titleSave").disabled = invalid || homeTitleSaving;
+    $("titleInput").disabled = homeTitleSaving;
+    $("titleAnother").disabled = draft.filename || homeTitleSaving;
+    $("titleCount").textContent = draft.filename ? "Filename" : draft.text.length + " / " + DISC_TITLE_MAX;
+    var index = DISC_SAYINGS[draft.made.category].sayings.indexOf(draft.text);
+    $("titleSayingCount").textContent = draft.filename ? "Filename selected"
+      : index >= 0 ? "Saying " + (index + 1) + " of 10" : "Your own words";
+    $("titleCaption").textContent = words || "Your title here";
+    $("titlePrivacy").hidden = !locked;
+    clearTimeout(homeTitlePreviewTimer);
+    var run = ++homeTitlePreviewRun;
+    if (!invalid && !homeTitleSaving) {
+      homeTitlePreviewTimer = setTimeout(function () { previewTitleDraft(draft, words, run); }, 180);
+    }
+  }
+
+  async function previewTitleDraft(draft, words, run) {
+    // Preview a small sample, so typing never recompresses or encrypts the payload.
+    var opts = Object.assign({}, draft.made.opts, {
+      label: words, size: 512, minSize: 512, maxSize: 512,
+      password: undefined, name: undefined, mime: undefined, tag: undefined, compress: false
+    });
+    try {
+      await ensureDiscFonts();
+      var png = await PuttyPNG.encode("Title preview", opts);
+      if (run !== homeTitlePreviewRun || homeTitleDraft !== draft) return;
+      $("titlePreview").src = png.dataUrl;
+      $("titlePreview").alt = "Disc title preview: " + words;
+    } catch (err) {
+      if (run !== homeTitlePreviewRun || homeTitleDraft !== draft) return;
+      $("titleError").textContent = "The preview could not update. " + friendly(err);
+      $("titleError").hidden = false;
+    }
+  }
+
+  async function saveDiscTitle(event) {
+    event.preventDefault();
+    var draft = homeTitleDraft;
+    if (!draft || homeTitleSaving || homePressing) return;
+    var words = titleDraftWords(draft);
+    if (!words || (!draft.filename && draft.text.length > DISC_TITLE_MAX)) { paintTitleDraft(false); return; }
+    var made = draft.made;
+    var opts = Object.assign({}, made.opts, { label: words });
+    homeTitleSaving = true;
+    $("homeMakeBtn").disabled = true;
+    $("titleSave").textContent = "Saving...";
+    paintDiscEdit();
+    paintTitleDraft(false);
+    try {
+      await ensureDiscFonts();
+      var png = await PuttyPNG.encode(made.input, opts);
+      // Decode the image surface before replacing the blob and its visible preview.
+      var image = new Image();
+      image.src = png.dataUrl;
+      await image.decode();
+      if (homeTitleDraft !== draft || homeMade !== made || !homeDiscOut) return;
+      homeLastBlob = png.blob;
+      homeMade.opts = opts;
+      homeMade.filename = draft.filename;
+      homeMade.customText = draft.text.trim().replace(/\s+/g, " ");
+      homeTitleFilename = draft.filename;
+      homeLabelLocked = !!opts.password;
+      homeEditedLabel = draft.filename ? "" : homeMade.customText;
+      $("optLabel").value = homeEditedLabel;
+      $("optLabelOn").checked = true;
+      $("cd").src = png.dataUrl;
+      paintDiscNote();
+      closeTitleEditor();
+      toast("Title saved. Your contents are unchanged.", "ok");
+    } catch (err) {
+      if (homeTitleDraft === draft) {
+        $("titleError").textContent = "The title was not saved. " + friendly(err);
+        $("titleError").hidden = false;
+      }
+    } finally {
+      homeTitleSaving = false;
+      $("homeMakeBtn").disabled = false;
+      $("titleSave").textContent = "Save title";
+      paintDiscEdit();
+      if (homeTitleDraft === draft) {
+        $("titleInput").disabled = false;
+        $("titleFilename").disabled = !!made.opts.password || !made.name;
+        $("titleAnother").disabled = draft.filename;
+        $("titleSave").disabled = false;
+      }
+    }
+  }
+
+  function closeTitleEditor() {
+    homeTitleDraft = null;
+    homeTitlePreviewRun++;
+    clearTimeout(homeTitlePreviewTimer);
+    if ($("titleDialog").open) $("titleDialog").close();
+  }
+
+  function wireTitleEditor() {
+    var dialog = $("titleDialog");
+    $("discEdit").addEventListener("click", openTitleEditor);
+    $("titleInput").addEventListener("input", function () {
+      if (!homeTitleDraft) return;
+      homeTitleDraft.text = this.value;
+      paintTitleDraft(false);
+    });
+    $("titleFilename").addEventListener("change", function () {
+      homeTitleDraft.filename = this.checked;
+      paintTitleDraft(true);
+    });
+    $("titleAnother").addEventListener("click", function () {
+      homeTitleDraft.text = pickDiscSaying(!!homeTitleDraft.made.opts.password, homeTitleDraft.text, homeTitleDraft.made.category);
+      paintTitleDraft(true);
+    });
+    $("titleForm").addEventListener("submit", saveDiscTitle);
+    $("titleCancel").addEventListener("click", closeTitleEditor);
+    $("titleClose").addEventListener("click", closeTitleEditor);
+    dialog.addEventListener("cancel", function (event) { event.preventDefault(); closeTitleEditor(); });
+    dialog.addEventListener("close", function () {
+      if (dialog.open) return;
+      closeTitleEditor();
+      $("titlePreview").removeAttribute("src");
+      if (homeDiscOut) $("discEdit").focus({ preventScroll: true });
+    });
+    dialog.addEventListener("keydown", function (event) {
+      if (event.key !== "Tab") return;
+      var fields = Array.from(dialog.querySelectorAll("button:not(:disabled), textarea:not(:disabled), input:not(:disabled)"));
+      var first = fields[0], last = fields[fields.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === $("titleHeading"))) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    });
+    dialog.addEventListener("dragover", function (event) { event.preventDefault(); event.stopPropagation(); });
+    dialog.addEventListener("drop", function (event) { event.preventDefault(); event.stopPropagation(); });
+    $("optLabel").addEventListener("input", function () {
+      homeEditedLabel = null;
+      homeTitleFilename = false;
+      homeLabelLocked = !!$("optPassword").value;
+    });
+    window.addEventListener("resize", titleEditorSize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", titleEditorSize);
+      window.visualViewport.addEventListener("scroll", titleEditorSize);
+    }
   }
 
   function wireHomeLoad() {
@@ -2648,6 +3128,10 @@
     // A different PuttyPNG deserves its own saying. Flipping the background
     // does not come through here, which is what keeps that one wording.
     homeSaying = null;
+    homeTitleFilename = false;
+    if (homeEditedLabel !== null && $("optLabel").value === homeEditedLabel) $("optLabel").value = "";
+    homeEditedLabel = null;
+    homeMade = null;
     var raw = currentHomeBytes().byteLength;
     var top = Math.min(homeLastRung, RUNGS.length - 1);
     var band = capOf(top) - (homeLastRung ? capOf(homeLastRung - 1) : 0);
@@ -2726,6 +3210,9 @@
   function tossDisc(then) {
     if (!homeDiscOut) { if (then) then(); return; }
     homeDiscOut = false;
+    homeMade = null;
+    closeTitleEditor();
+    paintDiscEdit();
     var run = homeDiscRun;
     $("cd").classList.add("gone");
     setTimeout(function () {
@@ -2735,8 +3222,9 @@
   }
 
   async function pressHomeDisc() {
-    if (homePressing) return;
+    if (homePressing || homeTitleSaving) return;
     homePressing = true;
+    paintDiscEdit();
     var btn = $("homeMakeBtn"), lab = $("makeLabel"), label = lab.innerHTML;
     btn.disabled = true;
     lab.textContent = "Pressing...";
@@ -2751,20 +3239,10 @@
       // of the other end still knowing what it was called.
       if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
 
-      /* WHAT THE BOARD WRITES ON THE DISC when the drawer left a line empty.
-         An absent option is the board's turn; a single space is a line the
-         person turned off, and neither of those is overwritten here.
-         The saying is held across a background flip, because that presses the
-         same PuttyPNG again and rewording it would read as a fault. */
-      var locked = !!opts.password;
-      if (opts.label == null) {
-        if (!homeSaying || homeSayingLocked !== locked) {
-          homeSaying = pickDiscSaying(locked);
-          homeSayingLocked = locked;
-        }
-        opts.label = homeSaying;
-      }
-      if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
+      applyDiscWriting(input, opts);
+      var made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
+        category: discCategory(homeAttached, !!opts.password), filename: homeTitleFilename,
+        customText: homeTitleFilename ? ($("optLabel").value || homeSaying) : opts.label };
 
       // The faces have to be in before the canvas can letter with them.
       await ensureDiscFonts();
@@ -2776,6 +3254,7 @@
         // This disc is the current one now, and it starts from a clean slot
         // whatever an unfinished toss left behind.
         homeDiscRun++;
+        homeMade = made;
         resetDisc();
         // The width and the height are read off the image, so the reading has
         // to wait for the image. once:true, or every press adds another.
@@ -2799,6 +3278,7 @@
     lab.innerHTML = label;
     btn.disabled = false;
     homePressing = false;
+    paintDiscEdit();
   }
 
   async function copyHomeDisc(el, word) {
@@ -2830,6 +3310,8 @@
       cd.classList.remove("lifted");
       loadHomeFromSrc(cd.src, "the one you made", homeLastBlob);
       homeDiscOut = false;
+      homeMade = null;
+      paintDiscEdit();
       cd.classList.add("gone");
       var run = homeDiscRun;
       setTimeout(function () { if (run === homeDiscRun) resetDisc(); }, DISC_TOSS_MS);

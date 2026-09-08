@@ -1074,6 +1074,64 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .bin svg { flex: none; }
 
+/* The title entry point stays visible beside a finished disc. */
+.disc-edit {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  margin-left: 32px; min-height: 36px; padding: 7px 14px;
+  border: 0; border-radius: 999px; background: var(--ink); color: #fff;
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.disc-edit[hidden] { display: none; }
+.disc-edit svg { flex: none; }
+.disc-edit .edit-short { display: none; }
+.disc-edit:focus-visible { outline: 3px solid #247791; outline-offset: 3px; }
+.disc-edit:disabled { opacity: .55; cursor: wait; }
+
+/* Draft changes stay in this dialog until Save title replaces the PNG. */
+.title-editor {
+  position: fixed; inset: 0; margin: auto;
+  width: min(460px, calc(100% - 32px)); max-width: none;
+  max-height: min(90vh, var(--title-height, 90dvh)); padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 20px;
+  background: #fffefa; color: var(--ink); box-shadow: var(--shadow-lift);
+  overflow: hidden;
+}
+.title-editor::backdrop { background: rgba(25, 30, 25, .45); }
+.title-editor form { display: flex; flex-direction: column; max-height: inherit; }
+.title-grip { display: none; }
+.title-head { display: flex; align-items: flex-start; gap: 10px; padding: 22px 24px 0; flex: none; }
+.title-head > div { flex: 1; min-width: 0; }
+.title-head h2 { margin: 0; font-size: 23px; line-height: 1.3; }
+.title-head p { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
+.title-close { width: 44px; min-height: 44px; flex: none; padding: 0; margin: -8px -9px 0 0; border: 0; background: none; font: inherit; font-size: 26px; color: var(--ink); cursor: pointer; }
+.title-body { padding: 16px 24px 20px; overflow: auto; min-height: 0; overscroll-behavior: contain; }
+.title-preview { display: flex; align-items: center; gap: 14px; background: #f1f3eb; border: 1px solid #e0e3d6; border-radius: 12px; padding: 8px 12px; margin-bottom: 18px; }
+.title-preview img { width: 126px; height: 126px; object-fit: contain; flex: none; }
+.title-preview > div { min-width: 0; }
+.title-preview small { display: block; font-size: 10px; color: #5d6a50; margin-bottom: 6px; }
+.title-preview strong { display: block; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.title-field-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.title-field-label label { margin: 0; font-size: 12px; font-weight: 600; }
+#titleCount { font-size: 11px; color: var(--muted); }
+#titleInput { display: block; width: 100%; min-height: 86px; resize: vertical; border: 1px solid #a4aa98; border-radius: 9px; background: #fff; padding: 12px; font: inherit; font-size: 16px; line-height: 1.45; box-sizing: border-box; }
+#titleInput[readonly] { color: var(--ink-soft); background: #f3f4ee; }
+.title-help { color: var(--muted); font-size: 11px; line-height: 1.55; margin: 7px 0 0; }
+.title-error { color: var(--bad); font-size: 12px; margin: 7px 0 0; }
+.title-error[hidden], #titlePrivacy[hidden] { display: none; }
+.title-filename { display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 14px 0; margin-top: 17px; }
+.title-filename > div { min-width: 0; }
+.title-filename label { font-size: 12px; font-weight: 600; }
+.title-filename small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.title-switch { min-width: 44px; min-height: 44px; justify-content: center; flex: none; margin: 0; }
+.title-switch:has(input:disabled) { opacity: .5; cursor: default; }
+.title-suggestions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.title-suggestions .btn { min-height: 44px; font-size: 12px; }
+#titleSayingCount { font-size: 11px; color: var(--muted); }
+.title-actions { display: flex; flex: none; justify-content: flex-end; gap: 8px; padding: 15px 24px; border-top: 1px solid var(--line-strong); background: #fffefa; }
+.title-actions .btn { min-width: 100px; min-height: 44px; justify-content: center; font-size: 12px; }
+.title-editor :focus-visible { outline: 3px solid #247791; outline-offset: 3px; }
+.title-editor button:disabled { opacity: .5; cursor: default; }
+
 /* THE PHONE'S MADE SCREEN, OFF BY DEFAULT.
    A desktop shows the deck, the tip beside the disc and the bin, and those say
    what these say. One region must not carry two designs at once, so every rule
@@ -1930,9 +1988,10 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   /* Beside the disc there is no room, so the two chips go under it instead of
      disappearing, which would take the bin away with them. */
-  .deckrow { height: calc(var(--slot-w) + 116px); }
+  .deckrow { height: calc(var(--slot-w) + 154px); }
   .cdtip { left: 0; top: calc(var(--slot-w) + 20px); }
   .cdtip .arrow { display: none; }
+  .disc-edit { margin-left: 0; }
   .bin { align-self: flex-start; }
 }
 
@@ -2037,7 +2096,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .discwin {
     --disc-top: 40px;
     display: block; position: relative; overflow: hidden; flex: none;
-    height: calc(var(--slot-w) + 76px);
+    height: calc(var(--slot-w) + 94px);
     border: 1px solid var(--line-strong); border-radius: 12px;
     background: #fbfbfc;
   }
@@ -2070,14 +2129,23 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      does both jobs on a phone. */
   .cdtip, .cdtools { display: none; }
 
+  .discwin > .disc-edit {
+    position: absolute; bottom: 6px; left: 10px; z-index: 10;
+    margin: 0; min-height: 44px; padding: 0 9px;
+    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+    border-radius: 9px;
+  }
+  .disc-edit .edit-short { display: inline; }
+  .disc-edit .edit-full { display: none; }
+
   /* The notice joins the column instead of being hung off the deck row. */
   .transnote { position: static; width: auto; top: auto; }
 
   /* The caption sits at the foot of the window. The disc above it is placed
      rather than flowed, so this is placed too. */
   .discnote {
-    display: block; position: absolute; left: 0; right: 0; bottom: 9px;
-    text-align: center; font-size: 12px; color: var(--muted);
+    display: block; position: absolute; left: 91px; right: 12px; bottom: 16px;
+    text-align: right; font-size: 11px; color: var(--muted);
   }
   .discnote[hidden] { display: none; }
 
@@ -2125,6 +2193,21 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
     color: var(--ink); font-weight: 600; font-size: 12.5px;
   }
   .corner .pill svg { color: var(--muted); flex: none; }
+
+  .title-editor {
+    width: min(440px, 100%); margin: auto auto 0;
+    top: auto; bottom: var(--title-keyboard-inset, 0px);
+    max-height: min(92dvh, var(--title-height, 92dvh));
+    border-radius: 22px 22px 0 0;
+  }
+  .title-grip { display: block; flex: none; width: 36px; height: 4px; border-radius: 4px; margin: 9px auto 0; background: #c7cdbe; }
+  .title-head { padding: 14px 20px 0; }
+  .title-head p { font-size: 11px; }
+  .title-body { padding: 14px 20px 18px; }
+  .title-preview { padding: 6px 12px; margin-bottom: 14px; gap: 12px; }
+  .title-preview img { width: 96px; height: 96px; }
+  .title-actions { padding: 13px 20px max(16px, env(safe-area-inset-bottom)); }
+  .title-actions .btn { flex: 1; min-width: 0; min-height: 48px; }
 }
 .transnote svg { flex: none; margin-top: 1px; color: #b8860b; }
 .transnote b { font-weight: 700; }

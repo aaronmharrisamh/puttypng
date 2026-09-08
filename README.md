@@ -12,10 +12,35 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
+Current release: page **2.11.1**, engine **2.2.1**, protocol **1**.
+
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
 PuttyPNG works either way, but the engine source card on the How it works tab
 can only fill itself over HTTP.
+
+## Editing a disc title
+
+After making a disc, press **Edit Title** on desktop or **Edit** at the lower
+left of the mobile result. The editor starts with the current wording and
+previews changes before saving. Use your own words, choose another saying, or
+use the attached filename. Long filenames lose their middle on the disc and
+keep their extension; the embedded file keeps its complete original name.
+
+Save title updates the downloadable and copyable PNG using the same contents,
+password, and cover settings. Cancel leaves the finished PNG unchanged.
+
+The board selects from 130 sayings: ten each for typed text, general
+attachments, ten popular file families, and protected contents. File families
+include PDF, Word, Excel/CSV, PowerPoint, OpenDocument text/spreadsheets/slides,
+text/Markdown files, images, and archives. The small contents arc uses a word
+count for typed text or a size and file type for attachments. Its arrow points
+toward **Paste into PuttyPNG.com**.
+
+Password-protected discs use generic sayings and **Locked contents inside!**.
+The automatic writing includes no filename, file type, size, or word count.
+Filename mode is unavailable while protected. A custom title is still visible
+without the password, as the editor explains.
 
 ## The files
 

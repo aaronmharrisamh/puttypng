@@ -396,7 +396,7 @@
                     <div class="field" style="margin:0 0 10px;">
                       <label for="optLabel">Its words</label>
                       <input type="text" id="optLabel" placeholder="leave empty for a saying">
-                      <div class="small muted" style="margin-top:6px;">Leave it empty and the board writes one of its own sayings.</div>
+                      <div class="small muted" style="margin-top:6px;">Leave it empty for a saying. Use Edit Title beside a finished disc to change its writing.</div>
                     </div>
                     <div class="grid2">
                       <div class="field" style="margin:0;">
@@ -604,7 +604,7 @@
                     <div class="field" style="margin:0 0 10px;">
                       <label for="optInfoText">Its words</label>
                       <input type="text" id="optInfoText" placeholder="leave empty for the name, words and size">
-                      <div class="small muted" style="margin-top:6px;">Leave it empty and the board writes the name, the words and the size. A disc with a password says its size and that it is locked, and never its name.</div>
+                      <div class="small muted" style="margin-top:6px;">Leave it empty for the word count or file size and type. A password-protected disc only says Locked contents inside!</div>
                     </div>
                     <div class="grid2">
                       <div class="field" style="margin:0;">
@@ -929,6 +929,9 @@
                 </svg>
                 <button type="button" class="say" id="cdTipCopy"></button>
               </div>
+              <button type="button" class="disc-edit" id="discEdit" aria-label="Edit title" aria-haspopup="dialog" aria-controls="titleDialog" hidden>
+                <span class="edit-short">Edit</span><span class="edit-full">Edit Title</span>
+              </button>
               <button type="button" class="bin ghost" id="bin" aria-label="Trash this PuttyPNG">
                 <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                   <path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6.5 7l.8 12.1A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"
@@ -1017,8 +1020,8 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.11.0</span>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.11.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
         <span class="sep" aria-hidden="true">&middot;</span><a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
@@ -1054,6 +1057,46 @@
       </div>
     </div>
   </div>
+
+  <!-- One title editor serves both pointer types. Saving replaces the PNG. -->
+  <dialog class="title-editor" id="titleDialog" aria-labelledby="titleHeading" aria-describedby="titleDescription">
+    <form id="titleForm" novalidate>
+      <div class="title-grip" aria-hidden="true"></div>
+      <header class="title-head">
+        <div>
+          <h2 id="titleHeading" tabindex="-1">Edit title</h2>
+          <p id="titleDescription">Change the writing on the outside of your disc.</p>
+        </div>
+        <button type="button" class="title-close" id="titleClose" aria-label="Cancel title changes">&times;</button>
+      </header>
+      <div class="title-body">
+        <div class="title-preview">
+          <img id="titlePreview" alt="Disc title preview" width="512" height="512">
+          <div><small>ON YOUR DISC</small><strong id="titleCaption"></strong></div>
+        </div>
+        <div class="title-field-label"><label for="titleInput">Disc title</label><span id="titleCount"></span></div>
+        <textarea id="titleInput" rows="2" maxlength="64" aria-describedby="titleHelp titleError"></textarea>
+        <p class="title-help" id="titleHelp">Start with our words, or write something of your own.</p>
+        <p class="title-error" id="titleError" role="alert" hidden></p>
+        <div class="title-filename">
+          <div><label for="titleFilename">Use filename only</label><small id="titleFilenameHelp"></small></div>
+          <label class="switch title-switch">
+            <input type="checkbox" role="switch" id="titleFilename" aria-describedby="titleFilenameHelp">
+            <span class="track"></span>
+          </label>
+        </div>
+        <div class="title-suggestions">
+          <button type="button" class="btn ghost" id="titleAnother">Another saying</button>
+          <span id="titleSayingCount">10 sayings</span>
+        </div>
+        <p class="title-help" id="titlePrivacy" hidden>Your title is visible without the password. Keep it discreet.</p>
+      </div>
+      <footer class="title-actions">
+        <button type="button" class="btn ghost" id="titleCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="titleSave">Save title</button>
+      </footer>
+    </form>
+  </dialog>
 
   <!-- The page-wide drop target. One overlay for the whole window, raised
        while a file is over the page. Hidden until then. -->

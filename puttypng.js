@@ -2,7 +2,7 @@
  * PuttyPNG - Press your data into a PNG. Hand it to anyone.
  * https://puttypng.com
  *
- * Protocol v1  |  Engine v1.0.0
+ * Protocol v1  |  Engine v2.2.1
  * A tiny, dependency-free engine that hides any data inside an ordinary lossless
  * PNG and reads it back out. Paste this whole file into your project - it is the
  * documentation of the protocol as much as the implementation of it.
@@ -23,7 +23,7 @@
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
-  var ENGINE_VERSION = "2.2.0";   // 2.2.0 gave the disc three styleable lines of writing
+  var ENGINE_VERSION = "2.2.1";   // Disc title editing and discreet protected labels
 
   // The public object. Everything a developer touches hangs off of this.
   var PuttyPNG = {
@@ -1028,6 +1028,54 @@
     ctx.restore();
   }
 
+  /* Place an SVG-path arrow beside the info arc, toward the paste instruction.
+     It uses the resolved text bounds, so it follows the words at every size. */
+  function resolveInfoArrow(ctx, info, rim, geo, size) {
+    if (!info || !rim || info.sp.pos !== "bottom" || rim.sp.pos !== "bottom") return null;
+    var scale = size * geo.inset / 256;
+    function endOf(line) {
+      var row = line.lines[line.lines.length - 1];
+      var half = arcTextAngle(ctx, row.text, row.radius, lineFont(line.sp, line.px), line.sp.spacing) / 2;
+      var angle = Math.PI / 2 - half - 7 * scale / row.radius;
+      return { x: geo.cx + row.radius * Math.cos(angle), y: geo.cy + row.radius * Math.sin(angle) };
+    }
+    var start = endOf(info), end = endOf(rim);
+    var dx = end.x - start.x, dy = end.y - start.y;
+    var length = Math.sqrt(dx * dx + dy * dy);
+    if (length < 7 * scale) return null;
+    var control = { x: (start.x + end.x) / 2 + 3 * scale, y: (start.y + end.y) / 2 + 2 * scale };
+    var direction = Math.atan2(end.y - control.y, end.x - control.x);
+    var tipSize = 3.5 * scale;
+    var left = { x: end.x - tipSize * Math.cos(direction - .65), y: end.y - tipSize * Math.sin(direction - .65) };
+    var right = { x: end.x - tipSize * Math.cos(direction + .65), y: end.y - tipSize * Math.sin(direction + .65) };
+    var points = [start, control, end, left, right];
+    var radii = points.map(function (p) { return Math.hypot(p.x - geo.cx, p.y - geo.cy); });
+    if (Math.max.apply(null, radii) > geo.rSheen - scale || Math.min.apply(null, radii) < geo.rHub + 2 * scale) return null;
+    var angles = points.map(function (p) { return Math.atan2(p.y - geo.cy, p.x - geo.cx); });
+    var low = Math.min.apply(null, angles), high = Math.max.apply(null, angles);
+    var path = "M" + start.x + " " + start.y + " Q" + control.x + " " + control.y + " " + end.x + " " + end.y +
+      " M" + left.x + " " + left.y + " L" + end.x + " " + end.y + " L" + right.x + " " + right.y;
+    return { path: path, scale: scale, band: {
+      rIn: Math.min.apply(null, radii) - 3 * scale,
+      rOut: Math.max.apply(null, radii) + 3 * scale,
+      spans: [{ center: (low + high) / 2, half: (high - low) / 2 + .035 }]
+    } };
+  }
+
+  function drawInfoArrow(ctx, arrow) {
+    if (!arrow) return;
+    var path = new Path2D(arrow.path);
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(255,255,255,.85)";
+    ctx.lineWidth = 2.8 * arrow.scale;
+    ctx.stroke(path);
+    ctx.strokeStyle = "#252529";
+    ctx.lineWidth = 1.2 * arrow.scale;
+    ctx.stroke(path);
+    ctx.restore();
+  }
+
   // Angular width (radians) the text would occupy at a given font + radius.
   // `spacing` is extra pixels added after every letter. It must be applied here
   // as well as when drawing, or the fit decision and the drawn text disagree.
@@ -1337,8 +1385,8 @@
      a caller that does, as the board does, passes its own line instead. */
   function buildInfoRim(info) {
     info = info || {};
+    if (info.encrypted) return "Locked contents inside!";
     var sz = info.size != null ? formatSize(info.size) : "";
-    if (info.encrypted) return sz ? sz + ", locked" : "locked";
     if (info.name) return sz ? info.name + " \u00b7 " + sz : info.name;
     if (sz) return sz;
     return "";
@@ -1475,13 +1523,15 @@
        here later is cleared for without either of them being told. */
     var splatOpts = opts.splat || {};
     var textPad = resolveTextPad(splatOpts, size);
-    var written = [];
+    var written = [], byName = {};
     ["label", "rim", "info"].forEach(function (which) {
       var line = resolveArcLine(ctx, lineWords(which, opts),
                                 lineSpec(which, opts, geo, size), geo, size, textPad);
-      if (line) written.push(line);
+      if (line) { written.push(line); byName[which] = line; }
     });
     var bands = written.map(function (line) { return line.band; });
+    var infoArrow = opts.infoArrow ? resolveInfoArrow(ctx, byName.info, byName.rim, geo, size) : null;
+    if (infoArrow) bands.push(infoArrow.band);
 
     stippleSurface(ctx, geo, size, bands);
 
@@ -1504,6 +1554,7 @@
        line. resolveArcLine already holds every line clear of it, so this only
        makes the order harmless as well as correct. */
     written.forEach(function (line) { drawArcLine(ctx, line, geo, size); });
+    drawInfoArrow(ctx, infoArrow);
 
     /* THE CASE GOES IN BEHIND, LAST. Drawing it under the finished disc with
        destination-over does three things at once: it fills the corners, it
@@ -1754,6 +1805,7 @@
       rimStyle: options.rimStyle,
       infoText: options.infoText,
       infoStyle: options.infoStyle,
+      infoArrow: !!options.infoArrow,
       imprint: options.imprintImg,       // a pre-loaded HTMLImageElement (see encode)
       solidBackground: !!options.solidBackground,
       hub: options.hub,                  // { size, holeSize, outerThickness, innerThickness }
@@ -2660,10 +2712,10 @@
     assert(splatDotStyle("rainbowStrong", 0).indexOf("hsl(") === 0, "rainbow is hsl");
   });
 
-  test("buildInfoRim: the size, the name, and locked when encrypted", async function () {
+  test("buildInfoRim: public details and discreet encrypted contents", async function () {
     // A locked disc says its size and nothing else. The name is inside the
     // picture, and printing it on the outside would undo the password.
-    assert(buildInfoRim({ size: 5320, type: "binary", name: "x.zip", encrypted: true }) === "5.2 KB, locked", "encrypted -> locked, no name");
+    assert(buildInfoRim({ size: 5320, type: "binary", name: "x.zip", encrypted: true }) === "Locked contents inside!", "encrypted -> no name, type, or size");
     assert(buildInfoRim({ size: 2048, type: "binary", name: "photo.jpg" }) === "photo.jpg · 2.0 KB", "file -> name and size");
     assert(buildInfoRim({ size: 320, type: "text" }) === "320 bytes", "no name -> the size alone");
     assert(buildInfoRim({}) === "", "nothing known -> no line at all");
