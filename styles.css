@@ -448,6 +448,41 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
    is at the right, so a left edge would point at nothing. */
 .drawer-inner { padding: 16px 2px 4px 2px; border-top: 1px solid var(--line); }
 
+/* THE DISC'S THREE LINES, IN THE DRAWER. A disc carries what a person wrote,
+   where to take it, and what is inside, and each is one group with the same
+   five controls in the open. The rest sit behind Fine tune, because a shadow
+   blur is not a first question and fifty controls in a row is not a panel. */
+.cdline {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 10px 12px 12px; margin: 0 0 12px; min-width: 0;
+}
+
+.cdline legend {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--muted); padding: 0 6px;
+}
+
+.cdline input[type="color"] { height: 34px; padding: 2px; }
+
+.finetune { margin-top: 10px; }
+
+/* The browser's own marker is replaced, so the chevron can turn. list-style
+   is for Firefox and the pseudo-element is for the WebKit browsers, and both
+   have to be said or one of them keeps two markers. */
+.finetune summary {
+  display: flex; align-items: center; gap: 7px;
+  min-height: 38px; padding: 4px 0; cursor: pointer; list-style: none;
+  font-size: 13px; font-weight: 600; color: var(--clay-deep);
+}
+
+.finetune summary::-webkit-details-marker { display: none; }
+
+.finetune summary::before { content: "\203a"; font-size: 15px; transition: transform .2s ease; }
+
+.finetune[open] summary::before { transform: rotate(90deg); }
+
+.finetune summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; border-radius: 6px; }
+
 /* Output preview */
 .preview {
   display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px;

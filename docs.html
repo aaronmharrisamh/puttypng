@@ -127,15 +127,19 @@
               <tr><td class="mono">maxSize</td><td class="mono">4096</td><td>Ceiling for the finished image (px). It caps auto-sizing, and it is also what stops the CD cover growing past an explicit <span class="mono">size</span>. Past it the engine raises <span class="mono">PTY-E04</span> rather than making a larger picture.</td></tr>
               <tr><td class="mono">name</td><td class="mono">""</td><td>Filename recorded in the (protected) metadata.</td></tr>
               <tr><td class="mono">coverStyle</td><td class="mono">"noise"</td><td>Built-in generated cover when no <span class="mono">cover</span> is given: <span class="mono">"noise"</span> or <span class="mono">"cd"</span> (a reflective disc). CD defaults <span class="mono">depth</span> to subtle.</td></tr>
-              <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: curved text across the top of the disc (shrinks / wraps).</td></tr>
+              <tr><td class="mono">label</td><td class="mono">""</td><td>CD only: the top line, what a person wrote on the disc. It shrinks to fit, then wraps onto a second arc inside the first. Empty means no top line at all.</td></tr>
               <tr><td class="mono">solidBackground</td><td class="mono">false</td><td>CD only: set the disc in a light grey jewel case, lying on white, instead of leaving the corners transparent. Every pixel opaque &rarr; the whole square carries data, and it survives being flattened onto a background. The page turns this on by default.</td></tr>
               <tr><td class="mono">imprint</td><td class="mono">none</td><td>CD only: an image (File/Blob/URL/Image) etched onto the disc as a grayscale stipple, beneath the label.</td></tr>
-              <tr><td class="mono">fontFamily</td><td class="mono">system</td><td>CD only: the label font.</td></tr>
-              <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: label size: <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span> (each scales with the disc size; still shrinks/wraps to fit).</td></tr>
-              <tr><td class="mono">rimText</td><td class="mono">auto</td><td>CD only: the mirrored microtext around the inner rim. Defaults to <span class="mono">"Paste into PuttyPNG.com to decode!"</span>. The text shrinks to fit if it is long.</td></tr>
+              <tr><td class="mono">labelStyle</td><td class="mono">marker</td><td>CD only: how the top line is drawn. A style block for this line. Every field is optional: <span class="mono">pos</span> ("top" or "bottom"), <span class="mono">radius</span> (a fraction of the disc, held between the hub and the edge), <span class="mono">arc</span> (degrees the words may take), <span class="mono">sides</span> (1, or 2 for a copy top and bottom), <span class="mono">font</span>, <span class="mono">size</span> (points on a 256px disc, scaled from there), <span class="mono">px</span> (an exact pixel size, which wins over size), <span class="mono">weight</span>, <span class="mono">spacing</span>, <span class="mono">ink</span>, <span class="mono">mode</span> ("solid", or "marker" to darken the disc through the strokes), <span class="mono">opacity</span>, <span class="mono">outline</span> with <span class="mono">outlineWidth</span>, and <span class="mono">shadow</span> with <span class="mono">shadowAlpha</span>, <span class="mono">shadowBlur</span> and <span class="mono">shadowDrop</span>. The last four are fractions of the size, so they scale with it. The default is a felt-tip hand at 26.5pt, marker ink at 60%.</td></tr>
+              <tr><td class="mono">fontFamily</td><td class="mono">Permanent&nbsp;Marker</td><td>CD only: the top line's font. Kept from 2.1. <span class="mono">labelStyle.font</span> says the same thing and wins.</td></tr>
+              <tr><td class="mono">fontSize</td><td class="mono">"medium"</td><td>CD only: the top line's size as a name: <span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, or <span class="mono">"xlarge"</span>, each a fraction of the disc. Kept from 2.1. <span class="mono">labelStyle.size</span> is points and wins.</td></tr>
+              <tr><td class="mono">infoText</td><td class="mono">auto</td><td>CD only: the small line on the outer edge, what is inside. One arc and never more: a line too long for its arc loses its middle to an ellipsis. Left out, the engine writes the name and the size it was given, or the size and <span class="mono">"locked"</span> when a password was used. The board writes the word count into it as well, because only the board knows it.</td></tr>
+              <tr><td class="mono">infoStyle</td><td class="mono">brush</td><td>CD only: how that line is drawn. Same fields as <span class="mono">labelStyle</span>. The default is a brush hand at 8.5pt on the outer edge.</td></tr>
+              <tr><td class="mono">rimText</td><td class="mono">auto</td><td>CD only: the printed line, where to take the picture. Defaults to <span class="mono">"Paste into PuttyPNG.com"</span>, drawn once along the bottom in white with a dark outline. A single space leaves it off.</td></tr>
+              <tr><td class="mono">rimStyle</td><td class="mono">printed</td><td>CD only: how that line is drawn. Same fields as <span class="mono">labelStyle</span>.</td></tr>
               <tr><td class="mono">rimSize</td><td class="mono">13</td><td>CD only: rim microtext size in <strong>points measured on a 256px disc</strong>, then scaled to the real disc, so the text keeps its proportion at every size. A name (<span class="mono">"small"</span>, <span class="mono">"medium"</span>, <span class="mono">"large"</span>, <span class="mono">"xlarge"</span>) picks a fraction of the disc instead.</td></tr>
               <tr><td class="mono">rimSpacing</td><td class="mono">0</td><td>CD only: extra space after each rim letter, in px on a 256px disc, scaled the same way. Negative values tighten the text.</td></tr>
-              <tr><td class="mono">rimTwoSided</td><td class="mono">false</td><td>CD only: always print the rim text at the top and the bottom, shrinking it to fit each half. Left off, text that outgrows one half wraps once around the rim instead.</td></tr>
+              <tr><td class="mono">rimTwoSided</td><td class="mono">false</td><td>CD only: print the printed line at the top and the bottom, shrinking it to fit each half. Kept from 2.1. <span class="mono">rimStyle.sides</span> says the same thing and wins.</td></tr>
               <tr><td class="mono">splat</td><td class="mono">branding</td><td>CD only: the default "putty splat" imprint (our reusable Gak-like silhouette, stippled into the surface across the full lobe extent; dots stay 5% clear of the disc edge and the hub). <span class="mono">{ points, curve, waviness, amplitude, seed, size, dotColor, dotMin, dotMax, separation, textBuffer, textClear }</span>. <span class="mono">textBuffer</span> is how far the dot-clearing reaches past the text, in px on a 256px disc and scaled from there (default 4); <span class="mono">textClear</span> is how much of that space is emptied, from 0 to 1 (default 0.25). <span class="mono">dotColor</span> is a palette (default <span class="mono">"rainbowSoft"</span>; also rainbowStrong, black, white, dkgray, ltgray, blue, red, orange, yellow, green). A custom <span class="mono">imprint</span> image overrides it.</td></tr>
               <tr><td class="mono">hub</td><td class="mono">round</td><td>CD only: the round clamping centre. <span class="mono">{ size, holeSize, outerThickness, innerThickness }</span> (fractions of the disc). The spindle hole is transparent.</td></tr>
             </tbody>
@@ -237,7 +241,8 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
             </div>
             <div>
               <h3>CD</h3>
-              <p class="small">A reflective disc drawn in canvas, the flagship example of a JS-generated cover. By default it carries the PuttyPNG <strong>"putty splat"</strong> branding (a reusable Gak-like silhouette stippled into the surface) and an informational rim (<span class="mono">PuttyPNG | size | contents</span>). Add a curved <span class="mono">label</span>, replace the splat with your own <span class="mono">imprint</span> image, or tune the hub. Auto-sizes from 32&times;32 up (a little larger than noise, since the transparent corners and spindle hole hold no data). Defaults to subtle depth for a smooth sheen.</p>
+              <p class="small">A reflective disc drawn in canvas, the flagship example of a JS-generated cover. It carries the PuttyPNG <strong>"putty splat"</strong> branding (a reusable Gak-like silhouette stippled into the surface) and up to <strong>three lines of writing</strong>: <span class="mono">label</span> across the top in a marker hand, <span class="mono">rimText</span> along the bottom saying where to take the picture, and <span class="mono">infoText</span> on the outer edge saying what is inside. Each has a style block of its own, and the dots are cleared under all three so every line stays crisp. Replace the splat with your own <span class="mono">imprint</span> image, or tune the hub. Auto-sizes from 32&times;32 up (a little larger than noise, since the transparent corners and spindle hole hold no data). Defaults to subtle depth for a smooth sheen.</p>
+              <p class="small"><strong>A face has to be loaded before a canvas can letter with it.</strong> The two the disc uses by default, Permanent Marker and Caveat Brush, are served from <span class="mono">fonts/</span>, and this site fetches them the first time a PuttyPNG is pressed. Call <span class="mono">document.fonts.load()</span> before <span class="mono">encode</span> if you name a face of your own, or the canvas falls back to another one without saying so.</p>
             </div>
           </div>
           <h3 style="margin-top:16px;">Transparent vs solid, and a flattening caveat</h3>
@@ -326,8 +331,15 @@ await PuttyPNG.encode(data, { cover: "logo.png", size: 512 });</pre>
           <h3>Generate your own cover in JS</h3>
           <p class="small">The CD style is a canvas drawn in code. You can do the same: draw an <span class="mono">ImageData</span> (or a canvas / data-URL) and pass it as the <span class="mono">cover</span>. PuttyPNG hardens any transparency and hides the data in the opaque pixels. Use the built-in <span class="mono">"cd"</span> style for a ready-made disc.</p>
           <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="rec-gen">Copy</button></div>
-<pre id="rec-gen">// Built-in reflective CD with a label + a burned-in imprint:
-await PuttyPNG.encode(data, { coverStyle: "cd", label: "My Album", imprint: "logo.png" });
+<pre id="rec-gen">// Built-in reflective CD with all three lines of writing:
+await document.fonts.load('400 20px "Permanent Marker"');   // or the canvas falls back
+await PuttyPNG.encode(data, {
+  coverStyle: "cd",
+  label: "My Album",                       // the top line, in a marker hand
+  rimText: "Paste into PuttyPNG.com",      // the printed line along the bottom
+  infoText: "mixtape.zip \u00b7 4.2 MB",        // the small line on the outer edge
+  labelStyle: { size: 24, ink: "#1b3a6b" } // any field of a style block
+});
 
 // ...or draw your own cover on a canvas and hand it over:
 const c = document.createElement("canvas"); c.width = c.height = 256;
@@ -452,8 +464,8 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.10.1</span>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.1.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.11.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
         <span class="sep" aria-hidden="true">&middot;</span><a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>

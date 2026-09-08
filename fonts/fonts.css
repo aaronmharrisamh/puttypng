@@ -76,3 +76,21 @@
   font-display: swap;
   src: url('righteous.woff2') format('woff2');
 }
+
+/* Permanent Marker - the writing on the disc, a thick felt tip */
+@font-face {
+  font-family: 'Permanent Marker';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('permanentmarker.woff2') format('woff2');
+}
+
+/* Caveat Brush - the small print on the disc, a brush hand */
+@font-face {
+  font-family: 'Caveat Brush';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('caveatbrush.woff2') format('woff2');
+}

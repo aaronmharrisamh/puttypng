@@ -23,7 +23,7 @@
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
-  var ENGINE_VERSION = "2.1.0";   // 2.1.0 rebuilt the solid background as a jewel case
+  var ENGINE_VERSION = "2.2.0";   // 2.2.0 gave the disc three styleable lines of writing
 
   // The public object. Everything a developer touches hangs off of this.
   var PuttyPNG = {
@@ -763,12 +763,13 @@
   // rim microtext. The anti-aliased rim is hardened to binary alpha so no data
   // pixel borders transparency. Only runs in a browser (needs a canvas).
 
-  var CD_LABEL_MIN = 96;    // draw the arc label only at/above this disc size
-  var CD_RIM_MIN = 128;     // draw the rim microtext only at/above this size
+  var CD_LABEL_MIN = 96;    // draw the top line only at/above this disc size
+  var CD_RIM_MIN = 128;     // draw the printed line only at/above this size
+  var CD_INFO_MIN = 176;    // draw the small info line only at/above this size
 
   // The rim microtext when the caller sets no `rimText`. It tells a person who
   // receives the image what to do with it, which the image cannot say by itself.
-  var CD_RIM_DEFAULT = "Decode at PuttyPNG.com";
+  var CD_RIM_DEFAULT = "Paste into PuttyPNG.com";
 
   // The rim text is drawn twice, at the top and the bottom of the rim. Each copy
   // gets half the circle, so it must stay inside this arc to leave a clear gap
@@ -807,40 +808,130 @@
   // reduced when it would lap over its own start, which no size can read.
   var CD_RIM_FULL_ARC = Math.PI * 2 * 0.97;
 
-  // The raised look for the rim microtext, as fractions of the font size.
-  // The disc surface below the text is a busy rainbow of stippled dots, so the
-  // text needs its own light ground to stay readable at a small size.
-  // A stroke sits centered on the glyph outline, so half of it grows inward and
-  // narrows the holes in letters such as e and a. This ratio is kept low on
-  // purpose: enough halo to separate the text, not enough to close it up.
-  var CD_RIM_HALO_WIDTH = 0.26;    // outline thickness, total across the stroke
-  var CD_RIM_HALO_BLUR = 0.24;     // shadow softness
-  var CD_RIM_HALO_LIFT = 0.12;     // shadow offset below each letter
+  /* ========================================================================
+     THE THREE LINES OF WRITING ON A DISC
 
-  // Build the outline and shadow settings for a rim text of `px` pixels.
-  function rimTextStyle(px) {
-    return {
-      textColor: "rgba(24,24,30,0.95)",
-      haloColor: "rgba(255,255,255,0.92)",
-      haloWidth: Math.max(1.4, px * CD_RIM_HALO_WIDTH),
-      shadowColor: "rgba(0,0,0,0.38)",
-      shadowBlur: Math.max(1, px * CD_RIM_HALO_BLUR),
-      shadowOffsetY: Math.max(0.6, px * CD_RIM_HALO_LIFT)
-    };
+     A disc carries three lines and they are all the same thing: words set on
+     an arc with a style. One routine resolves them and one draws them, so a
+     change to how text is placed cannot reach one line and miss another.
+
+       label   what the person wrote, across the top. A marker hand.
+       rim     where to take the picture. Printed, and the loudest small line.
+       info    what is inside. Printed small, on the outer edge.
+
+     A style block holds:
+       pos           "top" or "bottom", where the middle of the arc sits
+       radius        fraction of the disc side
+       arc           how much of the circle the words may take, in degrees
+       sides         1, or 2 for a copy at the top and the bottom
+       split         true to allow a second arc inside the first
+       min           the smallest disc that still draws this line
+       font          a CSS font family
+       size          points, read against a 256px disc and scaled from there
+       px            an exact pixel size, which wins over size when given
+       weight        "normal" or "bold"
+       spacing       extra pixels after every letter
+       ink           fill colour
+       mode          "solid", or "marker" to darken what is under the strokes
+       opacity       0 to 1
+       outline       colour, with outlineWidth as a fraction of the size
+       shadow        colour, with shadowAlpha, and shadowBlur and shadowDrop
+                     as fractions of the size
+
+     A CALLER PASSING A FACE MUST HAVE IT LOADED. A canvas cannot use a font
+     the document has not fetched, and it falls back without saying so. Every
+     stack here ends in a system face for that reason.
+     ======================================================================== */
+
+  var CD_MARKER_STACK = '"Permanent Marker", "Segoe UI", Roboto, sans-serif';
+  var CD_SANS_STACK = '-apple-system, "Segoe UI", Roboto, sans-serif';
+  var CD_BRUSH_STACK = '"Caveat Brush", "Segoe UI", Roboto, sans-serif';
+
+  var CD_LINE_DEFAULTS = {
+    label: { pos: "top", radius: 0.395, arc: 156, sides: 1, split: true, min: CD_LABEL_MIN, spacing: 0,
+             font: CD_MARKER_STACK, size: 26.5, weight: "normal",
+             ink: "#121216", mode: "marker", opacity: 0.6,
+             outline: "#ffffff", outlineWidth: 0,
+             shadow: "#000000", shadowAlpha: 0.55, shadowBlur: 0.035, shadowDrop: 0 },
+    rim:   { pos: "bottom", radius: 0.37, arc: 349, sides: 1, split: false, min: CD_RIM_MIN, spacing: 0,
+             font: CD_SANS_STACK, size: 9.5, weight: "bold",
+             ink: "#ffffff", mode: "solid", opacity: 1,
+             outline: "#0e0e12", outlineWidth: 0.14,
+             shadow: "#000000", shadowAlpha: 0.4, shadowBlur: 0, shadowDrop: 0.04 },
+    info:  { pos: "bottom", radius: 0.435, arc: 130, sides: 1, split: false, min: CD_INFO_MIN, spacing: 0,
+             font: CD_BRUSH_STACK, size: 8.5, weight: "normal",
+             ink: "#18181e", mode: "marker", opacity: 0.86,
+             outline: "#ffffff", outlineWidth: 0,
+             shadow: "#000000", shadowAlpha: 0, shadowBlur: 0.22, shadowDrop: 0.05 }
+  };
+
+  // The style for one line: the default, then the names kept from 2.1, then
+  // whatever the caller wrote in labelStyle, rimStyle or infoStyle.
+  function lineSpec(which, opts, geo, size) {
+    var d = CD_LINE_DEFAULTS[which], sp = {}, k;
+    for (k in d) sp[k] = d[k];
+    if (which === "label") {
+      if (opts.fontFamily) sp.font = opts.fontFamily;
+      if (opts.fontSize != null) sp.px = resolveLabelFont(opts.fontSize, geo);
+    } else if (which === "rim") {
+      if (opts.rimSize != null) sp.px = resolveRimPx(opts.rimSize, size);
+      if (opts.rimSpacing) sp.spacing = opts.rimSpacing * (size / CD_RIM_REF_SIZE);
+      if (opts.rimTwoSided === true) sp.sides = 2;
+    }
+    var over = opts[which + "Style"];
+    if (over) for (k in over) if (over[k] != null) sp[k] = over[k];
+    return sp;
+  }
+
+  function lineFont(sp, px) {
+    var w = sp.weight === "bold" ? "700" : sp.weight === "normal" ? "400" : sp.weight;
+    return w + " " + px + "px " + sp.font;
   }
 
   // How far the finished text reaches from its own centre line, counting the
-  // glyphs, the outline that sits around them, and the shadow under them.
-  // The rim is placed using this, so nothing the text draws can be clipped.
-  function rimInkReach(style, px) {
-    return px / 2 + style.haloWidth / 2 + style.shadowBlur + style.shadowOffsetY;
+  // glyphs, the outline around them, and the shadow under them. Every line is
+  // placed using this, so nothing it draws can land outside the disc.
+  function lineInkReach(sp, px) {
+    var outline = sp.outline && sp.outlineWidth > 0 ? px * sp.outlineWidth / 2 : 0;
+    var shadow = sp.shadowAlpha > 0 ? px * (sp.shadowBlur + sp.shadowDrop) : 0;
+    return px / 2 + outline + shadow;
   }
 
-  // Radii (in pixels) for a square CD of the given side length.
+  // A colour with an alpha put on it. Anything that is not a six digit hex is
+  // handed back as it came, so a caller may pass rgba() itself.
+  function withAlpha(colour, a) {
+    var m = /^#([0-9a-f]{6})$/i.exec(String(colour || ""));
+    if (!m) return colour;
+    var n = parseInt(m[1], 16);
+    return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
+  }
+
+  /* Take characters out of the middle until the words fit the arc they have.
+     The last resort, and the only thing that makes an overflow impossible: a
+     line that ran past its arc would lap over its own start and read as
+     nothing at all. */
+  function ellipsizeArc(ctx, text, radius, sp, px, maxArc) {
+    if (arcTextAngle(ctx, text, radius, lineFont(sp, px), sp.spacing) <= maxArc) return text;
+    function shrunk(keep) {
+      var head = Math.ceil(keep / 2), tail = keep - head;
+      return text.slice(0, head) + "\u2026" + (tail ? text.slice(text.length - tail) : "");
+    }
+    var lo = 0, hi = text.length;
+    while (lo < hi) {
+      var keep = (lo + hi + 1) >> 1;
+      if (arcTextAngle(ctx, shrunk(keep), radius, lineFont(sp, px), sp.spacing) <= maxArc) lo = keep;
+      else hi = keep - 1;
+    }
+    return shrunk(lo);
+  }
+
+  // Radii (in pixels) for a square CD of the given side length. `inset` is
+  // how much of its size the disc gave up to sit inside a case, so a line
+  // placed by a fraction of the disc lands in the same place either way.
   function cdGeometry(size) {
     var c = size / 2;
     return {
-      cx: c, cy: c,
+      cx: c, cy: c, inset: 1,
       rOuter: size * 0.48,   // disc edge
       rSheen: size * 0.46,   // reflective surface extent
       rLabel: size * 0.40,   // curved label arc radius
@@ -894,33 +985,45 @@
   // every letter on top. That canvas is then composited in one go with the
   // shadow applied, so the whole word casts a single drop shadow instead of
   // each letter casting its own onto its neighbours.
-  function drawRimText(ctx, rimBand, geo, size, style) {
-    var font = "600 " + rimBand.px + "px -apple-system, Segoe UI, Roboto, sans-serif";
+  function drawArcLine(ctx, line, geo, size) {
+    var sp = line.sp;
     var layer = makeCanvas(size, size);
     var lc = layer.getContext("2d");
-    lc.font = font;
+    lc.font = lineFont(sp, line.px);
     // Ask for shape-accurate glyphs. A browser that does not know this property
     // ignores it, and canvas text is smoothed either way.
     lc.textRendering = "geometricPrecision";
     lc.lineJoin = "round";
     lc.miterLimit = 2;
-    lc.lineWidth = style.haloWidth;
-    lc.strokeStyle = style.haloColor;
-    lc.fillStyle = style.textColor;
 
-    var copies = rimBand.spans.map(function (s) { return s.center; });
-    var pass, c;
-    for (pass = 0; pass < 2; pass++) {
-      var mode = pass === 0 ? "stroke" : "fill";
-      for (c = 0; c < copies.length; c++) {
-        drawTextOnArc(lc, rimBand.text, geo.cx, geo.cy, rimBand.radius, copies[c], rimBand.spacing, mode);
-      }
+    /* EVERY OUTLINE FIRST, THEN EVERY LETTER. Stroking and filling one letter
+       before moving to the next lets the next letter's outline paint over the
+       one before it and eat a sliver off its edge. */
+    var i, c;
+    if (sp.outline && sp.outlineWidth > 0) {
+      lc.strokeStyle = sp.outline;
+      lc.lineWidth = Math.max(1, line.px * sp.outlineWidth);
+      for (i = 0; i < line.lines.length; i++)
+        for (c = 0; c < line.centers.length; c++)
+          drawTextOnArc(lc, line.lines[i].text, geo.cx, geo.cy, line.lines[i].radius, line.centers[c], sp.spacing, "stroke");
     }
+    lc.fillStyle = sp.ink;
+    for (i = 0; i < line.lines.length; i++)
+      for (c = 0; c < line.centers.length; c++)
+        drawTextOnArc(lc, line.lines[i].text, geo.cx, geo.cy, line.lines[i].radius, line.centers[c], sp.spacing, "fill");
 
+    /* The whole line is composited in one go, so it casts a single shadow
+       rather than each letter casting one onto its neighbours. Marker ink
+       multiplies, which darkens the disc under the strokes instead of
+       covering it, the way a felt tip behaves on a printed surface. */
     ctx.save();
-    ctx.shadowColor = style.shadowColor;
-    ctx.shadowBlur = style.shadowBlur;
-    ctx.shadowOffsetY = style.shadowOffsetY;
+    ctx.globalAlpha = sp.opacity;
+    if (sp.mode === "marker") ctx.globalCompositeOperation = "multiply";
+    if (sp.shadowAlpha > 0) {
+      ctx.shadowColor = withAlpha(sp.shadow, sp.shadowAlpha);
+      ctx.shadowBlur = Math.max(0.4, line.px * sp.shadowBlur);
+      ctx.shadowOffsetY = line.px * sp.shadowDrop;
+    }
     ctx.drawImage(layer, 0, 0);
     ctx.restore();
   }
@@ -957,69 +1060,108 @@
     return Math.max(9, Math.round(size * mult) + CD_RIM_BUMP);
   }
 
-  // Work out the rim microtext, its size, and how it is laid out. This runs
-  // before the surface is stippled, so the dots can be cleared around the text
-  // wherever the text ends up.
-  //
-  // Two layouts:
-  //   short text -> one copy at the top and one at the bottom, mirrored.
-  //   long text  -> one copy that wraps the whole rim.
-  //
-  // Returns null when there is no rim text, or the disc is too small to read it.
-  function resolveRim(ctx, opts, geo, size, pad) {
-    var text = opts.rimText != null && opts.rimText !== "" ? String(opts.rimText) : CD_RIM_DEFAULT;
-    if (!text || size < CD_RIM_MIN) return null;
+  /* Work out one line of writing: its size, where it sits, and the band it
+     occupies. This runs before the surface is stippled, so the dots can be
+     cleared wherever the words end up.
 
-    var family = "px -apple-system, Segoe UI, Roboto, sans-serif";
-    var px = resolveRimPx(opts.rimSize, size);
-    // Letter spacing is given for a reference disc too, so it tracks the text.
-    var spacing = (opts.rimSpacing || 0) * (size / CD_RIM_REF_SIZE);
-    var forced = opts.rimTwoSided === true;
+     THE RADIUS IS CLAMPED, NOT TRUSTED. A line is asked for as a fraction of
+     the disc, and it is then held between the hub and the reflective surface
+     by the ink it really puts down. That is what stops a caller placing words
+     over the spindle or off the edge, and words off the edge would be turned
+     into opaque pixels outside the disc when the cover is hardened.
 
-    // Place the text so its outline and shadow clear the hub. The hub is drawn
-    // over the surface, and its size is adjustable up to a point where it would
-    // otherwise swallow the rim, so the radius is worked out from the ink the
-    // text really puts down rather than assumed.
-    var radius, reach, arc;
-    var measure = function () { return arcTextAngle(ctx, text, radius, "600 " + px + family, spacing); };
+     Returns null when there are no words, or the disc is too small to read
+     them at all. */
+  function resolveArcLine(ctx, text, sp, geo, size, pad) {
+    if (text == null || String(text).trim() === "" || size < sp.min) return null;
+    text = String(text);
 
-    for (;;) {
-      reach = rimInkReach(rimTextStyle(px), px);
-      radius = Math.max(geo.rRim, geo.rHub + reach + CD_RIM_HUB_GAP * size);
-      // The text must also stay inside the reflective surface.
-      if (radius + reach <= geo.rSheen || px <= 5) break;
-      px -= 1;
+    var want = size * sp.radius * geo.inset;
+    var maxArc = Math.min(CD_RIM_FULL_ARC, sp.arc * Math.PI / 180);
+    if (sp.sides === 2) maxArc = Math.min(maxArc, CD_RIM_MAX_ARC);
+    var px = sp.px != null ? Math.max(5, Math.round(sp.px))
+                           : Math.max(5, Math.round(sp.size * PT_TO_PX * (size / CD_RIM_REF_SIZE)));
+    var floorPx = Math.max(5, Math.round(px * (sp.split ? 0.55 : 0.5)));
+    var radius = want, reach = 0;
+
+    function place(p) {
+      reach = lineInkReach(sp, p);
+      var lo = geo.rHub + reach + CD_RIM_HUB_GAP * size;
+      var hi = geo.rSheen - reach;
+      if (lo > hi) return false;
+      radius = Math.min(Math.max(want, lo), hi);
+      return true;
+    }
+    function fits(t, p, rr) { return arcTextAngle(ctx, t, rr, lineFont(sp, p), sp.spacing) <= maxArc; }
+
+    if (!place(px)) return null;
+    while (px > floorPx && !fits(text, px, radius)) { px -= 1; if (!place(px)) return null; }
+
+    var lines;
+    if (fits(text, px, radius)) {
+      lines = [{ text: text, radius: radius }];
+    } else if (sp.split) {
+      /* A SECOND ARC INSIDE THE FIRST. Both halves are set at one size, and
+         the size comes down until each fits its own arc, because two lines of
+         different sizes read as two different things. */
+      var halves = splitInTwo(text);
+      var gap = function (p) { return p + Math.max(3, p * 0.22); };
+      var inner = radius - gap(px);
+      while (px > 5 && (inner - reach <= geo.rHub ||
+                        !fits(halves[0], px, radius) || !fits(halves[1], px, inner))) {
+        px -= 1;
+        if (!place(px)) return null;
+        inner = radius - gap(px);
+      }
+      lines = [
+        { text: ellipsizeArc(ctx, halves[0], radius, sp, px, maxArc), radius: radius },
+        { text: ellipsizeArc(ctx, halves[1], inner, sp, px, maxArc), radius: inner }
+      ];
+    } else {
+      lines = [{ text: ellipsizeArc(ctx, text, radius, sp, px, maxArc), radius: radius }];
     }
 
-    arc = measure();
+    var centers = sp.sides === 2
+      ? [-Math.PI / 2, Math.PI / 2]
+      : [sp.pos === "bottom" ? Math.PI / 2 : -Math.PI / 2];
 
-    // Two copies each need their own half of the circle, so forcing two sides
-    // means the text must be reduced to fit one. Left free, the text may run
-    // past that limit and wrap the rim, and is reduced only when it would lap
-    // over its own start.
-    var limit = forced ? CD_RIM_MAX_ARC : CD_RIM_FULL_ARC;
-    while (px > 5 && arc > limit) {
-      px -= 1;
-      reach = rimInkReach(rimTextStyle(px), px);
-      radius = Math.max(geo.rRim, geo.rHub + reach + CD_RIM_HUB_GAP * size);
-      arc = measure();
+    /* The band the words occupy, so the dots can be cleared there and nowhere
+       else. `pad` is the buffer in pixels, turned into an angle at the radius
+       for the sideways part. */
+    var rIn = Infinity, rOut = -Infinity, widest = 0, i;
+    for (i = 0; i < lines.length; i++) {
+      rIn = Math.min(rIn, lines[i].radius - reach - pad);
+      rOut = Math.max(rOut, lines[i].radius + reach + pad);
+      widest = Math.max(widest, arcTextAngle(ctx, lines[i].text, lines[i].radius, lineFont(sp, px), sp.spacing));
     }
+    var halfArc = Math.min(Math.PI, widest / 2 + pad / radius);
+    var spans = centers.map(function (c) { return { center: c, half: halfArc }; });
 
-    var twoSided = forced || arc <= CD_RIM_MAX_ARC;
+    return { sp: sp, px: px, lines: lines, centers: centers,
+             band: { rIn: rIn, rOut: rOut, spans: spans } };
+  }
 
-    // Where the text sits, so the imprint can clear the dots around it and
-    // nowhere else. `pad` is the buffer in pixels, converted to an angle at the
-    // text radius for the sideways part.
-    var halfHeight = reach + pad;
-    var halfArc = Math.min(Math.PI, arc / 2 + pad / radius);
-    var spans = twoSided
-      ? [{ center: -Math.PI / 2, half: halfArc }, { center: Math.PI / 2, half: halfArc }]
-      : [{ center: -Math.PI / 2, half: halfArc }];
+  /* Whether a dot at this radius and angle falls where a line of writing is
+     going to be. One rule for every line, and for both of the things that
+     have to keep out of their way. */
+  function inTextBand(bands, r, ang) {
+    for (var i = 0; i < bands.length; i++) {
+      var b = bands[i];
+      if (r < b.rIn || r > b.rOut) continue;
+      for (var sIdx = 0; sIdx < b.spans.length; sIdx++) {
+        if (angleGap(ang, b.spans[sIdx].center) <= b.spans[sIdx].half) return true;
+      }
+    }
+    return false;
+  }
 
-    return {
-      text: text, px: px, arc: arc, spacing: spacing, twoSided: twoSided,
-      radius: radius, rIn: radius - halfHeight, rOut: radius + halfHeight, spans: spans
-    };
+  /* The words each line carries, and what it falls back to when the caller
+     writes none. The top line has no fallback on purpose: a disc nobody wrote
+     on is a disc with nothing written on it. */
+  function lineWords(which, opts) {
+    if (which === "label") return opts.label;
+    if (which === "rim") return opts.rimText != null ? opts.rimText : CD_RIM_DEFAULT;
+    return opts.infoText != null ? opts.infoText : buildInfoRim(opts.info);
   }
 
   // The curved top label: centered at 12 o'clock, shrinking the font to fit, then
@@ -1033,40 +1175,15 @@
     return Math.max(9, Math.round(geo.rOuter * mult));
   }
 
-  // wrapping onto a second (inner) arc if it is still too long.
-  function drawCdLabel(ctx, label, geo, fontFamily, fontSizeOverride) {
-    var maxArc = Math.PI * 0.95;               // ~171 degrees of the top
-    // Start from the requested size (if any), else auto from the disc size.
-    var fontSize = fontSizeOverride ? Math.round(fontSizeOverride) : Math.max(9, Math.round(geo.rOuter * 0.16));
-    var minFont = 9;
-    var font;
-
-    // Shrink to fit one line if we can.
-    while (fontSize >= minFont) {
-      font = "600 " + fontSize + "px " + fontFamily;
-      if (arcTextAngle(ctx, label, geo.rLabel, font) <= maxArc) {
-        ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
-        drawTextOnArc(ctx, label, geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
-        return;
-      }
-      fontSize -= 1;
-    }
-
-    // Still too long at the minimum font: split into two lines on two arcs.
-    font = "600 " + minFont + "px " + fontFamily;
-    ctx.font = font; ctx.fillStyle = "rgba(30,30,35,0.92)";
-    var mid = splitInTwo(label);
-    var lineGap = minFont + 3;
-    drawTextOnArc(ctx, mid[0], geo.cx, geo.cy, geo.rLabel, -Math.PI / 2);
-    drawTextOnArc(ctx, mid[1], geo.cx, geo.cy, geo.rLabel - lineGap, -Math.PI / 2);
-  }
+  // The top line wraps onto a second arc inside the first when one will not
+  // hold the words. resolveArcLine does it for every line that asks.
 
   // "Burned-in" image imprint: render a grayscale stipple of a source image onto
   // the disc annulus, the way a 90s laser labeller (LightScribe) etched discs.
   // Darker areas of the source become denser, darker dots; light areas stay clear.
   // Confined to the ring between the hub and the outer edge; drawn beneath the
   // label so the text stays legible on top.
-  function imprintStipple(ctx, img, geo, size, labelActive) {
+  function imprintStipple(ctx, img, geo, size, bands) {
     // Sample the source at disc resolution, cover-fit into the disc's square.
     var d = Math.max(16, Math.ceil(geo.rOuter * 2));
     var off = makeCanvas(d, d);
@@ -1097,12 +1214,9 @@
         var lum = src[si] * 0.299 + src[si + 1] * 0.587 + src[si + 2] * 0.114;
         var darkness = 1 - lum / 255;                      // 0 (white) .. 1 (black)
         if (darkness < 0.12) continue;                     // leave light areas clear
-        // Thin the imprint out under the top label band so the label stays crisp.
-        if (labelActive && r > geo.rLabel * 0.78) {
-          var ang = Math.atan2(y, x);
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < 1.0 && Math.random() > darkness * 0.35) continue;
-        }
+        // Thin the imprint out under the writing so the words stay crisp.
+        if (bands && bands.length && inTextBand(bands, r, Math.atan2(y, x)) &&
+            Math.random() > darkness * 0.35) continue;
         if (Math.random() > darkness * 1.2) continue;      // density by darkness
         var jx = geo.cx + x + (Math.random() - 0.5) * step * 0.5;   // less jitter -> uniform
         var jy = geo.cy + y + (Math.random() - 0.5) * step * 0.5;
@@ -1146,7 +1260,7 @@
     }
   }
 
-  function imprintSplat(ctx, geo, size, splat, labelActive, rimBand) {
+  function imprintSplat(ctx, geo, size, splat, bands) {
     var s = {
       points: splat.points != null ? splat.points : CD_SPLAT_DEFAULT.points,
       curve: splat.curve != null ? splat.curve : CD_SPLAT_DEFAULT.curve,
@@ -1199,22 +1313,11 @@
         if (r < rSkip || r > rEdge) continue;             // 5% clear of hub and edge
         if (!ctx.isPointInPath(path, px, py)) continue;   // inside the splat only
         var ang = Math.atan2(y, x);
-        // Thin out around the top label so it stays crisp.
-        if (labelActive && r > geo.rLabel - textBuf) {
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < 1.0 && Math.random() < textClear) continue;
-        }
-        // Thin out around the rim text, and only there. rimBand carries the
-        // band the text occupies and the arcs it runs along, both already
-        // widened by the buffer, so a one-sided line clears one arc and leaves
-        // the rest of the rim as it is.
-        if (rimBand && r >= rimBand.rIn && r <= rimBand.rOut && Math.random() < textClear) {
-          var covered = false;
-          for (var sp = 0; sp < rimBand.spans.length; sp++) {
-            if (angleGap(ang, rimBand.spans[sp].center) <= rimBand.spans[sp].half) { covered = true; break; }
-          }
-          if (covered) continue;
-        }
+        /* Thin out where the writing is going to be, and only there. Each
+           band carries the ring it occupies and the arcs it runs along, both
+           already widened by the buffer, so a one-sided line clears one arc
+           and leaves the rest of the disc as it is. */
+        if (bands && bands.length && inTextBand(bands, r, ang) && Math.random() < textClear) continue;
         if (Math.random() > 0.9) continue;                // high, even fill (uniform)
         var jx = px + (Math.random() - 0.5) * step * 0.5; // low jitter -> uniform
         var jy = py + (Math.random() - 0.5) * step * 0.5;
@@ -1229,17 +1332,16 @@
     ctx.restore();
   }
 
-  // The default informational rim text: "PuttyPNG | {size} | {contents|Secured}".
+  /* The info line when the caller writes none. The engine knows the size and
+     whether the data is locked. It does not know how many words are in it, so
+     a caller that does, as the board does, passes its own line instead. */
   function buildInfoRim(info) {
     info = info || {};
     var sz = info.size != null ? formatSize(info.size) : "";
-    var contents;
-    if (info.encrypted) contents = "Secured";
-    else if (info.name) contents = info.name;
-    else if (info.type === "text") contents = "text";
-    else if (info.type === "json") contents = "JSON";
-    else contents = "binary";
-    return "PuttyPNG | " + sz + " | " + contents;
+    if (info.encrypted) return sz ? sz + ", locked" : "locked";
+    if (info.name) return sz ? info.name + " \u00b7 " + sz : info.name;
+    if (sz) return sz;
+    return "";
   }
 
   // Human-readable byte size.
@@ -1284,6 +1386,7 @@
        whatever the disc gives up the case takes back. */
     if (opts.solidBackground) {
       var inset = CASE_DISC_SCALE;
+      geo.inset = inset;
       geo.rOuter *= inset; geo.rSheen *= inset; geo.rLabel *= inset;
       geo.rRim *= inset; geo.rHub *= inset; geo.rHole *= inset;
     }
@@ -1365,49 +1468,42 @@
     }
     ctx.globalAlpha = 1;
 
-    // Resolve the label up front so the stipple can clear a buffer around its arc.
-    var labelActive = !!(opts.label && size >= CD_LABEL_MIN);
-    var labelFontPx = resolveLabelFont(opts.fontSize, geo);
-    var labelBand = labelActive
-      ? { rIn: geo.rLabel - labelFontPx * 1.05, halfAngle: Math.PI * 0.52 }
-      : null;
-
-    // Resolve the rim text up front for the same reason: the imprint needs to
-    // know where the text sits before it stipples dots over that band. The
-    // buffer is resolved here too, because the text carries its own clear area.
+    /* THE THREE LINES ARE RESOLVED BEFORE THE SURFACE IS DRAWN, because the
+       stipple and the imprint both have to keep their dots out of the way of
+       words that are not on the disc yet. Each line hands back the band it
+       occupies, and the bands go to both of them as one list, so a line added
+       here later is cleared for without either of them being told. */
     var splatOpts = opts.splat || {};
     var textPad = resolveTextPad(splatOpts, size);
-    var rimBand = resolveRim(ctx, opts, geo, size, textPad);
+    var written = [];
+    ["label", "rim", "info"].forEach(function (which) {
+      var line = resolveArcLine(ctx, lineWords(which, opts),
+                                lineSpec(which, opts, geo, size), geo, size, textPad);
+      if (line) written.push(line);
+    });
+    var bands = written.map(function (line) { return line.band; });
 
-    stippleSurface(ctx, geo, size, labelBand);
+    stippleSurface(ctx, geo, size, bands);
 
-    // --- Imprint (beneath the label), still inside the disc clip ---
+    // --- Imprint (beneath the writing), still inside the disc clip ---
     // A user-supplied image wins; otherwise the default PuttyPNG "putty splat"
     // branding is stippled into the rainbow surface (the hub covers its middle).
     if (opts.imprint) {
-      imprintStipple(ctx, opts.imprint, geo, size, labelActive);
+      imprintStipple(ctx, opts.imprint, geo, size, bands);
     } else if (size >= CD_RIM_MIN) {
-      imprintSplat(ctx, geo, size, opts.splat || {}, labelActive, rimBand);
+      imprintSplat(ctx, geo, size, opts.splat || {}, bands);
     }
 
     ctx.restore();  // remove disc clip
 
-    // --- Curved label (top) if the disc is big enough to read ---
-    if (labelActive) {
-      drawCdLabel(ctx, String(opts.label), geo,
-        opts.fontFamily || "-apple-system, Segoe UI, Roboto, sans-serif", labelFontPx);
-    }
-
     // --- The round clamping hub + transparent spindle hole ---
-    // The hub is drawn before the rim text. resolveRim already places the text
-    // clear of it, and drawing the hub first means a hub turned up to its
-    // largest can never paint over the letters.
     drawCdCenter(ctx, geo, size, opts.hub || {});
 
-    // --- Rim microtext, mirrored at top and bottom, or wrapped right around ---
-    if (rimBand) {
-      drawRimText(ctx, rimBand, geo, size, rimTextStyle(rimBand.px));
-    }
+    /* THE WRITING GOES ON LAST, after the hub as well as the surface, because
+       the hub can be turned up to a size that would otherwise paint across a
+       line. resolveArcLine already holds every line clear of it, so this only
+       makes the order harmless as well as correct. */
+    written.forEach(function (line) { drawArcLine(ctx, line, geo, size); });
 
     /* THE CASE GOES IN BEHIND, LAST. Drawing it under the finished disc with
        destination-over does three things at once: it fills the corners, it
@@ -1603,9 +1699,10 @@
 
   // Fine darkening dots across the disc surface - looks like a disc and helps
   // hide the low-bit data embedding. Laid on an evenly-spaced (jittered) grid so
-  // the dots have a consistent size and separation. `labelBand`, when given,
-  // clears a buffer around the top label arc so the label reads cleanly.
-  function stippleSurface(ctx, geo, size, labelBand) {
+  // the dots have a consistent size and separation. `bands`, when given, are
+  // the places the writing is going to land, and the dots there are dropped
+  // so every line reads cleanly.
+  function stippleSurface(ctx, geo, size, bands) {
     var sep = Math.max(3, Math.round(size * 0.0105));   // ~2x the old density
     var dotR = Math.max(0.7, size * 0.0035);            // consistent middle size
     var jitter = sep * 0.34;
@@ -1614,12 +1711,8 @@
       for (var gx = -geo.rOuter; gx <= geo.rOuter; gx += sep) {
         var r = Math.sqrt(gx * gx + gy * gy);
         if (r < geo.rHub || r > geo.rOuter) continue;
-        // Clear a buffer around the label arc (top sector, outer band).
-        if (labelBand && r >= labelBand.rIn) {
-          var ang = Math.atan2(gy, gx);
-          var fromTop = Math.abs(((ang + Math.PI / 2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-          if (fromTop < labelBand.halfAngle) continue;
-        }
+        // Clear the dots wherever a line of writing is going to be.
+        if (bands && bands.length && inTextBand(bands, r, Math.atan2(gy, gx))) continue;
         var jx = geo.cx + gx + (Math.random() - 0.5) * jitter * 2;
         var jy = geo.cy + gy + (Math.random() - 0.5) * jitter * 2;
         ctx.beginPath();
@@ -1655,6 +1748,12 @@
       rimTwoSided: options.rimTwoSided,
       fontFamily: options.fontFamily,
       fontSize: options.fontSize,
+      // The three style blocks, and the words for the small info line. Each
+      // one is optional: the engine's own defaults draw the disc without them.
+      labelStyle: options.labelStyle,
+      rimStyle: options.rimStyle,
+      infoText: options.infoText,
+      infoStyle: options.infoStyle,
       imprint: options.imprintImg,       // a pre-loaded HTMLImageElement (see encode)
       solidBackground: !!options.solidBackground,
       hub: options.hub,                  // { size, holeSize, outerThickness, innerThickness }
@@ -2561,11 +2660,13 @@
     assert(splatDotStyle("rainbowStrong", 0).indexOf("hsl(") === 0, "rainbow is hsl");
   });
 
-  test("buildInfoRim: Secured when encrypted, else name/type", async function () {
-    assert(buildInfoRim({ size: 5320, type: "binary", name: "x.zip", encrypted: true }) === "PuttyPNG | 5.2 KB | Secured", "encrypted -> Secured");
-    assert(buildInfoRim({ size: 320, type: "text" }) === "PuttyPNG | 320 bytes | text", "text");
-    assert(buildInfoRim({ size: 100, type: "json" }) === "PuttyPNG | 100 bytes | JSON", "json");
-    assert(buildInfoRim({ size: 2048, type: "binary", name: "photo.jpg" }) === "PuttyPNG | 2.0 KB | photo.jpg", "file -> name");
+  test("buildInfoRim: the size, the name, and locked when encrypted", async function () {
+    // A locked disc says its size and nothing else. The name is inside the
+    // picture, and printing it on the outside would undo the password.
+    assert(buildInfoRim({ size: 5320, type: "binary", name: "x.zip", encrypted: true }) === "5.2 KB, locked", "encrypted -> locked, no name");
+    assert(buildInfoRim({ size: 2048, type: "binary", name: "photo.jpg" }) === "photo.jpg · 2.0 KB", "file -> name and size");
+    assert(buildInfoRim({ size: 320, type: "text" }) === "320 bytes", "no name -> the size alone");
+    assert(buildInfoRim({}) === "", "nothing known -> no line at all");
   });
 
   // ---- self-test runner ------------------------------------------------------

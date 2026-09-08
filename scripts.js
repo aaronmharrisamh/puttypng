@@ -255,11 +255,44 @@
   // A drop has to fit in memory twice over, once as bytes and once as pixels.
   var MAX_DROP_BYTES = 64 * 1024 * 1024;
 
+  /* WHAT THE DISC SAYS WHEN NOBODY WROTE ON IT. None of these names what is
+     inside, so a saying can never give away what the picture is hiding. A
+     person who wants their own words types them in Advanced. */
+  var DISC_SAYINGS = [
+    "Something is hidden inside this PNG!",
+    "There's a secret in this picture!",
+    "This PNG is fuller than it looks!",
+    "Look closer. It's all in here!",
+    "Don't judge a PNG by its cover!",
+    "A whole file lives in this disc!",
+    "Yes, it's really all inside!",
+    "Pressed into a PNG, for you!",
+    "More in here than pixels!",
+    "This picture has something to say!"
+  ];
+
+  // The same, for a disc with a password on it.
+  var DISC_LOCKED_SAYINGS = [
+    "Something secret fits inside this PNG!",
+    "Locked tight. Ask me for the key!",
+    "A secret, with a password on it!"
+  ];
+
+  /* THE LONGEST A FILE NAME MAY BE ON THE DISC. The info line has one arc and
+     no more, so a long name has to give. 28 characters leaves room for the
+     word count and the size beside it at the size the line is drawn. */
+  var DISC_NAME_MAX = 28;
+
+  /* THE TWO FACES THE DISC IS WRITTEN IN. A canvas cannot use a font the
+     document has not fetched, and it falls back to another face without
+     saying so, so both are loaded before the first disc is pressed. They are
+     not loaded with the page, because nothing needs them until then. */
+  var DISC_FACES = ['400 20px "Permanent Marker"', '400 20px "Caveat Brush"'];
+
   var SLIDER_IDS = [
     "splHubSize", "splHoleSize", "splOuter", "splInner",
     "splPoints", "splCurve", "splWaviness", "splAmplitude", "splSize",
-    "splDotSep", "splDotMin", "splDotMax", "splTextBuffer", "splTextClear",
-    "optRimSize", "optRimSpacing"
+    "splDotSep", "splDotMin", "splDotMax", "splTextBuffer", "splTextClear"
   ];
 
   // What the engine snippet card says when a server is present but the file
@@ -267,6 +300,16 @@
   var ENGINE_SOURCE_FAILED =
     "puttypng.js could not be loaded.\n" +
     "Check that the file sits next to index.html on the server.";
+
+  /* The saying this disc is carrying. It is chosen when a PuttyPNG is made
+     and kept while the background is flipped, because flipping Solid presses
+     the same PuttyPNG again and rewording it there would look like a fault.
+     Typing something new clears it, so the next one gets its own. */
+  var homeSaying = null;
+  var homeSayingLocked = false;
+
+  // The faces, once. A promise, so a second press waits rather than refetching.
+  var discFontsReady = null;
 
   // Element handles. These are looked up once because the page reuses them.
   // A control used in exactly one place is looked up where it is used instead.
@@ -539,6 +582,94 @@
     if (n >= 1048576) return (n / 1048576).toFixed(2) + " MB";
     if (n >= 1024) return (n / 1024).toFixed(1) + " KB";
     return n + " bytes";
+  }
+
+  /* ------------------------------------------------------------------------
+     THE WRITING ON THE DISC
+
+     Three lines, and the board fills in the two it knows about. The engine
+     draws them; everything here decides what they say.
+     ------------------------------------------------------------------------ */
+
+  // One saying, from the pool that suits the disc.
+  function pickDiscSaying(locked) {
+    var pool = locked ? DISC_LOCKED_SAYINGS : DISC_SAYINGS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  /* A file name short enough for one arc, cut in the middle so both ends
+     survive. A name is what a person recognises, and the start and the
+     extension carry more of that than the middle does. */
+  function shortDiscName(name) {
+    name = String(name || "");
+    if (name.length <= DISC_NAME_MAX) return name;
+    var dot = name.lastIndexOf(".");
+    var ext = dot > 0 ? name.slice(dot) : "";
+    var base = dot > 0 ? name.slice(0, dot) : name;
+    var keep = DISC_NAME_MAX - ext.length - 1;
+    if (keep < 4) return name.slice(0, DISC_NAME_MAX - 1) + "\u2026";
+    var head = Math.ceil(keep * 0.62);
+    return base.slice(0, head) + "\u2026" + base.slice(base.length - (keep - head)) + ext;
+  }
+
+  /* WHAT IS INSIDE, IN ONE LINE. A disc with a password says its size and
+     that it is locked, and nothing else: the name and the word count are
+     inside the picture, and printing either on the outside would undo the
+     password that hid them. */
+  function discInfoLine(input, locked) {
+    var bytes = typeof input === "string" ? new TextEncoder().encode(input).length : input.length;
+    var size = homeFmt(bytes);
+    if (locked) return size + ", locked";
+    var parts = [];
+    if (homeAttached) parts.push(shortDiscName(homeAttached.name));
+    if (typeof input === "string") {
+      var found = input.trim().match(/\S+/g);
+      var n = found ? found.length : 0;
+      parts.push(n.toLocaleString("en-US") + (n === 1 ? " word" : " words"));
+    }
+    parts.push(size);
+    return parts.join(" \u00b7 ");
+  }
+
+  // The two faces, fetched once and awaited before a disc is pressed.
+  function ensureDiscFonts() {
+    if (discFontsReady) return discFontsReady;
+    if (!document.fonts || !document.fonts.load) return (discFontsReady = Promise.resolve());
+    discFontsReady = Promise.all(DISC_FACES.map(function (f) {
+      return document.fonts.load(f).catch(function () {});
+    }));
+    return discFontsReady;
+  }
+
+  /* One line of writing, read off its group in the drawer. The style names
+     match the engine's, so nothing is translated on the way through.
+     Show turned off writes a single space, which is how the engine is told a
+     line has no words. That is not the same as leaving the field empty: an
+     absent option means the board fills the words in itself. */
+  function readDiscLine(key, wordsKey, opts) {
+    var v = function (name) { return document.getElementById("opt" + key + name); };
+    var box = document.getElementById(
+      key === "Label" ? "optLabel" : key === "Rim" ? "optRimText" : "optInfoText");
+    var words = box ? box.value.trim() : "";
+    if (!v("On").checked) opts[wordsKey] = " ";
+    else if (words) opts[wordsKey] = words;
+    opts[key.toLowerCase() + "Style"] = {
+      font: v("Font").value,
+      size: parseFloat(v("Size").value),
+      ink: v("Ink").value,
+      pos: v("Pos").value,
+      radius: parseFloat(v("Radius").value),
+      arc: parseFloat(v("Arc").value),
+      weight: v("Weight").value,
+      mode: v("Mode").value,
+      opacity: parseFloat(v("Opacity").value),
+      outline: v("Outline").value,
+      outlineWidth: parseFloat(v("OutlineW").value),
+      shadow: v("Shadow").value,
+      shadowAlpha: parseFloat(v("ShadowA").value),
+      shadowBlur: parseFloat(v("ShadowBlur").value),
+      shadowDrop: parseFloat(v("ShadowDrop").value)
+    };
   }
 
   // What the meter measures. The engine compresses before it fills a disc, so
@@ -2033,19 +2164,16 @@
       opts.coverFit = document.getElementById("optCoverFit").value;
     } else if (style === "cd") {
       opts.coverStyle = "cd";
-      var label = document.getElementById("optLabel").value;
-      if (label) opts.label = label;
       opts.solidBackground = document.getElementById("optSolidBg").checked;
       var imprintFile = document.getElementById("optImprint").files;
       if (imprintFile && imprintFile[0]) opts.imprint = imprintFile[0];
-      opts.fontFamily = document.getElementById("optFontFamily").value;
-      opts.fontSize = document.getElementById("optFontSize").value;   // small|medium|large|xlarge
-      var rim = document.getElementById("optRimText").value;
-      if (rim) opts.rimText = rim;
-      // Points and spacing are both read against a 256px disc, then scaled.
-      opts.rimSize = parseFloat(document.getElementById("optRimSize").value) || 13;
-      opts.rimSpacing = parseFloat(document.getElementById("optRimSpacing").value) || 0;
-      opts.rimTwoSided = document.getElementById("optRimTwoSided").checked;
+
+      /* THE THREE LINES ARE READ THE SAME WAY, because on the disc they are
+         the same thing: words on an arc with a style. Sizes are points read
+         against a 256px disc and scaled from there. */
+      readDiscLine("Label", "label", opts);
+      readDiscLine("Rim", "rimText", opts);
+      readDiscLine("Info", "infoText", opts);
 
       // Hub, the round center: sizes plus gray-ring thicknesses.
       opts.hub = {
@@ -2517,6 +2645,9 @@
     // What is in the tray was pressed from what the box used to hold. One
     // letter is enough to make it wrong, so it goes.
     if (homeDiscOut) tossDisc();
+    // A different PuttyPNG deserves its own saying. Flipping the background
+    // does not come through here, which is what keeps that one wording.
+    homeSaying = null;
     var raw = currentHomeBytes().byteLength;
     var top = Math.min(homeLastRung, RUNGS.length - 1);
     var band = capOf(top) - (homeLastRung ? capOf(homeLastRung - 1) : 0);
@@ -2619,6 +2750,24 @@
       // The engine takes a name and a type in its options, so a file comes out
       // of the other end still knowing what it was called.
       if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
+
+      /* WHAT THE BOARD WRITES ON THE DISC when the drawer left a line empty.
+         An absent option is the board's turn; a single space is a line the
+         person turned off, and neither of those is overwritten here.
+         The saying is held across a background flip, because that presses the
+         same PuttyPNG again and rewording it would read as a fault. */
+      var locked = !!opts.password;
+      if (opts.label == null) {
+        if (!homeSaying || homeSayingLocked !== locked) {
+          homeSaying = pickDiscSaying(locked);
+          homeSayingLocked = locked;
+        }
+        opts.label = homeSaying;
+      }
+      if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
+
+      // The faces have to be in before the canvas can letter with them.
+      await ensureDiscFonts();
       var png = await PuttyPNG.encode(input, opts);
       homeLastBlob = png.blob;
       maybeCelebrate("make");
