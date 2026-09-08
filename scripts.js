@@ -104,7 +104,18 @@
                "back if you remove the file.",
     askPlain:  "Nothing is hidden in that picture. Do you want to embed the picture " +
                "instead? Your note stays, and it comes back if you remove the file.",
-    contents:  "The PuttyPNG&rsquo;s contents:"
+    contents:  "The PuttyPNG&rsquo;s contents:",
+    /* A PASTE THAT DOES NOTHING MUST SAY WHY. Words pasted onto the page rather
+       than into a field are not a picture. A paste with neither words nor a
+       file names what it did carry, so a phone that hands the page something
+       odd is reported rather than ignored. */
+    pasteWords: "That paste was words, not a picture. Copy the picture itself, then paste again.",
+    pasteOdd:   "That paste held nothing the page can use: ",
+    pasteEmpty: "That paste was empty.",
+    /* How to paste without the Paste one! button. It depends on what the
+       person is holding: a phone has no Ctrl key and a mouse has no long press. */
+    pasteKey:   "Press Ctrl+V instead.",
+    pasteTap:   "Long-press the box and choose Paste instead."
   };
 
   /* HOW BIG THE METER IS. One rule for both shapes: the meter takes a share of
@@ -1140,10 +1151,27 @@
       var items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
       if (onBoardPage()) {
-        // Typing into the Make box is not an attempt to load a disc.
-        if (e.target === $("makeText")) return;
-        var png = pngFrom(items);
-        if (png) { e.preventDefault(); readHomeFile(png); }
+        /* A PASTE IS A DROP. A PNG is peeked, so a PuttyPNG opens and a plain
+           picture becomes the file to hide. Any other file is attached, the
+           way a file dropped on the box is.
+           THE MAKE BOX IS NOT EXEMPT ANY MORE. On a phone it is the only place
+           Paste is offered at all: Android shows Paste on a focused field and
+           nowhere else, and the Load column is off screen there. Until
+           v2.10.1 the box refused every paste, so a long-press Paste of a
+           PuttyPNG did nothing and said nothing.
+           Words pasted into a field are still words: they carry no file and
+           fall through to the browser. Anything else is named, so a paste
+           that does nothing never does it in silence. */
+        var file = fileFrom(items);
+        if (file) {
+          e.preventDefault();
+          if (/^image\/png/.test(file.type)) readHomeFile(file);
+          else takeHomeAttachment(file);
+          return;
+        }
+        if (hasText(items) && isTyping(e.target)) return;
+        e.preventDefault();
+        toast(hasText(items) ? SAY.pasteWords : pasteHeld(items), "bad");
         return;
       }
       if (!$("dropzone")) return;
@@ -1871,11 +1899,13 @@
     });
 
     /* A page cannot fake a paste, so asking for the clipboard needs the
-       permission API and is not offered by every browser. Ctrl+V is
-       always there, and it lands on the invisible field over the zone. */
+       permission API and is not offered by every browser. The other way is
+       always there: on a mouse Ctrl+V lands on the invisible field over the
+       zone, and on a phone a long press on the box offers Paste, which the
+       box takes from v2.10.1. The advice names whichever the person has. */
     $("pasteBtn").addEventListener("click", async function () {
       if (!navigator.clipboard || !navigator.clipboard.read) {
-        toast("This browser will not hand a page the clipboard. Press Ctrl+V instead.", "bad");
+        toast("This browser will not hand a page the clipboard. " + howToPaste(), "bad");
         return;
       }
       try {
@@ -1889,7 +1919,7 @@
         }
         toast(SAY.noPaste, "bad");
       } catch (err) {
-        toast("The clipboard was not shared. Press Ctrl+V instead.", "bad");
+        toast("The clipboard was not shared. " + howToPaste(), "bad");
       }
     });
 
@@ -2841,13 +2871,42 @@
     $("sink").value = "";
   }
 
-  // The first PNG on a clipboard, or nothing.
-  function pngFrom(items) {
+  /* THE FIRST FILE ON A CLIPBOARD, a PNG for choice, or nothing. A PNG is
+     preferred because it is the one kind that might be a PuttyPNG, and a copy
+     of a picture can carry more than one representation of it. */
+  function fileFrom(items) {
+    var first = null;
     for (var i = 0; items && i < items.length; i++) {
+      if (items[i].kind !== "file") continue;
       if (/^image\/png/.test(items[i].type)) return items[i].getAsFile();
+      if (!first) first = items[i].getAsFile();
     }
-    return null;
+    return first;
   }
+
+  function hasText(items) {
+    for (var i = 0; items && i < items.length; i++) {
+      if (items[i].kind === "string" && items[i].type === "text/plain") return true;
+    }
+    return false;
+  }
+
+  /* Whether a paste on this element is typing. The sink is a field too, but
+     it exists only to catch a paste, so words in it are never typing. */
+  function isTyping(el) {
+    if (!el || el.id === "sink") return false;
+    var tag = (el.tagName || "").toUpperCase();
+    return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable === true;
+  }
+
+  // What a paste carried when it carried nothing the page can use.
+  function pasteHeld(items) {
+    var types = [];
+    for (var i = 0; items && i < items.length; i++) types.push(items[i].type || items[i].kind);
+    return types.length ? SAY.pasteOdd + types.join(", ") : SAY.pasteEmpty;
+  }
+
+  function howToPaste() { return touchPointer.matches ? SAY.pasteTap : SAY.pasteKey; }
 
   /* ==========================================================================
      SECTION 6 - CLEANUP / FINALIZATION
