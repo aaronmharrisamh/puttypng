@@ -171,7 +171,16 @@
   var D_X = "M7.5 7.5l9 9M16.5 7.5l-9 9";
   var D_FILE = "M13.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5zM13.5 3v5.5H19";
   var D_TICK = "M5 12.5l4.5 4.5L19 7.5";
-  var D_WRITE = "m13.5 4.5 6 6M4 20l4.5-1 12-12a2.1 2.1 0 0 0-3-3l-12 12L4 20Z";
+  /* EDIT TITLE: A PENCIL OVER A LINE OF WRITING. The mark before it was a
+     tapered rod with a rounded back and one band across the neck, which is
+     the silhouette of an eyedropper, and it read as one.
+     Three things make it a pencil instead. The back is cut square rather than
+     rounded. The ferrule is a band across the body, far enough from the back
+     that the two do not merge at this size. The line underneath says the
+     thing being changed is writing.
+     Nothing is closer than about four units to anything else, because at 18px
+     a 1.9 stroke lands near 1.4px and two lines any nearer read as a smudge. */
+  var D_WRITE = "M5 21h14 M5.2 16.8 L6 11.7 L15.9 1.8 L19.9 5.8 L10 15.7 Z M12.7 5 L16.7 9";
   // R5's marks for the phone's Made screen. Each is one path with two
   // subpaths, because homeIcon draws one path and both of these are stroked.
   var D_AGAIN = "M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5";
@@ -2176,7 +2185,11 @@
 
   function wireHomeDisc() {
     var cd = $("cd");
-    $("discEdit").innerHTML = homeIcon(D_WRITE, 16) + $("discEdit").innerHTML;
+    /* 18px, where the board's other marks are 15 and 16. This one has to hold
+       its own beside a bold label, and on a phone it sits on the picture
+       window rather than on the page's white. The label's own size does not
+       move: it is 12px in both pills. */
+    $("discEdit").innerHTML = homeIcon(D_WRITE, 18) + $("discEdit").innerHTML;
 
     // The tip is a button too, so the invitation and the act are one thing.
     $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
