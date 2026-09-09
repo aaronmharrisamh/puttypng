@@ -918,33 +918,45 @@
           <div class="tray">
             <div class="lip"></div>
             <img class="cd" id="cd" alt="Your PuttyPNG. Drag it into Load, or press the bin to throw it away.">
+            <!-- THE TWO OVERLAY BUTTONS ARE NOT DRAWN ON THE PICTURE ANY MORE.
+                 They sat on top of the one thing this screen exists to show.
+                 They stay in the markup because a phone still moves them into
+                 its own row: placeMadeActions() is the only thing that touches
+                 them, and the gate counts one of each. -->
             <div class="cdtools">
               <button type="button" id="cdCopy"></button>
               <button type="button" id="cdSave"></button>
-            </div>
-            <div class="cdtip">
-              <div class="tiprow">
-                <svg class="arrow" width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
-                  <path d="M1 8h21M17 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <button type="button" class="say" id="cdTipCopy"></button>
-              </div>
-              <button type="button" class="disc-edit" id="discEdit" aria-label="Edit title" aria-haspopup="dialog" aria-controls="titleDialog" hidden>
-                <span class="edit-short">Edit</span><span class="edit-full">Edit Title</span>
-              </button>
-              <button type="button" class="bin ghost" id="bin" aria-label="Trash this PuttyPNG">
-                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                  <path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6.5 7l.8 12.1A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"
-                        fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                ...or trash me!
-              </button>
             </div>
           </div>
           <!-- WHAT THE PICTURE IS, inside the frame with it, which is where R5
                puts it. It is a caption, so it belongs to the picture and not
                to the column of things to do next. -->
           <div class="discnote" id="discNote" hidden></div>
+          </div>
+
+          <!-- WHAT TO DO WITH IT, BESIDE THE PICTURE.
+               The deck spans both columns so these four fit next to a disc
+               drawn at its real size. The arrow points at the invitation only.
+               #discEdit is moved in here by placeDiscEdit(), so its place in
+               this markup is where a desktop finds it and nothing more. -->
+          <div class="cdtip">
+            <div class="tiprow">
+              <svg class="arrow" width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
+                <path d="M1 8h21M17 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <button type="button" class="say" id="cdTipCopy"></button>
+            </div>
+            <button type="button" class="say" id="cdTipSave"></button>
+            <button type="button" class="disc-edit" id="discEdit" aria-label="Edit title" aria-haspopup="dialog" aria-controls="titleDialog" hidden>
+              <span class="edit-short">Edit</span><span class="edit-full">Edit Title</span>
+            </button>
+            <button type="button" class="bin ghost" id="bin" aria-label="Trash this PuttyPNG">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6.5 7l.8 12.1A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"
+                      fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              ...or trash me!
+            </button>
           </div>
 
           <!-- EVERYTHING BELOW IS THE PHONE'S MADE SCREEN, and it is R5's, in
@@ -1020,7 +1032,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.11.4</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.12.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>

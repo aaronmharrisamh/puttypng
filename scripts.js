@@ -135,15 +135,23 @@
   /* HOW BIG THE FINISHED PUTTYPNG IS. It is not the meter. The meter shares a
      row with a button that has to hold words, so it gives width up. The disc
      has a row to itself, so it takes the width the picture is worth.
-     wide is null on purpose: the desktop disc is the donut plus the card
-     padding, worked out from the measured column, and writing it as four fixed
-     sizes would break the moment the window is resized. null means there is no
-     table here, and setBoardSizes says so in one branch.
+
+     ON A DESKTOP IT IS THE SIZE THE PICTURE REALLY IS, where the room exists
+     for that. A 256px PuttyPNG is drawn 256px across, so what sits in the tray
+     is the thing a person is about to send rather than a thumbnail of it.
+     The larger rungs cannot be true: a 512px disc does not fit a 448px column,
+     and a 2048px one never will. They take a share of the deck instead,
+     ramping to nine tenths of it, so the step from rung to rung is still
+     something a person can see. Whichever of the two is smaller wins, which is
+     what makes 256 exact and everything above it proportional.
+     The shares are read against the deck row rather than the card, because the
+     deck row is the box the disc sits in.
+
      The touch numbers are R5's own preview table, r-shell.js:16. They are
      absolute pixels rather than a share, which is a departure from every other
      size on this board, and the comment above is the whole defence. */
   var DISC_TUNING = {
-    wide: null,
+    wide: [0.575, 0.683, 0.792, 0.90],
     touch: [150, 190, 230, 268]
   };
 
@@ -1859,8 +1867,17 @@
     $("makeBox").classList.toggle("glow", stage === "box");
     var ic = document.querySelector(".act .ic");
     if (ic) ic.classList.toggle("glow", stage === "make");
-    var copy = $("cdCopy");
-    if (copy) copy.classList.toggle("glow", stage === "copy");
+    /* THE LAST STOP HAS TO BE THE COPY A PERSON CAN SEE. A phone's is
+       #cdCopy, moved into its row by placeMadeActions(). A desktop's is the
+       chip under the disc, because #cdCopy is parked out of sight there from
+       v2.12.0. A glow on a hidden control is a chain that ends nowhere.
+       The other one is cleared either way, so a change of pointer cannot
+       leave a glow behind on the shape that is no longer showing. */
+    var lit = touchPointer.matches ? "cdCopy" : "cdTipCopy";
+    ["cdCopy", "cdTipCopy"].forEach(function (id) {
+      var el = $(id);
+      if (el) el.classList.toggle("glow", stage === "copy" && id === lit);
+    });
   }
 
   /* A keystroke puts the chain out until the typing settles. The wait is
@@ -2193,6 +2210,7 @@
 
     // The tip is a button too, so the invitation and the act are one thing.
     $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
+    $("cdTipSave").innerHTML = homeIcon(D_DOWN, 15) + "<span>Download and send me later!</span>";
     $("cdCopy").innerHTML = homeIcon(D_COPY, 13) + "<span>Copy</span>";
     $("cdSave").innerHTML = homeIcon(D_DOWN, 13) + "<span>Download</span>";
 
@@ -2244,12 +2262,17 @@
       glowDone = true; paintGlow();
       copyHomeDisc(this, "Copied!");
     });
-    $("cdTipCopy").addEventListener("click", function () { copyHomeDisc(this, "Copied!"); });
-    $("cdSave").addEventListener("click", function () {
-      if (!homeLastBlob) return;
-      saveBytes(URL.createObjectURL(homeLastBlob), "puttypng.png", true);
-      confirmDone(this, "Saved!");
+    /* Both Copies end the chain, because either one of them is the one the
+       person could see when they pressed it. */
+    $("cdTipCopy").addEventListener("click", function () {
+      glowDone = true; paintGlow();
+      copyHomeDisc(this, "Copied!");
     });
+    /* TWO BUTTONS, ONE SAVE. #cdSave is the phone's, moved into its row by
+       placeMadeActions(). #cdTipSave is the desktop's chip under the disc.
+       Neither is a copy of the other's work: they call the same function. */
+    $("cdSave").addEventListener("click", function () { saveHomeDisc(this); });
+    $("cdTipSave").addEventListener("click", function () { saveHomeDisc(this); });
 
     // The disc going takes its two chips with it, because the tip only shows
     // while the disc is out. Nothing else has to be cleared by hand.
@@ -2882,8 +2905,18 @@
     var t = METER_TUNING[touchPointer.matches ? "touch" : "wide"];
     var meter = Math.min(t.max, Math.max(t.min, Math.round(inner * t.share[homeShownRung])));
 
-    var discs = DISC_TUNING[touchPointer.matches ? "touch" : "wide"];
-    var slot = discs ? discs[homeShownRung] : meter + pad * 2;
+    /* THE SHARE IS OF THE MAKE COLUMN, NOT THE DECK ROW. The deck spans the
+       whole board so the chips have room beside the picture, but the picture
+       itself stays as wide as the column it was pressed in. Reading the deck
+       instead would draw an 828px disc on a 920px board. */
+    var slot;
+    if (touchPointer.matches) {
+      slot = DISC_TUNING.touch[homeShownRung];
+    } else {
+      var colW = col.getBoundingClientRect().width || inner + pad * 2;
+      slot = Math.round(Math.min(RUNGS[homeShownRung].px,
+                                 colW * DISC_TUNING.wide[homeShownRung]));
+    }
 
     // Both tokens are set on the root, because that is where every rule that
     // reads them resolves. Setting them on the column would leave the deck
@@ -3290,6 +3323,13 @@
     btn.disabled = false;
     homePressing = false;
     paintDiscEdit();
+  }
+
+  // Put the finished PuttyPNG on disk. The button says so and goes quiet again.
+  function saveHomeDisc(el) {
+    if (!homeLastBlob) return;
+    saveBytes(URL.createObjectURL(homeLastBlob), "puttypng.png", true);
+    confirmDone(el, "Saved!");
   }
 
   async function copyHomeDisc(el, word) {

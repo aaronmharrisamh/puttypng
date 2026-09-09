@@ -270,7 +270,12 @@ nav.tabs a {
   grid-template-columns: 1fr 1fr;
   column-gap: 24px;
   row-gap: 8px;
-  grid-template-areas: "hm hl" "cm cl" "ad ad" "sm sl";
+  /* THE DECK SPANS BOTH COLUMNS. The disc is drawn at the size the picture
+     really is, and the chips sit beside it, and the two of them do not fit in
+     one column. The right half of this row was empty in every state the board
+     has ever had, so the deck takes it rather than pushing the chips under
+     the picture. The disc itself is still held to the Make column's width. */
+  grid-template-areas: "hm hl" "cm cl" "ad ad" "sm sm";
   align-items: stretch;
 }
 
@@ -986,10 +991,34 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 /* Everything here is worked out from the one token, so the slot and the disc
    grow at the same moment and the same rate as the donut above them. */
-.deckrow { position: relative; height: calc(var(--slot-w) + 34px); transition: height var(--grow); }
+/* THE DECK, SAID AS A SHAPE RATHER THAN AS OFFSETS.
+   The picture on the left, what to do with it on the right, and the notice
+   under both. It used to be a fixed frame with each chip placed against the
+   disc by calc(var(--slot-w) + ...), which only works while the disc is a
+   thumbnail. Naming the areas costs four lines and survives a disc of any
+   size, and a phone overrides the whole thing with a column in Section 7. */
+.deckrow {
+  display: grid; align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "tray tip" "note note";
+  gap: 14px 18px;
+  min-width: 0;
+}
+
+/* A DESCENDANT, NOT A CHILD. .discwin is display:contents on a desktop, and
+   that takes the box out of the tree without taking the element out of the
+   DOM, so .deckrow > .tray matches nothing: the tray's parent is still
+   .discwin. It landed in the right cell by the order it is auto-placed in,
+   which is luck rather than a rule. */
+.deckrow .tray { grid-area: tray; }
+/* It sizes to its widest chip rather than to the cell, so the bin can line
+   its right edge up with the invitation above it. Stretched, the bin would
+   sit against the far edge of the board. */
+.deckrow > .cdtip { grid-area: tip; justify-self: start; }
+.deckrow > .transnote { grid-area: note; }
 
 .tray {
-  position: absolute; left: 0; top: 0;
+  position: relative; flex: none;
   width: var(--slot-w); height: calc(var(--slot-w) + 28px);
   /* Only the TOP of this clip matters: it is what hides the disc above the
      slot. The other three sides are held wide so nothing inside is ever cut,
@@ -1020,40 +1049,35 @@ details.sect > summary::-webkit-details-marker { display: none; }
               width var(--grow), height var(--grow);
 }
 
-/* The pair is centred on the disc, but the two chips align to each other so
-   their marks form one column rather than drifting under words of different
-   lengths. */
-.cdtools {
-  position: absolute; left: 0; width: var(--slot-w);
-  top: calc(var(--slot-w) * 0.66); z-index: 9;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  opacity: 0; pointer-events: none;
-  transition: opacity .15s, width var(--grow), top var(--grow);
-}
+/* NOTHING IS DRAWN ON THE PICTURE ANY MORE. These two lay over the disc,
+   which is the one thing the screen exists to show, and a person had to hover
+   the picture to find out they were there at all. The words they carried are
+   under the disc now, on chips that are always visible.
+   The element stays because a phone still needs somewhere to keep the pair
+   between moves. placeMadeActions() takes them out of here and puts them
+   back, and the gate counts one of each in the markup. */
+.cdtools { display: none; }
 
-.cdtools button {
-  display: inline-flex; align-items: center; gap: 6px;
-  font: inherit; font-size: 10.5px; font-weight: 700; color: #fff; cursor: pointer;
-  background: rgba(20,20,24,.88); border: 0; border-radius: 999px; padding: 5px 11px;
-  min-width: 96px;
-}
-
-.cdtools button svg { flex: none; }
-
-/* THE TWO THINGS YOU CAN DO WITH A FRESH DISC, STACKED BESIDE IT.
-   The arrow points at the invitation only. The bin sits beneath it, indented
-   past the arrow so the two chips line up. */
+/* WHAT TO DO WITH A FRESH DISC, BESIDE IT.
+   One stack: copy it, save it, change what it says, throw it away. It is a
+   cell of the deck rather than a box placed against the disc, so it stands
+   beside a picture of any size without being told where to go. */
 .cdtip {
-  position: absolute;
-  left: calc(var(--slot-w) + 14px); top: calc(var(--slot-w) * 0.32); z-index: 8;
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  padding-top: calc(var(--slot-w) * 0.22);
   opacity: 0; transform: translateX(-8px); pointer-events: none;
-  transition: opacity .25s ease, transform .25s ease, left var(--grow), top var(--grow);
+  transition: opacity .25s ease, transform .25s ease, padding-top var(--grow);
 }
 
 .tiprow { display: flex; align-items: center; gap: 6px; }
 
 .cdtip .arrow { color: var(--clay); flex: none; }
+
+/* THE ARROW SETS THE INDENT. Everything below the invitation starts where the
+   invitation's words start, so the stack reads as one block rather than four
+   chips that happen to be near each other. */
+.cdtip > .say, .cdtip > .disc-edit { margin-left: 32px; }
+
 
 .cdtip .say {
   display: inline-flex; align-items: center; gap: 7px;
@@ -1077,7 +1101,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
 /* The title entry point stays visible beside a finished disc. */
 .disc-edit {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  margin-left: 32px; min-height: 36px; padding: 7px 14px;
+  min-height: 36px; padding: 7px 14px;
   border: 0; border-radius: 999px; background: var(--ink); color: #fff;
   font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
 }
@@ -1624,19 +1648,16 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   filter: drop-shadow(0 16px 26px rgba(0,0,0,.38));
 }
 
-.cd.out ~ .cdtools { pointer-events: auto; }
-@media (hover: hover) and (pointer: fine) {
-  .tray:hover .cd.out ~ .cdtools { opacity: 1; }
-  .cdtools button:hover { background: var(--clay-deep); }
-}
-.cdtools button.done { background: var(--ok); }
-
-.cd.out ~ .cdtip { opacity: 1; transform: none; pointer-events: auto; }
+/* THE CHIPS ARE NOT THE DISC'S SIBLINGS ANY MORE, so the state is read off
+   the deck instead of off the element next to it. The disc lives in the tray
+   and the chips live under it, and :has is what still lets one speak for the
+   other. */
+.deckrow:has(.cd.out) .cdtip { opacity: 1; transform: none; pointer-events: auto; }
 
 /* THE WHOLE STACK CLEARS WHILE THE DISC IS IN HAND. Neither chip is a place
    to drop any more, so there is nothing for them to do until the disc is set
    down again, and both come back if it returns to its slot. */
-.cd.lifted ~ .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
+.deckrow:has(.cd.lifted) .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
 
 @media (hover: hover) and (pointer: fine) {
   .cdtip .say:hover { background: var(--clay-deep); }
@@ -1707,7 +1728,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    in place, beside the component it belongs to. Gathering all 27 into one
    block here would move them to the end of the sheet, and four of them would
    then beat a rule that beats them today: .subtabs button.active,
-   .dropzone.drag-over, .cdtools button.done and .cdtip .say.done. A copied
+   .dropzone.drag-over and .cdtip .say.done. A copied
    chip would lose its green while the pointer rested on it, which is the
    moment a person is looking at it. */
 
@@ -1987,20 +2008,12 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 @media (max-width: 760px) {
   .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "ad" "sm" "hl" "cl"; }
 
-  /* Beside the disc there is no room, so the two chips go under it instead of
-     disappearing, which would take the bin away with them. */
-  .deckrow { height: calc(var(--slot-w) + 154px); }
-  .cdtip { left: 0; top: calc(var(--slot-w) + 20px); }
-  .cdtip .arrow { display: none; }
-  .disc-edit { margin-left: 0; }
-  .bin { align-self: flex-start; }
 }
 
 /* THE TRANSPARENCY NOTICE. A light notice with a mark, not a black bar, and it
    sits on the picture because it is about the picture. It is shown only while
    a see-thru PuttyPNG is in the tray, so it can never outlive its cause. */
 .transnote {
-  position: absolute; left: 0; top: calc(var(--slot-w) + 26px); z-index: 10;
   display: flex; align-items: flex-start; gap: 7px;
   width: min(300px, 100%); padding: 8px 10px;
   border: 1px solid #e8dcae; border-radius: var(--radius-sm);
@@ -2023,15 +2036,10 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    disc and needs none of this.
    The row grows only while the notice is showing, so a solid PuttyPNG is not
    charged for space it does not use. */
-/* A NARROW DESKTOP WINDOW, WHICH IS NOT A PHONE. The pointer half of this
-   query is what makes that explicit. A finger gets the block further down,
-   where the deck row is an ordinary column and none of this applies. Without
-   the pointer half, the :has rule below outranks that column by specificity
-   and squashes the picture window flat, which is what it did on 2026-09-07. */
-@media (max-width: 760px) and (hover: hover) and (pointer: fine) {
-  .transnote { top: calc(var(--slot-w) + 112px); }
-  .deckrow:has(.transnote:not([hidden])) { height: calc(var(--slot-w) + 196px); }
-}
+/* THE NARROW DESKTOP NEEDS NOTHING OF ITS OWN NOW. Two rules used to move the
+   notice and grow the deck row to make room for chips that had been pushed
+   under the disc. The deck is a column at every width, so the notice follows
+   the chips and the row is as tall as what is in it. */
 
 /* THE LOADED SCREEN ON A PHONE. THIS IS R5's SCREEN.
    Top to bottom: the heading with Close in its corner, the green line, the
@@ -2083,9 +2091,14 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    must beat it. */
 @media (hover: none), (pointer: coarse) {
 
-  /* The deck row stops being a fixed frame with things placed against it and
-     becomes an ordinary column. */
-  .deckrow { position: static; height: auto; display: flex; flex-direction: column; gap: 10px; }
+  /* A PHONE HAS NO ROOM BESIDE THE PICTURE, so the deck is a plain column
+     here: the window, the notice, the buttons, the sign off, the way back,
+     each taking the whole screen in the order they are read. The desktop's
+     two-cell grid above is undone rather than adjusted, because a column and
+     a grid are two different shapes and half of one is neither. */
+  .deckrow {
+    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
+  }
 
   /* WHERE THE DISC COMES TO REST, measured from the top of the window. The
      number is read twice: once to place the disc, once to work out how far
@@ -2128,7 +2141,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   /* A MOUSE'S CONTROLS. The tip is revealed by a hover and the bin is there
      for a drag that no longer happens here. The button row under the window
      does both jobs on a phone. */
-  .cdtip, .cdtools { display: none; }
+  .cdtip { display: none; }
 
   .discwin > .disc-edit {
     position: absolute; bottom: 6px; left: 10px; z-index: 10;
@@ -2254,7 +2267,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
 /* A ring for the things shaped like a box: the text box and the Copy chip. */
 .makebox.glow #makeText,
-#cdCopy.glow { animation: boxglow 1.68s ease-in-out infinite; }
+#cdCopy.glow,
+#cdTipCopy.glow { animation: boxglow 1.68s ease-in-out infinite; }
 .makebox.glow #makeText { border-color: #3fbf00; }
 
 @keyframes boxglow {
@@ -2281,7 +2295,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    needs to know where to start, so the glow stops moving and stays lit. */
 @media (prefers-reduced-motion: reduce) {
   .makebox.glow #makeText,
-  #cdCopy.glow { animation: none; box-shadow: 0 0 0 4px rgba(var(--limergb), .24); }
+  #cdCopy.glow,
+  #cdTipCopy.glow { animation: none; box-shadow: 0 0 0 4px rgba(var(--limergb), .24); }
   .act .ic.glow::after { animation: none; opacity: .6; transform: scale(1); }
 }
 
