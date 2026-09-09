@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.11.2**, engine **2.2.1**, protocol **1**.
+Current release: page **2.11.3**, engine **2.2.1**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -35,8 +35,8 @@ The board selects from 130 sayings: ten each for typed text, general
 attachments, ten popular file families, and protected contents. File families
 include PDF, Word, Excel/CSV, PowerPoint, OpenDocument text/spreadsheets/slides,
 text/Markdown files, images, and archives. The small contents arc uses a word
-count for typed text or a size and file type for attachments. Its arrow points
-toward **Paste into PuttyPNG.com**.
+count for typed text or a size and file type for attachments. The disc also
+reads **Paste into PuttyPNG.com**.
 
 Each press of Make picks a random saying when no title has been chosen,
 excluding the previous automatic saying for those contents. Saved custom

@@ -889,7 +889,6 @@
     }
     if (opts.label == null) opts.label = homeSaying;
     if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
-    opts.infoArrow = true;
   }
 
   // The two faces, fetched once and awaited before a disc is pressed.
