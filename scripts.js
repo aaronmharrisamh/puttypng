@@ -521,10 +521,8 @@
     "puttypng.js could not be loaded.\n" +
     "Check that the file sits next to index.html on the server.";
 
-  /* The saying this disc is carrying. It is chosen when a PuttyPNG is made
-     and kept while the background is flipped, because flipping Solid presses
-     the same PuttyPNG again and rewording it there would look like a fault.
-     Typing something new clears it, so the next one gets its own. */
+  // Each Make chooses a new automatic saying. Background changes keep the
+  // current saying because they update the same disc.
   var homeSaying = null;
   var homeSayingLocked = false;
   var homeTitleFilename = false;
@@ -875,10 +873,10 @@
   }
 
   // The board supplies wording; the engine draws and embeds it.
-  function applyDiscWriting(input, opts) {
+  function applyDiscWriting(input, opts, keepSaying) {
     var locked = !!opts.password;
-    if (!homeSaying || homeSayingLocked !== locked) {
-      homeSaying = pickDiscSaying(locked);
+    if (!keepSaying || !homeSaying || homeSayingLocked !== locked) {
+      homeSaying = pickDiscSaying(locked, homeSaying);
       homeSayingLocked = locked;
     }
     if (locked) {
@@ -1995,7 +1993,7 @@
     paintSolidWord();
     paintMadeScreen();
     updateHomeMeter(true);
-    if (homeDiscOut) pressHomeDisc();
+    if (homeDiscOut) pressHomeDisc(true);
   }
 
   /* THE READING UNDER A HEADING, AND THE ONLY THING THAT WRITES ONE.
@@ -2165,7 +2163,7 @@
       paintSolidWord();
     }
 
-    $("homeMakeBtn").addEventListener("click", pressHomeDisc);
+    $("homeMakeBtn").addEventListener("click", function () { pressHomeDisc(false); });
 
     /* ONE LISTENER FOR ONE CONTROL. Which job it does is read off the button
        when it is pressed, so the two jobs cannot drift apart from the label
@@ -2325,13 +2323,14 @@
     var draft = homeTitleDraft;
     if (!draft) return;
     var input = $("titleInput"), locked = !!draft.made.opts.password;
+    var canUseFilename = !locked && !!draft.made.name;
     var words = titleDraftWords(draft);
     if (fillInput) input.value = draft.filename ? draft.made.name : draft.text;
     input.readOnly = draft.filename;
+    $("titleFilenameRow").hidden = !canUseFilename;
     $("titleFilename").checked = draft.filename;
-    $("titleFilename").disabled = locked || !draft.made.name || homeTitleSaving;
-    $("titleFilenameHelp").textContent = locked ? "Hidden while this disc is password protected."
-      : draft.made.name || "Typed text has no filename. Use a saying or your own title.";
+    $("titleFilename").disabled = !canUseFilename || homeTitleSaving;
+    $("titleFilenameHelp").textContent = canUseFilename ? draft.made.name : "";
     $("titleHelp").textContent = draft.filename
       ? "The disc shortens the middle to fit and keeps the extension. The original filename stays unchanged."
       : "Start with our words, or write something of your own.";
@@ -3221,7 +3220,7 @@
     }, DISC_TOSS_MS);
   }
 
-  async function pressHomeDisc() {
+  async function pressHomeDisc(keepSaying) {
     if (homePressing || homeTitleSaving) return;
     homePressing = true;
     paintDiscEdit();
@@ -3239,7 +3238,7 @@
       // of the other end still knowing what it was called.
       if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
 
-      applyDiscWriting(input, opts);
+      applyDiscWriting(input, opts, keepSaying);
       var made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
         category: discCategory(homeAttached, !!opts.password), filename: homeTitleFilename,
         customText: homeTitleFilename ? ($("optLabel").value || homeSaying) : opts.label };

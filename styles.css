@@ -1119,6 +1119,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
 .title-error { color: var(--bad); font-size: 12px; margin: 7px 0 0; }
 .title-error[hidden], #titlePrivacy[hidden] { display: none; }
 .title-filename { display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 14px 0; margin-top: 17px; }
+.title-filename[hidden] { display: none; }
 .title-filename > div { min-width: 0; }
 .title-filename label { font-size: 12px; font-weight: 600; }
 .title-filename small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
