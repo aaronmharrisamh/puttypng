@@ -322,36 +322,63 @@ nav.tabs a {
    baseline would sit far below the word. */
 .egwrap { position: relative; display: inline-flex; align-items: center; align-self: center; }
 
-/* THE WIDTH IS SET, NOT LEFT TO THE ROWS. A dropdown sizes itself to its
-   longest option, so the closed slot came out at 210px to hold a row nobody
-   can see while it is closed. It only ever has to show the word Examples or a
-   tick and a short name, and the rows are short enough that the list a browser
-   opens stays readable at this width. */
-.egwrap select {
-  appearance: none; -webkit-appearance: none;
-  width: 132px; padding: 6px 26px 6px 12px; min-height: 30px;
+/* THE WIDTH IS SET, NOT LEFT TO THE WORDS. The button only ever shows the word
+   Examples or a tick and a short name, and a width that followed its longest
+   state would jump about as the tick came and went. */
+.egbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  width: 132px; padding: 6px 10px 6px 12px; min-height: 30px;
   font: inherit; font-size: 12px; font-weight: 700; line-height: 1;
-  text-overflow: ellipsis;
   color: var(--paper); background: var(--ink);
   border: 0; border-radius: 999px; cursor: pointer;
 }
 
-/* Decoration only. The select underneath takes every press. */
-.egwrap .egchev {
-  position: absolute; right: 10px; display: flex;
-  color: var(--paper); pointer-events: none;
+.egbtn #egLabel {
+  flex: 1 1 auto; min-width: 0; text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+.egbtn .egchev { display: flex; flex: none; }
+
+/* THE MENU HANGS FROM THE BUTTON AND TAKES NO ROOM IN THE ROW. It is absolute,
+   so opening it moves nothing: the heading, the reading and the card below all
+   stay exactly where they were. */
+.egmenu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  min-width: 210px; padding: 5px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--paper); box-shadow: var(--shadow-lift);
+}
+
+/* An author's display beats the hidden attribute, so every rule that sets one
+   needs its pair. The board learned this when a warning was drawn on an empty
+   screen while its attribute said otherwise. */
+.egmenu[hidden] { display: none; }
+
+.egitem {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; min-height: 34px;
+  font: inherit; font-size: 13px; font-weight: 600; text-align: left;
+  color: var(--ink); background: none;
+  border: 0; border-radius: var(--radius-sm); cursor: pointer;
+}
+
+/* The mark is the half that says what the row is, so it carries its own colour
+   weight rather than fading into the words beside it. */
+.egitem svg { flex: none; color: var(--muted); }
 
 /* A FOCUS RULE IS NOT A HOVER RULE and stays out of both pointer queries: a
    tablet with a keyboard needs this ring. The sheet has no catch-all, so
    every control carries its own, and this is the one the buttons wear. */
-.egwrap select:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+.egbtn:focus-visible,
+.egitem:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
 
-
-/* A HOVER DARKENS AND NEVER TINTS. Black goes to black, which is as dark as
-   black gets. */
+/* A HOVER DARKENS AND NEVER TINTS. Black goes to black, and a light row
+   darkens its paper rather than taking a colour it did not have. */
 @media (hover: hover) and (pointer: fine) {
-  .egwrap select:hover { background: #000; }
+  .egbtn:hover { background: #000; }
+  .egitem:hover { background: #f2f2f2; }
+  .egitem:hover svg { color: var(--ink); }
 }
 
 .head .say .peeklink {
@@ -1918,7 +1945,12 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      The row wraps when all three will not fit, which is the right answer at
      the narrowest widths: the offer drops under the word rather than
      squeezing it. */
-  .egwrap select { min-height: 44px; padding: 0 30px 0 13px; font-size: 12.5px; }
+  /* THE BUTTON AND EVERY ROW ARE 44px TO A THUMB. The menu grows with them and
+     is still absolute, so a row opening under the heading covers the card
+     rather than pushing it down the screen. */
+  .egbtn { min-height: 44px; padding: 0 10px 0 13px; font-size: 12.5px; }
+  .egitem { min-height: 44px; font-size: 14px; }
+  .egmenu { min-width: 240px; }
 
   /* THE WARNING'S CROSS IS 44px TO A THUMB. The mark drawn inside it keeps the
      size it has on a desktop; only the box a finger must hit grows. */

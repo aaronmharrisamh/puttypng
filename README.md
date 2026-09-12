@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.14.0**, engine **2.3.0**, protocol **1**.
+Current release: page **2.15.0**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -40,9 +40,10 @@ reads **Paste into PuttyPNG.com**.
 
 ## Trying it without typing anything
 
-An **Examples** dropdown sits beside the Make heading, offering a kind rather
-than a title: **Text Example** or **Attachment Example**. The board picks one of
-that kind at random, loads it, and says which one it chose. It does not press
+An **Examples** button sits beside the Make heading. It opens a short menu
+offering a kind rather than a title: **Text Example**, marked with lines of
+writing, or **Attachment Example**, marked with a paperclip. The board picks one
+of that kind at random, loads it, and says which one it chose. It does not press
 the disc: you press Make when you are ready, the way you would with anything you
 typed. An example replaces whatever is on the board, so it asks first if there
 is anything there.
@@ -90,7 +91,7 @@ without the password, as the editor explains.
 | `styles.css` | All presentation. Seven sections. |
 | `scripts.js` | All page behavior. Seven sections. |
 | `puttypng.js` | The engine. Nine sections. |
-| `examples.js` | The five examples behind the Examples dropdown. Generated, and loaded only when one is picked. |
+| `examples.js` | The five examples behind the Examples menu. Generated, and loaded only when one is picked. |
 
 Every page carries the same head, masthead, navigation, and footer, marked with
 `SYNC` comments. `.devtools/sync-chrome.mjs` checks the five copies agree.

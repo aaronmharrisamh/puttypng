@@ -118,9 +118,9 @@
                rewritten on every change of state and a control living in it
                disappeared the moment it was used.
                TWO ROWS, NOT FIVE. A person choosing between five named
-               titles is reading a menu; a person who wants to see the thing
-               work wants words or a file. The board picks one of that kind at
-               random, and the slot then says which one it gave them.
+               titles is reading a list of books; a person who wants to see the
+               thing work wants words or a file. The board picks one of that
+               kind at random, and the slot then says which one it gave them.
                THE ROWS ARE WRITTEN HERE, NOT BUILT FROM examples.js. That
                file is 600KB and is not fetched until somebody picks, so the
                list has to exist before it. The gate checks that each row's
@@ -132,15 +132,39 @@
                second asset. It is decoration: the select underneath is a real
                one, so a phone gets its own picker and a keyboard still works. -->
           <span class="egwrap">
-            <select id="egPick" aria-label="Load an example into Make">
-              <option value="">Examples</option>
-              <option value="text">Text Example</option>
-              <option value="file">Attachment Example</option>
-            </select>
-            <span class="egchev" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 9.5l6 6 6-6" fill="none"
-                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
+            <button type="button" class="egbtn" id="egPick" aria-haspopup="menu"
+                    aria-expanded="false" aria-controls="egMenu">
+              <span id="egLabel">Examples</span>
+              <span class="egchev" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 9.5l6 6 6-6" fill="none"
+                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+            <!-- A MENU, NOT A DROPDOWN, AND THE ICONS ARE WHY. An option in a
+                 native select renders as plain text in every browser, so there
+                 is nowhere in one to put a mark. With two rows a native picker
+                 gives up little: it opens a whole sheet on a phone to show two
+                 things, and these two rows are larger targets than that sheet.
+                 The marks match the paperclip on the attach chip: one path,
+                 stroked in currentColor, so a row on a white card and a row
+                 being pressed need no second asset and no second colour. -->
+            <div class="egmenu" id="egMenu" role="menu" aria-labelledby="egPick" hidden>
+              <button type="button" class="egitem" role="menuitem" data-kind="text">
+                <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+                  <path d="M5 7h14M5 12h14M5 17h9" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span>Text Example</span>
+              </button>
+              <button type="button" class="egitem" role="menuitem" data-kind="file">
+                <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+                  <path d="M21 11.5l-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-8.9 8.9a1.8 1.8 0 0 1-2.6-2.6l8.1-8.1"
+                        fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Attachment Example</span>
+              </button>
+            </div>
           </span>
           <!-- ONE CORNER, TWO JOBS, NAMED BY THE SCREEN IT IS ON.
                On Make it reads Clear and empties the board, and it is not
@@ -1063,7 +1087,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.14.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.15.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>

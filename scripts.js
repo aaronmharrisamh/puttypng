@@ -1747,21 +1747,74 @@
      Every listener the two columns and the deck need, in one place.
      ========================================================================== */
 
-  /* THE DROPDOWN IS A REAL ONE AND KEEPS ITS OWN LISTENER. It lives beside the
-     Make heading, which nothing repaints, so the listener can be held against
-     the element. That is the whole reason it moved out of the reading: a
-     control in there was rewritten away every time the board changed state.
+  /* THE MENU BESIDE THE HEADING. It keeps its own listeners, because nothing
+     repaints the heading row. That is the whole reason it moved out of the
+     reading: a control in there was rewritten away every time the board
+     changed state.
 
-     The first row is the offer and picks nothing, so an empty value returns.
-     The slot goes back to that row inside offerExample, whether the question
-     that follows is answered yes or no. */
+     IT IS A MENU RATHER THAN A SELECT BECAUSE OF THE MARKS. An option in a
+     native select renders as plain text, so a row cannot carry an icon. Doing
+     it by hand means the open and close, the keys and the focus are all
+     written here, which is the cost of the marks. */
+  function egMenuOpen() {
+    return $("egMenu") && !$("egMenu").hidden;
+  }
+
+  function openEgMenu() {
+    $("egMenu").hidden = false;
+    $("egPick").setAttribute("aria-expanded", "true");
+    var first = $("egMenu").querySelector(".egitem");
+    if (first) first.focus();
+  }
+
+  /* CLOSING ALWAYS PUTS THE FOCUS BACK, unless the board is about to take it
+     somewhere better. A menu that closes and leaves the focus on the page body
+     loses a keyboard reader their place. */
+  function closeEgMenu(refocus) {
+    if (!$("egMenu")) return;
+    $("egMenu").hidden = true;
+    $("egPick").setAttribute("aria-expanded", "false");
+    if (refocus) $("egPick").focus();
+  }
+
   function wireExamples() {
-    var sel = $("egPick");
-    if (!sel) return;
-    sel.addEventListener("change", function () {
-      var kind = sel.value;
-      sel.selectedIndex = 0;
-      if (kind) offerExample(kind);
+    var btn = $("egPick"), menu = $("egMenu");
+    if (!btn || !menu) return;
+
+    btn.addEventListener("click", function () {
+      if (egMenuOpen()) closeEgMenu(true); else openEgMenu();
+    });
+
+    menu.addEventListener("click", function (e) {
+      var item = e.target.closest && e.target.closest(".egitem");
+      if (!item) return;
+      closeEgMenu(false);
+      offerExample(item.getAttribute("data-kind"));
+    });
+
+    /* THE ARROW KEYS WALK THE ROWS, which is what a menu is expected to do and
+       what a select gave for nothing. Home and End are the same idea at the
+       ends. Escape closes and hands the focus back. */
+    menu.addEventListener("keydown", function (e) {
+      var items = [].slice.call(menu.querySelectorAll(".egitem"));
+      var at = items.indexOf(document.activeElement);
+      if (e.key === "Escape") { e.preventDefault(); return closeEgMenu(true); }
+      if (e.key === "ArrowDown") { e.preventDefault(); items[(at + 1) % items.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); items[(at - 1 + items.length) % items.length].focus(); }
+      else if (e.key === "Home") { e.preventDefault(); items[0].focus(); }
+      else if (e.key === "End") { e.preventDefault(); items[items.length - 1].focus(); }
+    });
+
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openEgMenu(); }
+    });
+
+    /* A PRESS ANYWHERE ELSE CLOSES IT, and without handing the focus back:
+       somebody who pressed another control is on their way there. */
+    document.addEventListener("pointerdown", function (e) {
+      if (!egMenuOpen()) return;
+      if (e.target.closest && e.target.closest(".egwrap")) return;
+      closeEgMenu(false);
     });
   }
 
@@ -3451,14 +3504,9 @@
                    cast: "Cast list", cal: "Calendar" };
 
   function flashExamplePick(shortName) {
-    var sel = $("egPick");
-    if (!sel || !sel.options.length) return;
-    var slot = sel.options[0];
+    var slot = $("egLabel");
+    if (!slot) return;
     clearTimeout(egFlashTimer);
-    /* THE SLOT IS PUT BACK BY THE LISTENER, NOT HERE. wireExamples reads the
-       value and returns to the first row in the same breath, which is the one
-       place a pick enters, so doing it again here would be a second rule
-       saying the same thing. */
     slot.textContent = "✓ " + shortName;
     egFlashTimer = setTimeout(function () { slot.textContent = EG_OFFER; }, EG_FLASH_MS);
   }
