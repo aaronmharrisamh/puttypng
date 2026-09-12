@@ -1294,28 +1294,40 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 #doneBtn { display: none; }
 
-/* THE QUESTION ASKED BEFORE A PLAIN PICTURE COVERS A NOTE. The same paper as
-   the transparency notice, because both are a caution rather than a failure:
-   nothing here has gone wrong and nothing is lost either way. */
-.ask {
-  margin: 12px 0 0; padding: 12px 13px;
-  border: 1px solid #e8dcae; border-radius: var(--radius-sm);
-  background: #fffaec; color: var(--ink);
+/* THE QUESTION THAT STOPS THE WORK. Two things ask it: a plain picture about
+   to cover a note, and an example about to replace what is on the board.
+
+   IT IS A DIALOG, NOT A PANEL IN THE CARD. It was a panel until v2.13.0, and a
+   question that stops the work should not sit in the flow where it can be
+   scrolled past. The native element brings the focus trap, Escape and the
+   backdrop, so none of those is written here.
+
+   The same paper as the transparency notice, because it is the same kind of
+   news: nothing has gone wrong and nothing is lost either way. */
+/* inset AND margin CENTRE IT. A modal dialog is laid out against the whole
+   viewport, and without the pair it sits in the top left corner. The title
+   editor carries the same two lines for the same reason. */
+.ask-dialog {
+  position: fixed; inset: 0; margin: auto;
+  width: min(380px, calc(100% - 32px)); max-width: none; height: fit-content;
+  padding: 20px 22px;
+  border: 1px solid #e8dcae; border-radius: var(--radius);
+  background: #fffaec; color: var(--ink); box-shadow: var(--shadow-lift);
 }
 
-.ask:focus { outline: none; }
+.ask-dialog::backdrop { background: rgba(25, 30, 25, .45); }
 
-.ask:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+.ask-dialog h2 { margin: 0 0 5px; font-size: 17px; line-height: 1.3; }
 
-.ask b { display: block; font-size: 14px; margin-bottom: 3px; }
-
-.ask p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.ask-dialog p { margin: 0 0 16px; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
 
 .askrow { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.askrow .btn { min-height: 44px; font-size: 13.5px; font-weight: 700; }
+.askrow .btn { flex: 1 1 auto; justify-content: center; min-height: 44px; font-size: 13.5px; font-weight: 700; }
 
 .askrow .btn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.ask-dialog :focus-visible { outline: 3px solid #247791; outline-offset: 3px; }
 
 /* THE WARNING THAT A PICTURE IS TOO BIG TO PASTE. The same caution paper as
    the question above, because it is the same kind of news: nothing has gone

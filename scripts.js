@@ -120,7 +120,7 @@
        example clears the board before it loads, so this is asked whenever
        there is anything on it, and it is asked every time. */
     egTitle:  "You have something here",
-    egAsk:    "An example replaces what is on the board. Your note will not come back.",
+    egAsk:    "An example replaces what is here. You cannot undo this.",
     egYes:    "Yes, replace it",
     examplesFailed: "The examples did not load. Check the connection and pick again."
   };
@@ -967,10 +967,24 @@
     return examplesReady;
   }
 
-  // The example a value in the dropdown names, or null when it names none.
-  function exampleById(all, id) {
-    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
-    return null;
+  /* ONE OF A KIND, AT RANDOM. The dropdown offers words or a file, not five
+     titles: somebody who wants to see the thing work does not want to read a
+     menu first. The board chooses which one, and the slot then says which one
+     it chose.
+     IT NEVER GIVES THE SAME ONE TWICE RUNNING. Three text examples chosen with
+     no memory repeat one press in three, and a person who asks for another and
+     gets the same one reads it as broken. */
+  var lastOfKind = {};
+
+  function randomOfKind(all, kind) {
+    var pool = all.filter(function (e) { return e.kind === kind; });
+    if (!pool.length) return null;
+    if (pool.length > 1 && lastOfKind[kind]) {
+      pool = pool.filter(function (e) { return e.id !== lastOfKind[kind]; });
+    }
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    lastOfKind[kind] = pick.id;
+    return pick;
   }
 
   /* One line of writing, read off its group in the drawer. The style names
@@ -1745,9 +1759,9 @@
     var sel = $("egPick");
     if (!sel) return;
     sel.addEventListener("change", function () {
-      var id = sel.value;
+      var kind = sel.value;
       sel.selectedIndex = 0;
-      if (id) offerExample(id);
+      if (kind) offerExample(kind);
     });
   }
 
@@ -2325,6 +2339,19 @@
       closePlainAsk();
       var ta = $("makeText");
       if (ta) ta.focus();
+    });
+
+    /* ESCAPE CLOSES A NATIVE DIALOG WITHOUT ASKING THE PAGE, so the answer it
+       was holding has to be dropped here rather than in the Cancel button.
+       Otherwise the next question would carry the last one's Yes.
+
+       THE GUARD IS NOT DECORATION. A dialog's close event is queued, not fired
+       on the spot, so one closed and reopened in quick succession delivers the
+       first close after the second question is already up. Without the guard
+       that wiped the new answer and Yes did nothing, which showed up as a
+       probe that failed about one run in two. */
+    $("plainAsk").addEventListener("close", function () {
+      if (!$("plainAsk").open) askPending = null;
     });
 
     $("bigWarnX").addEventListener("click", function () {
@@ -3441,11 +3468,11 @@
 
      IT REPLACES WHAT IS THERE. The board is emptied first, the note and any
      attached file together, so an example never lands on top of something. */
-  async function pickExample(id) {
+  async function pickExample(kind) {
     if (homePressing) return;
     try {
       var all = await ensureExamples();
-      var ex = exampleById(all, id);
+      var ex = randomOfKind(all, kind);
       if (!ex) return;
       clearBoard();
       if (ex.kind === "file") await applyFileExample(ex);
@@ -3467,12 +3494,12 @@
      One rule reads more clearly than a rule that knows which cases could lose
      work, and the panel is the board's own. A cancelled question loads
      nothing and leaves the slot offering. */
-  function offerExample(id) {
+  function offerExample(kind) {
     var ta = $("makeText");
     var carrying = !!homeAttached || !!(ta && ta.value.length);
-    if (!carrying) return pickExample(id);
+    if (!carrying) return pickExample(kind);
     askHome({ title: SAY.egTitle, body: SAY.egAsk, yes: SAY.egYes },
-      function () { pickExample(id); });
+      function () { pickExample(kind); });
   }
 
   /* ==========================================================================
@@ -3691,14 +3718,18 @@
     $("plainAskBody").textContent = words.body;
     $("plainYes").textContent = words.yes;
     askPending = onYes;
-    $("plainAsk").hidden = false;
-    $("plainAsk").focus();
+    /* showModal, NOT AN ATTRIBUTE. The browser then holds the focus inside the
+       dialog, closes it on Escape and draws the backdrop, and each of those is
+       a thing this page would otherwise have to write and keep true. */
+    var ask = $("plainAsk");
+    if (!ask.open) ask.showModal();
+    $("plainYes").focus();
   }
 
   function closePlainAsk() {
     askPending = null;
     var ask = $("plainAsk");
-    if (ask) ask.hidden = true;
+    if (ask && ask.open) ask.close();
   }
 
   function offerPlain(file) {

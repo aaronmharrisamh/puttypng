@@ -117,27 +117,25 @@
                rather than in the reading below, because the reading is
                rewritten on every change of state and a control living in it
                disappeared the moment it was used.
-               THE FIVE ROWS ARE WRITTEN HERE, NOT BUILT FROM examples.js.
-               That file is 600KB and is not fetched until somebody picks, so
-               the list has to exist before it. The gate checks every row names
-               a real example and carries the right size word, which is what
-               stops the two drifting apart.
-               THE WORD IS THE PICTURE, NOT THE TEXT. Small is a disc up to
-               256px, Medium up to 512, Large up to 1024, Very Large up to
-               2048. Four of the five read Small because an auto size is
-               floored at 256 so the artwork stays visible. They are in order
-               of what goes in, smallest first.
+               TWO ROWS, NOT FIVE. A person choosing between five named
+               titles is reading a menu; a person who wants to see the thing
+               work wants words or a file. The board picks one of that kind at
+               random, and the slot then says which one it gave them.
+               THE ROWS ARE WRITTEN HERE, NOT BUILT FROM examples.js. That
+               file is 600KB and is not fetched until somebody picks, so the
+               list has to exist before it. The gate checks that each row's
+               kind is one the file really holds.
+               NO SIZE WORD. Every example makes a picture under 512px, which
+               is the size past which a chat app would recompress it, so there
+               is nothing here a person has to weigh up.
                The chevron is inline so it takes currentColor and needs no
                second asset. It is decoration: the select underneath is a real
                one, so a phone gets its own picker and a keyboard still works. -->
           <span class="egwrap">
             <select id="egPick" aria-label="Load an example into Make">
               <option value="">Examples</option>
-              <option value="if">Kipling's If, Small</option>
-              <option value="cast">A cast list, Small</option>
-              <option value="cal">A rehearsal calendar, Small</option>
-              <option value="alice">Alice in Wonderland, Small</option>
-              <option value="tom">Tom Sawyer, Medium</option>
+              <option value="text">Text Example</option>
+              <option value="file">Attachment Example</option>
             </select>
             <span class="egchev" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 9.5l6 6 6-6" fill="none"
@@ -211,21 +209,6 @@
                  It takes focus when it opens, which is how the board announces
                  a change of screen too. It is not a live region: the board has
                  one and this is not it. -->
-            <!-- ONE QUESTION PANEL, ASKED BY WHOEVER NEEDS IT. Two things stop
-                 and ask on this board now: a plain picture that hides nothing,
-                 and an example about to replace what is here. They ask the
-                 same shape of question, so they share the panel and askHome()
-                 writes the three pieces of text into it. Every word here is a
-                 placeholder that the code replaces. -->
-            <div class="ask" id="plainAsk" tabindex="-1" hidden>
-              <b id="plainAskTitle">That is not a PuttyPNG</b>
-              <p id="plainAskBody"></p>
-              <div class="askrow">
-                <button type="button" class="btn dark" id="plainYes">Yes</button>
-                <button type="button" class="btn ghost" id="plainNo">Cancel</button>
-              </div>
-            </div>
-
             <div class="attachrow">
               <!-- THE WRAPPER IS FOR A PHONE. It has no box on a desktop, so the
                    mark and the words stay the button's own flex items. On a
@@ -1080,7 +1063,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.13.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.14.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
@@ -1119,6 +1102,25 @@
   </div>
 
   <!-- One title editor serves both pointer types. Saving replaces the PNG. -->
+  <!-- ONE QUESTION, ASKED BY WHOEVER NEEDS IT. Two things stop and ask on this
+       board: a plain picture that hides nothing, and an example about to
+       replace what is here. They ask the same shape of question, so they share
+       this dialog and askHome() writes the three pieces of text into it. Every
+       word below is a placeholder the code replaces.
+       IT IS A NATIVE dialog, OPENED WITH showModal(). That brings the focus
+       trap, the Escape key and the backdrop with it, which a panel built out of
+       a div would each have to be written by hand. It was such a panel inside
+       the Make card until v2.13.0, where a question that stops the work sat in
+       the flow and could be scrolled away from. -->
+  <dialog class="ask-dialog" id="plainAsk" aria-labelledby="plainAskTitle" aria-describedby="plainAskBody">
+    <h2 id="plainAskTitle">That is not a PuttyPNG</h2>
+    <p id="plainAskBody"></p>
+    <div class="askrow">
+      <button type="button" class="btn dark" id="plainYes">Yes</button>
+      <button type="button" class="btn ghost" id="plainNo">Cancel</button>
+    </div>
+  </dialog>
+
   <dialog class="title-editor" id="titleDialog" aria-labelledby="titleHeading" aria-describedby="titleDescription">
     <form id="titleForm" novalidate>
       <div class="title-grip" aria-hidden="true"></div>
