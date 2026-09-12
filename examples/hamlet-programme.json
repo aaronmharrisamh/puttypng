@@ -1,0 +1,223 @@
+{
+  "company": "The Mill Pond Players",
+  "production": "Hamlet",
+  "author": "William Shakespeare",
+  "venue": "Mill Pond Community Hall",
+  "season": "2030",
+  "performances": [
+    "2030-05-28",
+    "2030-05-29",
+    "2030-05-30",
+    "2030-05-31"
+  ],
+  "runningTimeMinutes": 172,
+  "intervalMinutes": 20,
+  "cast": [
+    {
+      "role": "Hamlet, Prince of Denmark",
+      "performer": "Greta Zelinsky",
+      "scenes": 20
+    },
+    {
+      "role": "Claudius, King of Denmark",
+      "performer": "Omar Ellery",
+      "scenes": 14
+    },
+    {
+      "role": "Gertrude, Queen of Denmark",
+      "performer": "Dana Bramble",
+      "scenes": 11
+    },
+    {
+      "role": "The Ghost of Hamlet's Father",
+      "performer": "Quinn Whitlow",
+      "scenes": 4
+    },
+    {
+      "role": "Polonius, Lord Chamberlain",
+      "performer": "Tovah Lindquist",
+      "scenes": 12
+    },
+    {
+      "role": "Ophelia",
+      "performer": "Ines Sable",
+      "scenes": 9
+    },
+    {
+      "role": "Laertes",
+      "performer": "Faye Cobb",
+      "scenes": 8
+    },
+    {
+      "role": "Horatio",
+      "performer": "Hugo Faraday",
+      "scenes": 13
+    },
+    {
+      "role": "Rosencrantz",
+      "performer": "Rafe Whitlow",
+      "scenes": 6
+    },
+    {
+      "role": "Guildenstern",
+      "performer": "Hana Whitlow",
+      "scenes": 6
+    },
+    {
+      "role": "Fortinbras, Prince of Norway",
+      "performer": "Bram Hollis",
+      "scenes": 3
+    },
+    {
+      "role": "Marcellus",
+      "performer": "Rafe Yardley",
+      "scenes": 4
+    },
+    {
+      "role": "Bernardo",
+      "performer": "Sana Sable",
+      "scenes": 3
+    },
+    {
+      "role": "Francisco",
+      "performer": "Dana Byrne",
+      "scenes": 2
+    },
+    {
+      "role": "Osric",
+      "performer": "Hana Norwood",
+      "scenes": 2
+    },
+    {
+      "role": "Reynaldo",
+      "performer": "Vince Bramble",
+      "scenes": 2
+    },
+    {
+      "role": "Voltemand",
+      "performer": "Ford Delacroix",
+      "scenes": 2
+    },
+    {
+      "role": "Cornelius",
+      "performer": "Bram Grimshaw",
+      "scenes": 2
+    },
+    {
+      "role": "First Gravedigger",
+      "performer": "Dov Jessup",
+      "scenes": 2
+    },
+    {
+      "role": "Second Gravedigger",
+      "performer": "Kira Zelinsky",
+      "scenes": 1
+    },
+    {
+      "role": "Player King",
+      "performer": "Rafe Oakes",
+      "scenes": 2
+    },
+    {
+      "role": "Player Queen",
+      "performer": "Yusuf Vance",
+      "scenes": 2
+    },
+    {
+      "role": "A Priest",
+      "performer": "Wren Ives",
+      "scenes": 1
+    },
+    {
+      "role": "A Captain",
+      "performer": "Rafe Bramble",
+      "scenes": 1
+    },
+    {
+      "role": "First Ambassador",
+      "performer": "Hana Ingram",
+      "scenes": 1
+    },
+    {
+      "role": "Lord in attendance",
+      "performer": "Wren Yardley",
+      "scenes": 4
+    },
+    {
+      "role": "Lady in attendance",
+      "performer": "Greta Keel",
+      "scenes": 4
+    },
+    {
+      "role": "Soldier of the watch",
+      "performer": "Bea Ives",
+      "scenes": 5
+    }
+  ],
+  "crew": [
+    {
+      "role": "Director",
+      "member": "Sana Jessup"
+    },
+    {
+      "role": "Assistant Director",
+      "member": "Sana Dunmore"
+    },
+    {
+      "role": "Stage Manager",
+      "member": "Bea Hollis"
+    },
+    {
+      "role": "Assistant Stage Manager",
+      "member": "Hugo Gale"
+    },
+    {
+      "role": "Costume Designer",
+      "member": "Eli Gale"
+    },
+    {
+      "role": "Wardrobe Supervisor",
+      "member": "Kira Pruitt"
+    },
+    {
+      "role": "Set Designer",
+      "member": "Cleo Ashby"
+    },
+    {
+      "role": "Master Carpenter",
+      "member": "Kira Grimshaw"
+    },
+    {
+      "role": "Lighting Designer",
+      "member": "Rafe Eastman"
+    },
+    {
+      "role": "Sound Designer",
+      "member": "Faye Hollis"
+    },
+    {
+      "role": "Props Master",
+      "member": "Hugo Yardley"
+    },
+    {
+      "role": "Fight Choreographer",
+      "member": "Iris Keel"
+    },
+    {
+      "role": "Dialect Coach",
+      "member": "Faye Alder"
+    },
+    {
+      "role": "Dramaturg",
+      "member": "Yusuf Halloran"
+    },
+    {
+      "role": "Box Office Manager",
+      "member": "Kira Whitlow"
+    },
+    {
+      "role": "House Manager",
+      "member": "Tovah Fenwick"
+    }
+  ]
+}

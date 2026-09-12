@@ -220,7 +220,7 @@ nav.tabs a {
 .foot a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
 
 @media (hover: hover) and (pointer: fine) {
-  .foot a:hover { color: var(--clay-deep); border-bottom-color: var(--clay); }
+  .foot a:hover { color: var(--ink); border-bottom-color: var(--ink); }
   .foot .byline a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 }
 
@@ -307,6 +307,53 @@ nav.tabs a {
 .head .say .mark { display: flex; flex: none; margin-top: 1px; }
 
 .head .say.ok { color: var(--ok); font-weight: 600; }
+
+/* THE EXAMPLES DROPDOWN SITS BESIDE THE HEADING, not in the reading below it.
+   The reading is rewritten on every change of state, so a control living
+   there was thrown away at the moment it was used. Nothing repaints this row.
+
+   It is a real select with its own arrow turned off and ours drawn in, so a
+   phone still gets its native picker and a keyboard still works. The wrapper
+   carries the chevron; the select keeps the whole box, so the chevron never
+   takes a click of its own.
+
+   align-self keeps it off the heading's baseline. The heading is display type
+   at 41px and the row aligns on baselines, so a 30px control hung from that
+   baseline would sit far below the word. */
+.egwrap { position: relative; display: inline-flex; align-items: center; align-self: center; }
+
+/* THE WIDTH IS SET, NOT LEFT TO THE ROWS. A dropdown sizes itself to its
+   longest option, so the closed slot came out at 210px to hold a row nobody
+   can see while it is closed. It only ever has to show the word Examples or a
+   tick and a short name, and the rows are short enough that the list a browser
+   opens stays readable at this width. */
+.egwrap select {
+  appearance: none; -webkit-appearance: none;
+  width: 132px; padding: 6px 26px 6px 12px; min-height: 30px;
+  font: inherit; font-size: 12px; font-weight: 700; line-height: 1;
+  text-overflow: ellipsis;
+  color: var(--paper); background: var(--ink);
+  border: 0; border-radius: 999px; cursor: pointer;
+}
+
+/* Decoration only. The select underneath takes every press. */
+.egwrap .egchev {
+  position: absolute; right: 10px; display: flex;
+  color: var(--paper); pointer-events: none;
+}
+
+/* A FOCUS RULE IS NOT A HOVER RULE and stays out of both pointer queries: a
+   tablet with a keyboard needs this ring. The sheet has no catch-all, so
+   every control carries its own, and this is the one the buttons wear. */
+.egwrap select:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+
+/* A HOVER DARKENS AND NEVER TINTS. Black goes to black, which is as dark as
+   black gets. */
+@media (hover: hover) and (pointer: fine) {
+  .egwrap select:hover { background: #000; }
+}
+
 .head .say .peeklink {
   font: inherit; font-weight: 700; color: var(--clay-deep); background: none;
   border: 0; border-bottom: 1px solid var(--clay); padding: 0; cursor: pointer;
@@ -1270,6 +1317,60 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .askrow .btn.dark { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+/* THE WARNING THAT A PICTURE IS TOO BIG TO PASTE. The same caution paper as
+   the question above, because it is the same kind of news: nothing has gone
+   wrong, and there is something better to do.
+
+   It spans the whole action bar rather than sitting in one of its cells. The
+   bar is a two by two grid of the donut, the button, the byte label and the
+   Advanced row, and a warning that belongs to the button belongs under all of
+   it. One line of words on both shapes, with the cross at the end. */
+/* IT TAKES A ROW OF ITS OWN AT THE END OF THE BAR, and that row is implicit
+   rather than named. A named row exists even while the item in it is away, so
+   the bar kept the gap above it and the whole board sat four pixels lower on
+   an empty screen. Auto-placement makes the row only when there is something
+   to put in it.
+   The end of the bar is the nearest place to the button that does not break
+   the donut from the byte label beneath it, which a full-width strip higher up
+   would do on a phone. */
+.bigwarn {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0 0; padding: 7px 8px 7px 11px;
+  border: 1px solid #e8dcae; border-radius: var(--radius-sm);
+  background: #fffaec; color: var(--ink-soft);
+  font-size: 12.5px; line-height: 1.35;
+}
+
+/* AN AUTHOR'S display BEATS THE hidden ATTRIBUTE, which comes from the
+   browser's own sheet. Without this the warning was drawn on an empty board
+   while its attribute said otherwise, and a probe reading the attribute
+   reported it as away. Every rule here that sets display needs its pair. */
+.bigwarn[hidden] { display: none; }
+
+.bigwarn span { flex: 1 1 auto; min-width: 0; }
+
+/* The cross is drawn rather than written, so it takes currentColor and needs
+   no glyph that a missing font could turn into a box. */
+.bigwarn .x {
+  flex: none; width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 0; background: none; border-radius: 50%;
+  color: var(--muted); position: relative;
+}
+.bigwarn .x::before,
+.bigwarn .x::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 11px; height: 1.6px; background: currentColor; border-radius: 1px;
+}
+.bigwarn .x::before { transform: translate(-50%, -50%) rotate(45deg); }
+.bigwarn .x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+.bigwarn .x:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .bigwarn .x:hover { color: var(--ink); }
+}
+
 .gotrow { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: center; }
 
 /* Files and text share the space under the heading row. With only files there
@@ -1305,7 +1406,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
 .filechip .nm span { font: 11px ui-monospace, Consolas, monospace; color: var(--muted); }
 
 @media (hover: hover) and (pointer: fine) {
-  .filechip:hover { border-color: var(--clay); }
+  .filechip:hover { border-color: var(--ink); }
 }
 
 .got .nm { font-weight: 600; font-size: 14px; word-break: break-all; }
@@ -1510,7 +1611,7 @@ textarea:focus, input:focus, select:focus {
 
 
 @media (hover: hover) and (pointer: fine) {
-  .dropzone:hover { border-color: var(--clay); background: var(--clay-soft); }
+  .dropzone:hover { border-color: var(--ink); }
 }
 
 .dropzone.drag-over { border-color: var(--clay); background: var(--clay-soft); box-shadow: 0 0 0 3px rgba(201,111,82,.12); }
@@ -1526,7 +1627,7 @@ textarea:focus, input:focus, select:focus {
 
 /* Docs */
 @media (hover: hover) and (pointer: fine) {
-  .subnav a:hover { border-color: var(--clay); color: var(--clay-deep); background: var(--clay-soft); }
+  .subnav a:hover { border-color: var(--ink); color: var(--ink); }
 }
 
 /* Header */
@@ -1540,7 +1641,7 @@ details.sect[open] .chev-d { transform: rotate(90deg); }
 details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 6px; }
 
 @media (hover: hover) and (pointer: fine) {
-  details.sect > summary:hover .sect-title { color: var(--clay-deep); }
+  details.sect > summary:hover .sect-title { color: var(--ink); }
 }
 
 /* ==========================================================================
@@ -1580,7 +1681,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .chip:hover { color: var(--clay-deep); border-color: var(--clay); background: var(--clay-soft); }
+  .chip:hover { color: var(--ink); border-color: var(--ink); }
 }
 
 /* On the Make side the chip takes the attachment off, so it warns in red. */
@@ -1592,8 +1693,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
 /* The Load side removes nothing, it hands the file over. */
 @media (hover: hover) and (pointer: fine) {
-  .gotfiles .pill:hover { border-color: var(--clay); background: var(--clay-soft); }
-  .gotfiles .pill:hover .act-ic { color: var(--clay-deep); }
+  .gotfiles .pill:hover { border-color: var(--ink); }
+  .gotfiles .pill:hover .act-ic { color: var(--ink); }
 }
 
 /* ==========================================================================
@@ -1660,7 +1761,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .deckrow:has(.cd.lifted) .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
 
 @media (hover: hover) and (pointer: fine) {
-  .cdtip .say:hover { background: var(--clay-deep); }
+  .cdtip .say:hover { background: #000; }
 }
 .cdtip .say:active { transform: scale(.97); }
 .cdtip .say.done { background: var(--ok); }
@@ -1691,7 +1792,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
 @media (hover: hover) and (pointer: fine) {
   .thumb:hover .thumbtools { opacity: 1; }
-  .thumbtools button:hover { background: var(--clay-deep); }
+  .thumbtools button:hover { background: #000; }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1799,6 +1900,29 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      thumb. R5 chose the bare clip and let the placeholder say attach a file;
      the placeholder is gone the moment a person types, so the words go on
      the chip, which is R2's version. */
+  /* THE DROPDOWN IS A 44px TARGET ON A PHONE, on the control itself rather
+     than on a box behind it. It has a row of its own here, shared with the
+     heading and the Clear pill, so its height costs the reading nothing.
+     The row wraps when all three will not fit, which is the right answer at
+     the narrowest widths: the offer drops under the word rather than
+     squeezing it. */
+  .egwrap select { min-height: 44px; padding: 0 30px 0 13px; font-size: 12.5px; }
+
+  /* THE WARNING'S CROSS IS 44px TO A THUMB. The mark drawn inside it keeps the
+     size it has on a desktop; only the box a finger must hit grows. */
+  .bigwarn { padding: 6px 4px 6px 11px; }
+  .bigwarn .x { width: 44px; height: 44px; }
+
+  /* IT GOES ONLY WHERE THE CARD IT BELONGS TO HAS GONE. A phone shows one
+     screen at a time, so on Made and Loaded the whole Make card is off screen
+     and an offer beside the heading would load an example into something
+     nobody can see. Close brings the card and the offer back together.
+     THIS RULE IS A PHONE RULE AND MUST STAY ONE. It was written outside this
+     block once, and a desktop then lost the dropdown the moment a disc was
+     pressed, while the Make column it sits above stayed in full view. */
+  .board[data-view="made"] .egwrap,
+  .board[data-view="loaded"] .egwrap { display: none; }
+
   .attachrow { margin-top: 6px; }
   .attach { min-width: 0; border: 0; background: none; padding: 0 4px; }
   .attach .cip {

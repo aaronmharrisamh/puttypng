@@ -1,0 +1,289 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//The Mill Pond Players//Rehearsal Calendar 2030//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:The Mill Pond Players: Hamlet rehearsals
+X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VTIMEZONE
+TZID:America/Los_Angeles
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0800
+TZOFFSETTO:-0700
+TZNAME:PDT
+DTSTART:20300310T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0700
+TZOFFSETTO:-0800
+TZNAME:PST
+DTSTART:20301103T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:reh-01@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300501T190000
+DTEND;TZID=America/Los_Angeles:20300501T220000
+SUMMARY:Rehearsal: Act I, scenes 1 to 3
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Hamlet, Horatio, Marcellus, Bernardo
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-02@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300502T190000
+DTEND;TZID=America/Los_Angeles:20300502T220000
+SUMMARY:Rehearsal: Act I, scenes 4 and 5
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Claudius, Gertrude, Polonius, Laertes
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-03@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300504T190000
+DTEND;TZID=America/Los_Angeles:20300504T220000
+SUMMARY:Rehearsal: Act II, scene 2
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Ophelia, Laertes, Polonius
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-04@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300506T190000
+DTEND;TZID=America/Los_Angeles:20300506T220000
+SUMMARY:Rehearsal: Act III, scene 1
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Rosencrantz, Guildenstern, Hamlet
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-05@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300508T190000
+DTEND;TZID=America/Los_Angeles:20300508T220000
+SUMMARY:Rehearsal: The closet scene
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Full company
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-06@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300509T190000
+DTEND;TZID=America/Los_Angeles:20300509T220000
+SUMMARY:Rehearsal: Act IV, scenes 4 to 7
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: The players and the court
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-07@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300511T190000
+DTEND;TZID=America/Los_Angeles:20300511T220000
+SUMMARY:Rehearsal: The graveyard
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Hamlet, Horatio, Marcellus, Bernardo
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-08@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300513T190000
+DTEND;TZID=America/Los_Angeles:20300513T220000
+SUMMARY:Rehearsal: The duel
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Claudius, Gertrude, Polonius, Laertes
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-09@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300515T190000
+DTEND;TZID=America/Los_Angeles:20300515T220000
+SUMMARY:Rehearsal: The play within the play
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Ophelia, Laertes, Polonius
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-10@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300516T190000
+DTEND;TZID=America/Los_Angeles:20300516T220000
+SUMMARY:Rehearsal: Act V, scene 2 to the end
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Rosencrantz, Guildenstern, Hamlet
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-11@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300518T190000
+DTEND;TZID=America/Los_Angeles:20300518T220000
+SUMMARY:Rehearsal: Act I, scenes 1 to 3
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: Full company
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:reh-12@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300520T190000
+DTEND;TZID=America/Los_Angeles:20300520T220000
+SUMMARY:Rehearsal: Act I, scenes 4 and 5
+LOCATION:Mill Pond Community Hall, Rehearsal Room B
+DESCRIPTION:Called: The players and the court
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:tech-01@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300522T180000
+DTEND;TZID=America/Los_Angeles:20300522T230000
+SUMMARY:Paper tech and lighting focus
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: design team and stage management
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:tech-02@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300523T180000
+DTEND;TZID=America/Los_Angeles:20300523T233000
+SUMMARY:Technical rehearsal, act one
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: full company
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:tech-03@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300524T130000
+DTEND;TZID=America/Los_Angeles:20300524T190000
+SUMMARY:Technical rehearsal, act two
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: full company. Bring a packed supper.
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:dress-01@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300525T183000
+DTEND;TZID=America/Los_Angeles:20300525T223000
+SUMMARY:Dress rehearsal
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: full company at half past six
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:dress-02@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300526T183000
+DTEND;TZID=America/Los_Angeles:20300526T223000
+SUMMARY:Final dress rehearsal, invited audience
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: full company at half past six
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:perf-01@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300528T193000
+DTEND;TZID=America/Los_Angeles:20300528T223000
+SUMMARY:Hamlet: performance 1
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:House opens at seven. Called at half past six.
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:perf-02@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300529T193000
+DTEND;TZID=America/Los_Angeles:20300529T223000
+SUMMARY:Hamlet: performance 2
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:House opens at seven. Called at half past six.
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:perf-03@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300530T193000
+DTEND;TZID=America/Los_Angeles:20300530T223000
+SUMMARY:Hamlet: performance 3
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:House opens at seven. Called at half past six.
+STATUS:CONFIRMED
+SEQUENCE:0
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:perf-04@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300531T193000
+DTEND;TZID=America/Los_Angeles:20300531T223000
+SUMMARY:Hamlet: performance 4
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:House opens at seven. Called at half past six.
+STATUS:CONFIRMED
+SEQUENCE:1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:strike-01@millpondplayers.example
+DTSTAMP:20300401T170000Z
+DTSTART;TZID=America/Los_Angeles:20300531T230000
+DTEND;TZID=America/Los_Angeles:20300531T235900
+SUMMARY:Strike the set
+LOCATION:Mill Pond Community Hall, Main Stage
+DESCRIPTION:Called: full company and crew. Pizza provided.
+STATUS:CONFIRMED
+SEQUENCE:2
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

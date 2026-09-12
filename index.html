@@ -113,6 +113,37 @@
                Both words stay in the markup and CSS chooses, because a word
                written by JavaScript is a word some crawlers never read. -->
           <h2 id="headMake" tabindex="-1"><span class="w-a">Make</span><span class="w-b">Made!</span></h2>
+          <!-- SOMETHING TO TRY WITHOUT TYPING ANYTHING. It sits beside the word
+               rather than in the reading below, because the reading is
+               rewritten on every change of state and a control living in it
+               disappeared the moment it was used.
+               THE FIVE ROWS ARE WRITTEN HERE, NOT BUILT FROM examples.js.
+               That file is 600KB and is not fetched until somebody picks, so
+               the list has to exist before it. The gate checks every row names
+               a real example and carries the right size word, which is what
+               stops the two drifting apart.
+               THE WORD IS THE PICTURE, NOT THE TEXT. Small is a disc up to
+               256px, Medium up to 512, Large up to 1024, Very Large up to
+               2048. Four of the five read Small because an auto size is
+               floored at 256 so the artwork stays visible. They are in order
+               of what goes in, smallest first.
+               The chevron is inline so it takes currentColor and needs no
+               second asset. It is decoration: the select underneath is a real
+               one, so a phone gets its own picker and a keyboard still works. -->
+          <span class="egwrap">
+            <select id="egPick" aria-label="Load an example into Make">
+              <option value="">Examples</option>
+              <option value="if">Kipling's If, Small</option>
+              <option value="cast">A cast list, Small</option>
+              <option value="cal">A rehearsal calendar, Small</option>
+              <option value="alice">Alice in Wonderland, Small</option>
+              <option value="tom">Tom Sawyer, Medium</option>
+            </select>
+            <span class="egchev" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 9.5l6 6 6-6" fill="none"
+                stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </span>
           <!-- ONE CORNER, TWO JOBS, NAMED BY THE SCREEN IT IS ON.
                On Make it reads Clear and empties the board, and it is not
                there at all while the board is already empty: a screen with
@@ -180,11 +211,17 @@
                  It takes focus when it opens, which is how the board announces
                  a change of screen too. It is not a live region: the board has
                  one and this is not it. -->
+            <!-- ONE QUESTION PANEL, ASKED BY WHOEVER NEEDS IT. Two things stop
+                 and ask on this board now: a plain picture that hides nothing,
+                 and an example about to replace what is here. They ask the
+                 same shape of question, so they share the panel and askHome()
+                 writes the three pieces of text into it. Every word here is a
+                 placeholder that the code replaces. -->
             <div class="ask" id="plainAsk" tabindex="-1" hidden>
-              <b>That is not a PuttyPNG</b>
+              <b id="plainAskTitle">That is not a PuttyPNG</b>
               <p id="plainAskBody"></p>
               <div class="askrow">
-                <button type="button" class="btn dark" id="plainYes">Yes, attach it</button>
+                <button type="button" class="btn dark" id="plainYes">Yes</button>
                 <button type="button" class="btn ghost" id="plainNo">Cancel</button>
               </div>
             </div>
@@ -232,6 +269,17 @@
               <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><mask id="pg-arrow" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/><g transform="translate(5.28 5.28) scale(0.56)"><path d="M4 12h14 M12.5 5.5l6 6.5-6 6.5" fill="none" stroke="#000" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/></g></mask><path d="M23.2 11.74C23.29 12.82 22.54 14.18 21.81 15.06C21.09 15.94 19.59 16.23 18.86 17.02C18.13 17.81 18.04 18.83 17.43 19.78C16.81 20.73 16.13 22.48 15.16 22.73C14.18 22.99 12.57 21.92 11.58 21.29C10.6 20.66 10.2 19.23 9.24 18.97C8.28 18.7 7.09 19.67 5.82 19.67C4.54 19.68 2.34 19.77 1.58 19.01C0.82 18.24 1.03 16.3 1.26 15.09C1.49 13.88 2.84 12.82 2.96 11.74C3.09 10.66 2.2 9.82 1.98 8.62C1.76 7.42 1.12 5.45 1.67 4.54C2.23 3.62 4.08 3.19 5.32 3.12C6.56 3.05 8.07 4.15 9.11 4.12C10.15 4.09 10.61 3.39 11.58 2.91C12.56 2.44 13.96 1.21 14.99 1.27C16.02 1.32 17.09 2.4 17.76 3.24C18.43 4.09 18.42 5.45 19.01 6.34C19.6 7.23 20.6 7.68 21.3 8.58C22 9.48 23.11 10.66 23.2 11.74Z" fill="currentColor" mask="url(#pg-arrow)"/></svg></span>
               <span class="say" id="makeLabel">Make a PuttyPNG</span>
             </button>
+            <!-- PAST 512 PIXELS A CHAT APP RECOMPRESSES THE PICTURE and the
+                 data stops reading back, so this is a correctness warning and
+                 not a style note. It is written from the size the engine says
+                 the picture will be, before anything is pressed, so a person
+                 can cut their text down while it still costs them nothing.
+                 It closes itself when the picture comes back under 512. The
+                 cross closes it for the rest of the visit. -->
+            <div class="bigwarn" id="bigWarn" hidden>
+              <span id="bigWarnText">Over 512 px. Apps may shrink it. Download instead.</span>
+              <button type="button" class="x" id="bigWarnX" aria-label="Close this warning"></button>
+            </div>
             <!-- Advanced sits in the one cell the action bar leaves empty,
                  under the button and hard against its right edge. -->
             <div class="row adv-row">
@@ -1032,8 +1080,8 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.12.0</span>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.13.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
         <span class="sep" aria-hidden="true">&middot;</span><a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>

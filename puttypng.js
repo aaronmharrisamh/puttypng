@@ -23,7 +23,7 @@
   // ===========================================================================
 
   var PROTOCOL_VERSION = 1;   // bumps ONLY on breaking byte-layout changes
-  var ENGINE_VERSION = "2.2.1";   // Disc title editing and discreet protected labels
+  var ENGINE_VERSION = "2.3.0";   // planSize: the picture's side, without drawing it
 
   // The public object. Everything a developer touches hangs off of this.
   var PuttyPNG = {
@@ -2267,6 +2267,53 @@
   // ===========================================================================
 
   // Hide data inside a PNG. Returns { blob, dataUrl, width, height, ...stats }.
+  /* HOW BIG THE PICTURE WILL BE, WITHOUT MAKING IT.
+
+     A caller that wants to warn somebody before they press has to know the
+     side of the square in advance, and the arithmetic for it belongs here
+     rather than in a page: `prepareBody` is canvas-free on purpose, and the
+     side falls out of the body length it returns.
+
+     It is exact for the covers that fill their square, which is noise and a
+     CD with a solid background. A see-thru CD leaves the corners clear, so
+     this returns the engine's own first guess; the engine may then grow it by
+     a step when it counts the opaque pixels it really drew.
+
+     Returns { side, bodyBytes, depth, compressed, encrypted }. It does not
+     apply `maxSize`, because a caller asking how big this would be needs the
+     answer even when the answer is too big. */
+  PuttyPNG.planSize = classified(async function planSize(input, options) {
+    options = options || {};
+    // encode() gives a CD cover subtle depth unless told otherwise, so the
+    // plan has to make the same assumption or it describes a different disc.
+    var style = options.coverStyle || "noise";
+    if (style === "cd" && options.depth == null) {
+      options = Object.assign({}, options, { depth: "subtle" });
+    }
+    var prep = await prepareBody(input, options);
+    var minSize = options.minSize || MIN_SIZE;
+    var side;
+    if (options.size) {
+      side = options.size;
+    } else if (style === "cd") {
+      // The same first guess fitGeneratedCover makes. A solid case fills the
+      // square; a see-thru one covers a little under three quarters of it.
+      var fraction = options.solidBackground ? 1 : 0.72;
+      side = Math.max(minSize, Math.ceil(Math.sqrt(neededPixelsFor(prep) / fraction)));
+    } else {
+      // No ceiling: a body too large still reports the side it would need.
+      side = Math.max(minSize, Math.ceil(Math.sqrt(neededPixelsFor(prep))));
+      if (options.sizeMode === "pow2") side = Math.max(nextPowerOfTwo(minSize), nextPowerOfTwo(side));
+    }
+    return {
+      side: side,
+      bodyBytes: prep.body.length,
+      depth: prep.widths === DEPTH_SUBTLE ? "subtle" : "standard",
+      compressed: !!(prep.flags & FLAG_COMPRESSED),
+      encrypted: !!(prep.flags & FLAG_ENCRYPTED)
+    };
+  });
+
   PuttyPNG.encode = classified(async function encode(input, options) {
     options = options || {};
     var style = options.coverStyle || "noise";

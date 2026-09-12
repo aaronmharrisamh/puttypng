@@ -115,7 +115,14 @@
     /* How to paste without the Paste one! button. It depends on what the
        person is holding: a phone has no Ctrl key and a mouse has no long press. */
     pasteKey:   "Press Ctrl+V instead.",
-    pasteTap:   "Long-press the box and choose Paste instead."
+    pasteTap:   "Long-press the box and choose Paste instead.",
+    /* WHAT THE QUESTION SAYS WHEN AN EXAMPLE WOULD REPLACE SOMETHING. An
+       example clears the board before it loads, so this is asked whenever
+       there is anything on it, and it is asked every time. */
+    egTitle:  "You have something here",
+    egAsk:    "An example replaces what is on the board. Your note will not come back.",
+    egYes:    "Yes, replace it",
+    examplesFailed: "The examples did not load. Check the connection and pick again."
   };
 
   /* HOW BIG THE METER IS. One rule for both shapes: the meter takes a share of
@@ -611,6 +618,23 @@
   var homeReadDepth = 0;     // how many decodes are running, so two cannot race
   var homeShownRung = 0;     // the rung the column width is currently set for
 
+  /* THE SIDE OF THE PICTURE THE ENGINE WOULD MAKE, in pixels, or 0 before the
+     first measurement. The rung is a capacity band and the picture is the
+     smallest square that holds the data above a 256px floor, so the two are
+     different numbers: a book sits on the 512 rung inside a 397px picture.
+     The engine works this out in PuttyPNG.planSize, because the arithmetic is
+     byte-level and belongs there rather than here. */
+  var homeTrueSide = 0;
+  var bigWarnClosed = false; // the cross was pressed, so it stays closed
+  var BIG_PASTE_PX = 512;    // past this a chat app recompresses and breaks it
+
+  /* THE EXAMPLES BEHIND THE EXAMPLES DROPDOWN. Nothing records which example
+     is on the board: the slot says what was picked for four seconds and then
+     goes back to offering, and the box and the meter show the rest. There is
+     no deck either, because a person chooses rather than being dealt to. */
+  var examplesReady = null;  // the promise for examples.js, held so it loads once
+  var egFlashTimer = 0;      // the wait before the slot goes back to offering
+
   // The glow chain. Three flags, and stageFor() reads the board for the rest.
   var glowTouched = false;   // the box has been typed in at least once
   var glowSettled = true;    // typing has stopped for long enough to light up
@@ -916,6 +940,37 @@
       return document.fonts.load(f).catch(function () {});
     }));
     return discFontsReady;
+  }
+
+  /* THE EXAMPLES ARE 600KB OF OTHER PEOPLE'S WRITING, so they are not on the
+     page until somebody asks for them. A script tag rather than a fetch,
+     because Chrome refuses fetch on file:// and the site promises to work from
+     a disk. The promise is held so a second press waits on the first load
+     instead of adding a second tag, and a failed load clears it so the next
+     press can try again. */
+  function ensureExamples() {
+    if (examplesReady) return examplesReady;
+    examplesReady = new Promise(function (ok, no) {
+      if (window.PUTTYPNG_EXAMPLES) return ok(window.PUTTYPNG_EXAMPLES);
+      var tag = document.createElement("script");
+      tag.src = "examples.js";
+      tag.onload = function () {
+        if (window.PUTTYPNG_EXAMPLES) ok(window.PUTTYPNG_EXAMPLES);
+        else { examplesReady = null; no(new Error("examples.js set nothing")); }
+      };
+      tag.onerror = function () {
+        examplesReady = null;
+        no(new Error("examples.js did not load"));
+      };
+      document.head.appendChild(tag);
+    });
+    return examplesReady;
+  }
+
+  // The example a value in the dropdown names, or null when it names none.
+  function exampleById(all, id) {
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
   }
 
   /* One line of writing, read off its group in the drawer. The style names
@@ -1678,12 +1733,31 @@
      Every listener the two columns and the deck need, in one place.
      ========================================================================== */
 
+  /* THE DROPDOWN IS A REAL ONE AND KEEPS ITS OWN LISTENER. It lives beside the
+     Make heading, which nothing repaints, so the listener can be held against
+     the element. That is the whole reason it moved out of the reading: a
+     control in there was rewritten away every time the board changed state.
+
+     The first row is the offer and picks nothing, so an empty value returns.
+     The slot goes back to that row inside offerExample, whether the question
+     that follows is answered yes or no. */
+  function wireExamples() {
+    var sel = $("egPick");
+    if (!sel) return;
+    sel.addEventListener("change", function () {
+      var id = sel.value;
+      sel.selectedIndex = 0;
+      if (id) offerExample(id);
+    });
+  }
+
   function wireHome() {
     if (!onBoardPage()) return;
     wireHomeMake();
     wireHomeDisc();
     wireTitleEditor();
     wireHomeLoad();
+    wireExamples();
 
     // Before the first paint of the board, because both of these decide which
     // card a control is drawn in, and a control that arrives and then jumps
@@ -1975,10 +2049,13 @@
   /* CLEAR EMPTIES THE BOARD AND LEAVES THE PERSON WHERE THEY ARE.
      It is a white control and not a red one: nothing here can be lost that
      was not the person's own to begin with. */
-  function clearBoard() {
+  /* refocus puts the caret back in the empty box, which is right when a
+     person pressed Clear and wrong when an example is about to fill it: on a
+     phone the focus opens the keyboard over the board they were looking at. */
+  function clearBoard(refocus) {
     if (homeAttached) dropHomeAttachment();
     var ta = $("makeText");
-    if (ta) { ta.value = ""; ta.focus(); }
+    if (ta) { ta.value = ""; if (refocus) ta.focus(); }
     noteHomeInput();
     growMakeBox();
     updateHomeMeter(true);
@@ -2194,7 +2271,7 @@
        when it is pressed, so the two jobs cannot drift apart from the label
        paintCorner wrote on it. */
     $("cornerBtn").addEventListener("click", function () {
-      if (this.dataset.job === "clear") clearBoard();
+      if (this.dataset.job === "clear") clearBoard(true);
       else if (this.dataset.job === "closeload") clearHomeLoaded();
       else closeToMake();
     });
@@ -2235,16 +2312,24 @@
 
     $("doneBtn").addEventListener("click", clearHomeLoaded);
 
+    /* ONE LISTENER EACH, WHATEVER ASKED. The answer is read back off
+       askPending rather than decided here, so a third thing that learns to ask
+       needs no change to either button. */
     $("plainYes").addEventListener("click", function () {
-      var f = plainPending;
+      var go = askPending;
       closePlainAsk();
-      if (f) takeHomeAttachment(f, SAY.tookPlain);
+      if (go) go();
     });
 
     $("plainNo").addEventListener("click", function () {
       closePlainAsk();
       var ta = $("makeText");
       if (ta) ta.focus();
+    });
+
+    $("bigWarnX").addEventListener("click", function () {
+      bigWarnClosed = true;
+      paintBigWarn();
     });
 
     // The phone's Made screen. Both marks are drawn once: neither changes.
@@ -2913,9 +2998,13 @@
     if (touchPointer.matches) {
       slot = DISC_TUNING.touch[homeShownRung];
     } else {
+      /* THE TRUE PICTURE WINS OVER THE RUNG. The rung is a band, and a disc
+         drawn at the band's top would be wider than the file really is. The
+         rung is the fallback for the first paint, before anything has been
+         measured. A phone keeps its own fixed sizes, above. */
       var colW = col.getBoundingClientRect().width || inner + pad * 2;
-      slot = Math.round(Math.min(RUNGS[homeShownRung].px,
-                                 colW * DISC_TUNING.wide[homeShownRung]));
+      var ceiling = homeTrueSide || RUNGS[homeShownRung].px;
+      slot = Math.round(Math.min(ceiling, colW * DISC_TUNING.wide[homeShownRung]));
     }
 
     // Both tokens are set on the root, because that is where every rule that
@@ -3099,6 +3188,39 @@
     return homeEncoder.encode($("makeText").value);
   }
 
+  /* WHAT A PRESS WOULD HAND THE ENGINE. One place, because the meter asks the
+     engine how big the picture will be and the press then makes it: if the two
+     read the board differently, the warning describes a disc nobody gets. */
+  function currentHomeInput() {
+    return homeAttached ? homeAttached.bytes : ($("makeText").value || "(empty)");
+  }
+
+  /* THE WARNING UNDER THE MAKE BUTTON. Past 512 pixels a chat app recompresses
+     the picture and the data stops reading back, so this is about correctness
+     and not about taste. It is derived, like everything else on this board:
+     nothing remembers whether it is showing, so it cannot report a state the
+     board has left. The cross is the one piece of memory, and it lasts the
+     visit. */
+  function paintBigWarn() {
+    var el = $("bigWarn");
+    if (!el) return;
+    // It closes itself when the picture comes back under the limit, which is
+    // the answer to the warning rather than a dismissal of it. The cross is a
+    // dismissal and lasts the visit: somebody who has read it once and chosen
+    // to send the file should not be told again on every keystroke.
+    el.hidden = bigWarnClosed || homeTrueSide <= BIG_PASTE_PX;
+
+    /* IT DESCRIBES THE BUTTON RATHER THAN ANNOUNCING ITSELF. `#loadSay` is the
+       board's one live region, and a second one lets two voices talk over each
+       other. Hung on the Make button instead, a screen reader reads the warning
+       at the moment somebody focuses the control it is about, which is later
+       than a live region would say it and better placed. */
+    var btn = $("homeMakeBtn");
+    if (!btn) return;
+    if (el.hidden) btn.removeAttribute("aria-describedby");
+    else btn.setAttribute("aria-describedby", "bigWarnText");
+  }
+
   // Redraw the meter for whatever the box holds. force skips the settle wait
   // and the two effects, for the first paint and for a cleared box.
   function updateHomeMeter(force) {
@@ -3108,6 +3230,20 @@
       var bytes = currentHomeBytes();
       var packed = await packedSize(bytes);
       if (token !== homeRunToken) return;
+
+      /* HOW BIG THE PICTURE WILL REALLY BE. Asked of the engine, which owns
+         the arithmetic, and with the drawer's own settings so a change to the
+         depth or the background moves the answer. A failure here must not
+         stop the meter: the rung is what the ring is drawn from, and the true
+         size only decides the tray's width and the warning. */
+      try {
+        var plan = await PuttyPNG.planSize(currentHomeInput(), gatherOptions());
+        if (token !== homeRunToken) return;
+        homeTrueSide = plan.side;
+      } catch (e) {
+        homeTrueSide = 0;
+      }
+      paintBigWarn();
 
       var k = rungFor(packed);
       var over = k >= RUNGS.length;
@@ -3231,6 +3367,112 @@
     glowTouched = true;
     paintGlow();
     paintMakeSay(false);
+  }
+
+  /* ==========================================================================
+     THE HOME BOARD - THE EXAMPLES
+     An example is not a special kind of content. A text example takes the
+     path a paste takes and a file example takes the path a drop takes, so the
+     board cannot treat one differently from the thing it stands for.
+     ========================================================================== */
+
+  /* A TEXT EXAMPLE FILLS THE BOX. Every call below is one the input listener
+     already makes on a keystroke, in the same order. The one it does not make
+     is noteGlowTyping(), which starts the wait for a person to stop typing,
+     and nobody is typing. */
+  function applyTextExample(ex) {
+    var ta = $("makeText");
+    if (!ta) return;
+    ta.value = ex.body;
+    // A whole book leaves the view at the end of it. The title is the line
+    // that says what a person is looking at, so the box goes back to the top.
+    ta.scrollTop = 0;
+    noteHomeInput();
+    growMakeBox();
+    /* FORCED, BECAUSE THE CONTENT ARRIVED WHOLE. The settle wait exists to
+       stop the meter redrawing on every keystroke, and there were no
+       keystrokes. Clear does the same for the same reason, and the disc is
+       pressed straight after this, so the slot has to be the right size
+       before it arrives rather than a tenth of a second later. */
+    updateHomeMeter(true);
+    glowTouched = true;
+    paintGlow();
+  }
+
+  /* A FILE EXAMPLE ATTACHES. takeHomeAttachment reads the bytes, shows the
+     file card, disables the box, moves the glow and paints the reading, so
+     there is nothing to do here but build the file. The board was emptied
+     before this ran, so there is no note underneath to protect. */
+  function applyFileExample(ex) {
+    var file = new File([ex.body], ex.name, { type: ex.mime });
+    return takeHomeAttachment(file, ex.say);
+  }
+
+  /* WHAT THE SLOT SAYS AFTER A PICK. A tick and a short name for four seconds,
+     then back to offering, so the control always ends up looking like
+     something a person can use again. The words belong to the first option
+     because that is the row the closed slot shows; writing them there keeps
+     the whole control a real dropdown, which is what gives a phone its own
+     picker and a keyboard its own behaviour. */
+  var EG_FLASH_MS = 4000;
+  var EG_OFFER = "Examples";
+
+  /* THE SHORT NAME THE TICK SHOWS. The list rows carry a title and a size
+     because a person is choosing between them; the tick has one job, which is
+     to say that the thing they chose went in. */
+  var EG_SHORT = { tom: "Tom Sawyer", alice: "Alice", if: "Kipling",
+                   cast: "Cast list", cal: "Calendar" };
+
+  function flashExamplePick(shortName) {
+    var sel = $("egPick");
+    if (!sel || !sel.options.length) return;
+    var slot = sel.options[0];
+    clearTimeout(egFlashTimer);
+    /* THE SLOT IS PUT BACK BY THE LISTENER, NOT HERE. wireExamples reads the
+       value and returns to the first row in the same breath, which is the one
+       place a pick enters, so doing it again here would be a second rule
+       saying the same thing. */
+    slot.textContent = "✓ " + shortName;
+    egFlashTimer = setTimeout(function () { slot.textContent = EG_OFFER; }, EG_FLASH_MS);
+  }
+
+  /* PUT AN EXAMPLE ON THE BOARD. It does not press the disc: a person presses
+     Make when they are ready, the way they would with anything they typed.
+
+     IT REPLACES WHAT IS THERE. The board is emptied first, the note and any
+     attached file together, so an example never lands on top of something. */
+  async function pickExample(id) {
+    if (homePressing) return;
+    try {
+      var all = await ensureExamples();
+      var ex = exampleById(all, id);
+      if (!ex) return;
+      clearBoard();
+      if (ex.kind === "file") await applyFileExample(ex);
+      else applyTextExample(ex);
+      /* THE METER IS TOLD AT ONCE, WHICHEVER PATH RAN. The settle wait exists
+         so the meter does not redraw on every keystroke, and an example is not
+         typed. The attach path waits by default, so without this the rung and
+         the label still described whatever was on the board before. */
+      updateHomeMeter(true);
+      toast(ex.say, "ok");
+      paintMakeSay(false);
+      flashExamplePick(EG_SHORT[ex.id] || ex.name);
+    } catch (err) {
+      toast(SAY.examplesFailed, "bad");
+    }
+  }
+
+  /* ANYTHING AT ALL ON THE BOARD MEANS ASKING FIRST, and asking every time.
+     One rule reads more clearly than a rule that knows which cases could lose
+     work, and the panel is the board's own. A cancelled question loads
+     nothing and leaves the slot offering. */
+  function offerExample(id) {
+    var ta = $("makeText");
+    var carrying = !!homeAttached || !!(ta && ta.value.length);
+    if (!carrying) return pickExample(id);
+    askHome({ title: SAY.egTitle, body: SAY.egAsk, yes: SAY.egYes },
+      function () { pickExample(id); });
   }
 
   /* ==========================================================================
@@ -3434,7 +3676,30 @@
      hides the text box, so an empty box has no answer worth asking for.
      The words are never destroyed either way. They come back the moment the
      file is taken off again, and the sentence says so. */
-  var plainPending = null;
+  /* ONE QUESTION PANEL, ASKED BY WHOEVER NEEDS IT.
+
+     Two things stop and ask on this board: a plain picture that hides nothing,
+     and an example about to replace what is here. Both ask the same shape of
+     question, so the panel is written once and the caller hands over the three
+     pieces of text and what to do with a Yes. The answer is held here rather
+     than in the caller, so the two buttons have one listener each however many
+     things learn to ask. */
+  var askPending = null;     // what to run on Yes, or null when nothing is asked
+
+  function askHome(words, onYes) {
+    $("plainAskTitle").textContent = words.title;
+    $("plainAskBody").textContent = words.body;
+    $("plainYes").textContent = words.yes;
+    askPending = onYes;
+    $("plainAsk").hidden = false;
+    $("plainAsk").focus();
+  }
+
+  function closePlainAsk() {
+    askPending = null;
+    var ask = $("plainAsk");
+    if (ask) ask.hidden = true;
+  }
 
   function offerPlain(file) {
     // The reading is left saying Decoding, and nothing is being decoded now.
@@ -3444,16 +3709,8 @@
       takeHomeAttachment(file, SAY.tookPlain);
       return;
     }
-    plainPending = file;
-    $("plainAskBody").textContent = SAY.askPlain;
-    $("plainAsk").hidden = false;
-    $("plainAsk").focus();
-  }
-
-  function closePlainAsk() {
-    plainPending = null;
-    var ask = $("plainAsk");
-    if (ask) ask.hidden = true;
+    askHome({ title: "That is not a PuttyPNG", body: SAY.askPlain, yes: "Yes, attach it" },
+      function () { takeHomeAttachment(file, SAY.tookPlain); });
   }
 
   async function loadHomeFromSrc(src, name, blob) {
@@ -3623,6 +3880,12 @@
     window.PuttyPNGDebug = window.PuttyPNGDebug || {};
     window.PuttyPNGDebug.launchTransform = launchTransform;
     window.PuttyPNGDebug.setView = setView;
+    // How the console and the probe drive the dropdown without opening it.
+    window.PuttyPNGDebug.pickExample = pickExample;
+    window.PuttyPNGDebug.offerExample = offerExample;
+    // The side the engine says the picture will be, which is what the tray is
+    // capped at and what the over-512 warning is read from.
+    window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
     window.PuttyPNGDebug.tuning = function () {
       return { rungs: RUNGS.length, wide: METER_TUNING.wide.share,
                touch: METER_TUNING.touch.share, disc: DISC_TUNING.touch };

@@ -180,6 +180,16 @@ if (info.isPuttyPNG &amp;&amp; info.tag === "myapp v2") { /* it's ours */ }</pre
         </div>
 
         <div class="card">
+          <h3>PuttyPNG.planSize(input, options?)</h3>
+          <div class="api-sig">await PuttyPNG.planSize(input, options) &rarr; { side, bodyBytes, depth, compressed, encrypted }</div>
+          <p class="small">Says how wide the picture will be, without drawing it. It prepares the data the way <span class="mono">encode()</span> does, compressing and encrypting as the options ask, then works out the side of the square that holds it. Use it to warn somebody before they press, or to size a preview.</p>
+          <p class="small">It takes the same options as <span class="mono">encode()</span> and it is exact for a cover that fills its square, which is noise and a CD with a solid background. A see-thru CD leaves the corners clear, so the answer is the engine's first guess and the real disc may come out one step larger. It ignores <span class="mono">maxSize</span>: a caller asking how big this would be needs the answer even when the answer is too big.</p>
+          <div class="row" style="justify-content:flex-end;"><button class="btn btn-ghost btn-sm copy-btn" type="button" data-copy="ex-plan">Copy</button></div>
+<pre id="ex-plan">const plan = await PuttyPNG.planSize(text, { coverStyle: "cd", solidBackground: true });
+if (plan.side &gt; 512) warn("Chat apps may shrink a picture this big.");</pre>
+        </div>
+
+        <div class="card">
           <h3>PuttyPNG.download(result, filename?) &middot; PuttyPNG.passwordPrompt</h3>
           <p class="small"><span class="mono">download()</span> saves a decoded result (or a raw Blob) to disk. <span class="mono">passwordPrompt</span> is the override point for password entry. It defaults to the browser's native <span class="mono">prompt()</span>. Replace it with your own UI (see <a href="#docs-prompt">Custom prompt</a>).</p>
           <div class="tablewrap"><table class="doc">
@@ -465,8 +475,8 @@ await PuttyPNG.encode(data, { password: await askUserForPassword() });</pre>
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.12.0</span>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.2.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.13.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
         <span class="sep" aria-hidden="true">&middot;</span><a href="https://github.com/aaronmharrisamh/puttypng" target="_blank" rel="noreferrer">Source on GitHub<svg class="ext" viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><path d="M8 16 16 8M9.5 8H16v6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>

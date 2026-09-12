@@ -1,0 +1,45 @@
+Section,Role,Performer,Scenes,Costumes,Costume budget (USD),Fitting,Contact,Notes
+Cast,"Hamlet, Prince of Denmark",Greta Zelinsky,20,2,480,2030-04-11,greta.zelinsky@millpondplayers.example,Doubles in the dumb show
+Cast,"Claudius, King of Denmark",Omar Ellery,14,2,520,2030-04-23,omar.ellery@millpondplayers.example,
+Cast,"Gertrude, Queen of Denmark",Dana Bramble,11,2,505,2030-04-15,dana.bramble@millpondplayers.example,Wig fitting booked separately
+Cast,The Ghost of Hamlet's Father,Quinn Whitlow,4,1,610,2030-04-22,quinn.whitlow@millpondplayers.example,Needs the rapier from Act V
+Cast,"Polonius, Lord Chamberlain",Tovah Lindquist,12,2,340,2030-04-11,tovah.lindquist@millpondplayers.example,
+Cast,Ophelia,Ines Sable,9,2,415,2030-04-22,ines.sable@millpondplayers.example,Needs the rapier from Act V
+Cast,Laertes,Faye Cobb,8,2,360,2030-04-16,faye.cobb@millpondplayers.example,Own shoes approved
+Cast,Horatio,Hugo Faraday,13,2,245,2030-04-11,hugo.faraday@millpondplayers.example,Understudies Horatio
+Cast,Rosencrantz,Rafe Whitlow,6,2,220,2030-04-18,rafe.whitlow@millpondplayers.example,Wig fitting booked separately
+Cast,Guildenstern,Hana Whitlow,6,2,220,2030-04-22,hana.whitlow@millpondplayers.example,Wig fitting booked separately
+Cast,"Fortinbras, Prince of Norway",Bram Hollis,3,1,395,2030-04-22,bram.hollis@millpondplayers.example,Wig fitting booked separately
+Cast,Marcellus,Rafe Yardley,4,1,180,2030-04-09,rafe.yardley@millpondplayers.example,Understudies Horatio
+Cast,Bernardo,Sana Sable,3,1,180,2030-04-09,sana.sable@millpondplayers.example,Travels from out of town on Sundays
+Cast,Francisco,Dana Byrne,2,1,165,2030-04-23,dana.byrne@millpondplayers.example,"Allergic to the fog fluid, keep upstage"
+Cast,Osric,Hana Norwood,2,1,275,2030-04-15,hana.norwood@millpondplayers.example,Needs the rapier from Act V
+Cast,Reynaldo,Vince Bramble,2,1,150,2030-04-15,vince.bramble@millpondplayers.example,
+Cast,Voltemand,Ford Delacroix,2,1,195,2030-04-11,ford.delacroix@millpondplayers.example,Wig fitting booked separately
+Cast,Cornelius,Bram Grimshaw,2,1,195,2030-04-23,bram.grimshaw@millpondplayers.example,"Allergic to the fog fluid, keep upstage"
+Cast,First Gravedigger,Dov Jessup,2,1,145,2030-04-09,dov.jessup@millpondplayers.example,"Allergic to the fog fluid, keep upstage"
+Cast,Second Gravedigger,Kira Zelinsky,1,1,140,2030-04-09,kira.zelinsky@millpondplayers.example,Wig fitting booked separately
+Cast,Player King,Rafe Oakes,2,1,330,2030-04-09,rafe.oakes@millpondplayers.example,"Allergic to the fog fluid, keep upstage"
+Cast,Player Queen,Yusuf Vance,2,1,330,2030-04-15,yusuf.vance@millpondplayers.example,Wig fitting booked separately
+Cast,A Priest,Wren Ives,1,1,210,2030-04-16,wren.ives@millpondplayers.example,Quick change after the closet scene
+Cast,A Captain,Rafe Bramble,1,1,175,2030-04-11,rafe.bramble@millpondplayers.example,Needs the rapier from Act V
+Cast,First Ambassador,Hana Ingram,1,1,205,2030-04-09,hana.ingram@millpondplayers.example,Doubles in the dumb show
+Cast,Lord in attendance,Wren Yardley,4,1,130,2030-04-09,wren.yardley@millpondplayers.example,Travels from out of town on Sundays
+Cast,Lady in attendance,Greta Keel,4,1,130,2030-04-15,greta.keel@millpondplayers.example,
+Cast,Soldier of the watch,Bea Ives,5,2,155,2030-04-22,bea.ives@millpondplayers.example,"Allergic to the fog fluid, keep upstage"
+Crew,Director,Sana Jessup,,,0,,sana.jessup@millpondplayers.example,
+Crew,Assistant Director,Sana Dunmore,,,0,,sana.dunmore@millpondplayers.example,
+Crew,Stage Manager,Bea Hollis,,,0,,bea.hollis@millpondplayers.example,Orders lumber by 2030-04-01
+Crew,Assistant Stage Manager,Hugo Gale,,,0,,hugo.gale@millpondplayers.example,On book from the first stumble-through
+Crew,Costume Designer,Eli Gale,,,0,,eli.gale@millpondplayers.example,Runs the fight call every night
+Crew,Wardrobe Supervisor,Kira Pruitt,,,0,,kira.pruitt@millpondplayers.example,On book from the first stumble-through
+Crew,Set Designer,Cleo Ashby,,,0,,cleo.ashby@millpondplayers.example,Holds the master key
+Crew,Master Carpenter,Kira Grimshaw,,,0,,kira.grimshaw@millpondplayers.example,Builds the paper props twice over
+Crew,Lighting Designer,Rafe Eastman,,,0,,rafe.eastman@millpondplayers.example,Builds the paper props twice over
+Crew,Sound Designer,Faye Hollis,,,0,,faye.hollis@millpondplayers.example,Holds the master key
+Crew,Props Master,Hugo Yardley,,,0,,hugo.yardley@millpondplayers.example,Builds the paper props twice over
+Crew,Fight Choreographer,Iris Keel,,,0,,iris.keel@millpondplayers.example,On book from the first stumble-through
+Crew,Dialect Coach,Faye Alder,,,0,,faye.alder@millpondplayers.example,
+Crew,Dramaturg,Yusuf Halloran,,,0,,yusuf.halloran@millpondplayers.example,Orders lumber by 2030-04-01
+Crew,Box Office Manager,Kira Whitlow,,,0,,kira.whitlow@millpondplayers.example,Runs the fight call every night
+Crew,House Manager,Tovah Fenwick,,,0,,tovah.fenwick@millpondplayers.example,On book from the first stumble-through
