@@ -154,19 +154,15 @@
      The shares are read against the deck row rather than the card, because the
      deck row is the box the disc sits in.
 
-     The touch numbers were R5's own preview table in absolute pixels until
-     v2.17.0: 150px on the smallest rung, in a window over twice that wide.
-     They are shares of the window now, like the desktop's, and the largest
-     rung stops DISC_GUTTER_PX short of each edge. The ladder is tight, because
-     every rung has to come close to filling a frame that is only as wide as a
-     phone: the step from rung to rung is 13px on a 384px screen, and the
-     gutter runs from 28px down to the 8px the largest leaves. */
+     A PHONE HAS NO TABLE. It had R5's four absolute sizes until v2.17.0 and
+     four shares after that, and neither could say the one thing that matters
+     on a small screen: that a 256px picture is small and a 512px one is not.
+     phoneDiscSize() ramps between those two facts instead. */
   var DISC_TUNING = {
-    wide: [0.575, 0.683, 0.792, 0.90],
-    touch: [0.88, 0.92, 0.96, 1.00]
+    wide: [0.575, 0.683, 0.792, 0.90]
   };
 
-  // How much white is left between the largest disc and the window's edge.
+  // How much white is left between the widest disc and the window's edge.
   var DISC_GUTTER_PX = 8;
 
   // Timings for the home board, in milliseconds.
@@ -3083,6 +3079,25 @@
   // happens on arrival and must not animate. See setBoardSizes.
   var boardSized = false;
 
+  /* HOW WIDE A PHONE DRAWS A PICTURE OF THIS SIDE, in a window with this much
+     room in it.
+     TRUE SIZE AT THE FLOOR, THE WHOLE WINDOW AT THE PASTE LIMIT. A 256px
+     PuttyPNG is drawn at 256px, which is the size it really is and the
+     smallest the board makes, so the smallest picture looks like the small
+     thing it is. From there the drawing grows with the picture, and by the
+     time the picture reaches the size a chat app would recompress it at, it
+     fills the window. Past that it stays filled: a picture already too large
+     to paste has nothing left to say by growing further.
+     Both ends are read from where they are named, so neither can move on one
+     side only, and the room is the ceiling for a screen too narrow to hold
+     even the floor. */
+  function phoneDiscSize(side, room) {
+    var from = RUNGS[0].px;
+    var to = BIG_PASTE_PX;
+    var t = Math.max(0, Math.min(1, (side - from) / (to - from)));
+    return Math.min(room, Math.round(from + t * (room - from)));
+  }
+
   function setBoardSizes(k) {
     homeShownRung = Math.min(k, RUNGS.length - 1);
     var col = document.querySelector(".col.make");
@@ -3101,17 +3116,15 @@
     var slot;
     var colW = col.getBoundingClientRect().width || inner + pad * 2;
     if (touchPointer.matches) {
-      /* A SHARE OF THE WINDOW, AND NOT THE PICTURE'S OWN SIZE.
-         A phone's window is 342px on a 384px screen, so a 256px PuttyPNG drawn
-         true would sit in it with 43px of white on each side and read as a
-         thumbnail rather than as the thing about to be sent. It is drawn to
-         fill instead, and the caption under it says what the picture really
-         measures. A desktop has the room to say that by drawing it, and a
-         phone says it in words.
+      /* THE PICTURE'S OWN SIZE DECIDES IT, not the rung. A rung is a band, and
+         the whole of the smallest band is drawn at one size on a phone: the
+         difference between 200 and 65,000 bytes is what the meter is for.
+         What a person needs from the picture is whether it is small enough to
+         paste, and that is what the ramp draws.
          The card is what is measured, not the window, because the two are
          never on screen at once on a phone and they are the same width. */
       var room = Math.max(0, Math.round(colW) - 2 - DISC_GUTTER_PX * 2);
-      slot = Math.round(room * DISC_TUNING.touch[homeShownRung]);
+      slot = phoneDiscSize(homeTrueSide || RUNGS[homeShownRung].px, room);
     } else {
       /* THE TRUE PICTURE WINS OVER THE RUNG. The rung is a band, and a disc
          drawn at the band's top would be wider than the file really is. The
@@ -3999,7 +4012,11 @@
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
     window.PuttyPNGDebug.tuning = function () {
       return { rungs: RUNGS.length, wide: METER_TUNING.wide.share,
-               touch: METER_TUNING.touch.share, disc: DISC_TUNING.touch };
+               touch: METER_TUNING.touch.share,
+               // The phone's ramp as its two ends and the white it leaves: a
+               // probe works the expected width out from these rather than
+               // holding a copy of four numbers that go stale in silence.
+               disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX } };
     };
 
     // A choice made in Advanced wins, in both directions. With no choice

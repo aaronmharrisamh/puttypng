@@ -768,12 +768,28 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 .dropzone .hint { font-size: 13px; color: var(--muted); }
 
 
-/* Toast */
+/* Toast.
+   A CARD AT THE TOP, NOT A PILL AT THE FOOT OF THE SCREEN. Every control on
+   this page is a pill, so a pill that arrives by itself at the bottom reads as
+   one more thing to press. This is a notice and not a control: a rectangle,
+   at the top where a notice belongs, with one coloured edge saying what kind
+   of notice it is.
+   66px clears the sticky tab bar, which is where a desktop reads this from
+   once the board is scrolled to. A phone's tabs are static and scroll away, so
+   the touch block puts it back at the top of the screen. */
 #toast {
-  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
-  background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 999px;
-  font-size: 14px; box-shadow: var(--shadow-lift); opacity: 0; pointer-events: none;
-  transition: opacity .2s ease, transform .2s ease; z-index: 100; max-width: 90vw;
+  position: fixed; left: 50%; top: 66px; transform: translateX(-50%) translateY(-10px);
+  /* A FIXED BOX SHRINKS TO FIT THE ROOM LEFT OF ITS OWN EDGE. Half the screen
+     is what left:50% leaves, so the card was 246px wide on a 492px phone and
+     the sentence broke into three lines inside it. max-content asks for the
+     width the words really want, and the cap is what holds it in. */
+  width: max-content; max-width: min(420px, calc(100vw - 28px));
+  padding: 13px 17px; border-radius: 12px; border-left: 4px solid var(--clay);
+  background: var(--ink); color: #fff; text-align: left;
+  font-size: 14px; line-height: 1.4; font-weight: 500;
+  box-shadow: 0 14px 34px rgba(12, 12, 16, .30);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease; z-index: 100;
 }
 
 /* Snippets */
@@ -1644,9 +1660,13 @@ textarea:focus, input:focus, select:focus {
 /* Toast */
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-#toast.bad { background: var(--bad); }
+/* THE KIND IS THE EDGE, NOT THE WHOLE CARD. The words stay on one ground
+   whatever has happened, so a message is read in the same place, in the same
+   colour, and only the edge beside it changes. A card that turned red was a
+   red block of text before it was a warning. */
+#toast.bad { border-left-color: var(--bad); }
 
-#toast.ok { background: var(--ok); }
+#toast.ok { border-left-color: var(--ok); }
 
 /* Docs */
 @media (hover: hover) and (pointer: fine) {
@@ -1895,6 +1915,12 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
     font-size: 13.5px; line-height: 1.2; padding: 6px 7px;
     min-height: 44px; min-width: 0;
   }
+
+  /* THE TOAST GOES TO THE TOP OF THE SCREEN HERE. The 66px in the base sheet
+     is the room a desktop's pinned tab row takes, and the rule above unpins
+     that row on a phone, so there is nothing here for the toast to clear. The
+     inset is for a phone whose screen is cut into at the top. */
+  #toast { top: max(12px, env(safe-area-inset-top)); }
 }
 
 /* THE MAKE COLUMN ON A TOUCH SCREEN.
@@ -2372,6 +2398,12 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .madeacts #cdSave { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
   .madeacts #cdCopy { background: var(--ink); color: #fff; border: 0; }
   .madeacts #cdCopy.done { background: var(--ok); }
+  /* THE TICK IS DRAWN IN WHITE, so the button it lands on has to stop being
+     white. Download kept its paper background through the confirmation and the
+     tick was invisible on it: only the word changed. */
+  .madeacts #cdSave.done {
+    background: var(--ok); color: #fff; border-color: var(--ok);
+  }
 
   .againrow { display: block; }
   .againrow[hidden] { display: none; }
@@ -2487,9 +2519,20 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 @media (prefers-reduced-motion: reduce) {
   .makebox.glow #makeText,
   #cdCopy.glow,
-  #cdTipCopy.glow { animation: none; box-shadow: 0 0 0 4px rgba(var(--limergb), .24); }
+  #cdTipCopy.glow { animation: none; box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
   .act .ic.glow::after { animation: none; opacity: .6; transform: scale(1); }
 }
+
+/* AND NOR IS ANIMATIONS OFF. The rule at the foot of this file stops every
+   animation under body.still, which left the chain with nothing lit at all:
+   the ring above is drawn by the animation, so turning the animation off took
+   the glow with it. A phone is where that is felt, because a phone is where
+   the browser's own motion setting is usually on.
+   The same lit ring, standing still. */
+body.still .makebox.glow #makeText,
+body.still #cdCopy.glow,
+body.still #cdTipCopy.glow { box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
+body.still .act .ic.glow::after { opacity: .6; transform: scale(1); }
 
 /* TWO NAMES, ONE EFFECT: nothing on the page moves.
    "still" is the Advanced preference for no animation, which scripts.js sets
