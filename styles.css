@@ -2281,17 +2281,21 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   /* WHERE THE DISC COMES TO REST, measured from the top of the window. The
      number is read twice: once to place the disc, once to work out how far
      above the lip it has to start from. One place to change it.
-     40px, not less: the switch is 24px tall at 15px, and the picture's box
-     has to start under it. A solid picture is a white square, so its box
-     is its edge, not only the circle drawn on it. v2.10.0 took 20px out of
-     the window that the disc was not using. */
+     40px was the floor and not the spacing: the switch is 24px tall at 15px,
+     so its edge sat one pixel above the picture's. A solid picture is a white
+     square, so its box is its edge and not only the circle drawn on it, and
+     the two read as one block with nothing between them.
+     56px from v2.18.1, which leaves 17px of paper between them. */
   /* THE FOOTER'S ROOM IS RESERVED, NOT MEASURED. The row of three buttons
      and the size line arrive with the disc, and a window that grew at that
      moment would move the page under a thumb already reaching for it. The
-     probe asserts the reserved room really holds what goes in it. */
+     probe asserts the reserved room really holds what goes in it.
+     It is the footer's own height plus the paper above it: 107px leaves 24px
+     between the picture and the row, where 92px left 9px and the two ran
+     together. */
   .discwin {
-    --disc-top: 40px;
-    --win-foot: 92px;
+    --disc-top: 56px;
+    --win-foot: 107px;
     display: block; position: relative; overflow: hidden; flex: none;
     height: calc(var(--disc-top) + var(--slot-w) + var(--win-foot));
     border: 1px solid var(--line-strong); border-radius: 12px;
@@ -2348,9 +2352,12 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   /* The caption is a slim line of its own under the row. It sat in the
      window's bottom corner beside the Edit chip until v2.17.0, where a row of
-     three buttons left it nowhere to sit. */
+     three buttons left it nowhere to sit.
+     RIGHT, NOT CENTRED. It is a footnote to the row above it, and its right
+     edge lands under the right edge of Copy, so the block reads as one thing
+     rather than as two lines of different widths. */
   .discnote {
-    display: block; text-align: center; font-size: 11px; color: var(--muted);
+    display: block; text-align: right; font-size: 11px; color: var(--muted);
   }
   .discnote[hidden] { display: none; }
 
