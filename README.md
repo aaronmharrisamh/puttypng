@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.15.0**, engine **2.3.0**, protocol **1**.
+Current release: page **2.16.0**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -22,14 +22,12 @@ can only fill itself over HTTP.
 ## Editing a disc title
 
 After making a disc, press **Edit Title** on desktop or **Edit** at the lower
-left of the mobile result. The editor starts with the current wording and
-previews changes before saving. Use your own words, choose another saying, or
-use the attached filename. Long filenames lose their middle on the disc and
-keep their extension; the embedded file keeps its complete original name.
-The filename row appears only when an attached file can supply a title.
+left of the mobile result. The editor holds one field, one sentence and one
+button. It starts with the current wording, counts what you type against a
+limit of 40 characters, and refuses an empty title.
 
 Save title updates the downloadable and copyable PNG using the same contents,
-password, and cover settings. Cancel leaves the finished PNG unchanged.
+password, and cover settings. Closing it leaves the finished PNG unchanged.
 
 The board selects from 130 sayings: ten each for typed text, general
 attachments, ten popular file families, and protected contents. File families
@@ -76,8 +74,8 @@ current title.
 
 Password-protected discs use generic sayings and **Locked contents inside!**.
 The automatic writing includes no filename, file type, size, or word count.
-The filename row is hidden while protected. A custom title is still visible
-without the password, as the editor explains.
+A custom title is still readable without the password, and the editor's one
+sentence says so.
 
 ## The files
 

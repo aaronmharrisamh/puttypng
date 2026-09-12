@@ -1196,18 +1196,12 @@ details.sect > summary::-webkit-details-marker { display: none; }
 }
 .title-editor::backdrop { background: rgba(25, 30, 25, .45); }
 .title-editor form { display: flex; flex-direction: column; max-height: inherit; }
-.title-grip { display: none; }
 .title-head { display: flex; align-items: flex-start; gap: 10px; padding: 22px 24px 0; flex: none; }
 .title-head > div { flex: 1; min-width: 0; }
 .title-head h2 { margin: 0; font-size: 23px; line-height: 1.3; }
 .title-head p { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
 .title-close { width: 44px; min-height: 44px; flex: none; padding: 0; margin: -8px -9px 0 0; border: 0; background: none; font: inherit; font-size: 26px; color: var(--ink); cursor: pointer; }
 .title-body { padding: 16px 24px 20px; overflow: auto; min-height: 0; overscroll-behavior: contain; }
-.title-preview { display: flex; align-items: center; gap: 14px; background: #f1f3eb; border: 1px solid #e0e3d6; border-radius: 12px; padding: 8px 12px; margin-bottom: 18px; }
-.title-preview img { width: 126px; height: 126px; object-fit: contain; flex: none; }
-.title-preview > div { min-width: 0; }
-.title-preview small { display: block; font-size: 10px; color: #5d6a50; margin-bottom: 6px; }
-.title-preview strong { display: block; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .title-field-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .title-field-label label { margin: 0; font-size: 12px; font-weight: 600; }
 #titleCount { font-size: 11px; color: var(--muted); }
@@ -1215,17 +1209,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
 #titleInput[readonly] { color: var(--ink-soft); background: #f3f4ee; }
 .title-help { color: var(--muted); font-size: 11px; line-height: 1.55; margin: 7px 0 0; }
 .title-error { color: var(--bad); font-size: 12px; margin: 7px 0 0; }
-.title-error[hidden], #titlePrivacy[hidden] { display: none; }
-.title-filename { display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 14px 0; margin-top: 17px; }
-.title-filename[hidden] { display: none; }
-.title-filename > div { min-width: 0; }
-.title-filename label { font-size: 12px; font-weight: 600; }
-.title-filename small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
-.title-switch { min-width: 44px; min-height: 44px; justify-content: center; flex: none; margin: 0; }
-.title-switch:has(input:disabled) { opacity: .5; cursor: default; }
-.title-suggestions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
-.title-suggestions .btn { min-height: 44px; font-size: 12px; }
-#titleSayingCount { font-size: 11px; color: var(--muted); }
+.title-error[hidden] { display: none; }
 .title-actions { display: flex; flex: none; justify-content: flex-end; gap: 8px; padding: 15px 24px; border-top: 1px solid var(--line-strong); background: #fffefa; }
 .title-actions .btn { min-width: 100px; min-height: 44px; justify-content: center; font-size: 12px; }
 .title-editor :focus-visible { outline: 3px solid #247791; outline-offset: 3px; }
@@ -2376,19 +2360,26 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   }
   .corner .pill svg { color: var(--muted); flex: none; }
 
+  /* A CENTRED MODAL ON A PHONE, NOT A SHEET STUCK TO THE BOTTOM. It was a
+     sheet until v2.16.1: full width, square top corners and a drag grip.
+
+     IT STILL RISES ABOVE THE KEYBOARD, and that is what the bottom offset is
+     for. Chrome does not shrink the layout viewport when the keyboard opens,
+     so a box centred against the whole page would sit behind it. Holding the
+     bottom edge at the keyboard's inset and leaving every margin on auto
+     centres it in the room that is left instead. titleEditorSize measures
+     that inset from the visual viewport.
+     The width keeps a gutter, so it reads as a card on the page rather than a
+     panel welded to its edges. */
   .title-editor {
-    width: min(440px, 100%); margin: auto auto 0;
-    top: auto; bottom: var(--title-keyboard-inset, 0px);
+    width: min(440px, calc(100% - 32px)); margin: auto;
+    top: 0; bottom: var(--title-keyboard-inset, 0px);
     max-height: min(92dvh, var(--title-height, 92dvh));
-    border-radius: 22px 22px 0 0;
   }
-  .title-grip { display: block; flex: none; width: 36px; height: 4px; border-radius: 4px; margin: 9px auto 0; background: #c7cdbe; }
-  .title-head { padding: 14px 20px 0; }
+  .title-head { padding: 18px 20px 0; }
   .title-head p { font-size: 11px; }
   .title-body { padding: 14px 20px 18px; }
-  .title-preview { padding: 6px 12px; margin-bottom: 14px; gap: 12px; }
-  .title-preview img { width: 96px; height: 96px; }
-  .title-actions { padding: 13px 20px max(16px, env(safe-area-inset-bottom)); }
+  .title-actions { padding: 13px 20px; }
   .title-actions .btn { flex: 1; min-width: 0; min-height: 48px; }
 }
 .transnote svg { flex: none; margin-top: 1px; color: #b8860b; }

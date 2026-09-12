@@ -1087,7 +1087,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.15.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.16.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
@@ -1145,40 +1145,30 @@
     </div>
   </dialog>
 
-  <dialog class="title-editor" id="titleDialog" aria-labelledby="titleHeading" aria-describedby="titleDescription">
+  <!-- ONE FIELD, ONE SENTENCE, ONE BUTTON. It carried a live disc preview, a
+       use-the-filename switch and an another-saying button until v2.16.0, and
+       a person opening it to change a few words had five things to read first.
+       THE SENTENCE CHANGES WHEN THE DISC HAS A PASSWORD, because a title is
+       drawn on the outside and is readable without one. That is a safety note
+       rather than help, so it takes the place of the help rather than adding a
+       line beside it. paintTitleDraft writes it.
+       The cross is the way out. A dialog also closes on Escape, and both come
+       back here through closeTitleEditor. -->
+  <dialog class="title-editor" id="titleDialog" aria-labelledby="titleHeading" aria-describedby="titleHelp">
     <form id="titleForm" novalidate>
-      <div class="title-grip" aria-hidden="true"></div>
       <header class="title-head">
         <div>
           <h2 id="titleHeading" tabindex="-1">Edit title</h2>
-          <p id="titleDescription">Change the writing on the outside of your disc.</p>
         </div>
-        <button type="button" class="title-close" id="titleClose" aria-label="Cancel title changes">&times;</button>
+        <button type="button" class="title-close" id="titleClose" aria-label="Close without saving">&times;</button>
       </header>
       <div class="title-body">
-        <div class="title-preview">
-          <img id="titlePreview" alt="Disc title preview" width="512" height="512">
-          <div><small>ON YOUR DISC</small><strong id="titleCaption"></strong></div>
-        </div>
         <div class="title-field-label"><label for="titleInput">Disc title</label><span id="titleCount"></span></div>
-        <textarea id="titleInput" rows="2" maxlength="64" aria-describedby="titleHelp titleError"></textarea>
-        <p class="title-help" id="titleHelp">Start with our words, or write something of your own.</p>
+        <textarea id="titleInput" rows="2" maxlength="40" aria-describedby="titleHelp titleError"></textarea>
+        <p class="title-help" id="titleHelp">Write the words that go on the outside of your disc.</p>
         <p class="title-error" id="titleError" role="alert" hidden></p>
-        <div class="title-filename" id="titleFilenameRow" hidden>
-          <div><label for="titleFilename">Use filename only</label><small id="titleFilenameHelp"></small></div>
-          <label class="switch title-switch">
-            <input type="checkbox" role="switch" id="titleFilename" aria-describedby="titleFilenameHelp">
-            <span class="track"></span>
-          </label>
-        </div>
-        <div class="title-suggestions">
-          <button type="button" class="btn ghost" id="titleAnother">Another saying</button>
-          <span id="titleSayingCount">10 sayings</span>
-        </div>
-        <p class="title-help" id="titlePrivacy" hidden>Your title is visible without the password. Keep it discreet.</p>
       </div>
       <footer class="title-actions">
-        <button type="button" class="btn ghost" id="titleCancel">Cancel</button>
         <button type="submit" class="btn btn-primary" id="titleSave">Save title</button>
       </footer>
     </form>

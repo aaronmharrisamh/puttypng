@@ -525,7 +525,11 @@
 
   // Keep both ends and the extension visible on the marker title.
   var DISC_NAME_MAX = 42;
-  var DISC_TITLE_MAX = 64;
+  /* THE LONGEST THE DISC WAS DESIGNED FOR. Measured against the board's own
+     130 sayings: the longest is 40 characters and the mean is 32. The limit
+     was 64, which allowed half again more than anything the disc carries, and
+     the engine then took the middle out of it to fit the arc. */
+  var DISC_TITLE_MAX = 40;
 
   /* THE TWO FACES THE DISC IS WRITTEN IN. A canvas cannot use a font the
      document has not fetched, and it falls back to another face without
@@ -549,14 +553,11 @@
   // current saying because they update the same disc.
   var homeSaying = null;
   var homeSayingLocked = false;
-  var homeTitleFilename = false;
   var homeEditedLabel = null;
   var homeLabelLocked = false;
   var homeMade = null;
   var homeTitleDraft = null;
   var homeTitleSaving = false;
-  var homeTitlePreviewRun = 0;
-  var homeTitlePreviewTimer = 0;
 
   // The faces, once. A promise, so a second press waits rather than refetching.
   var discFontsReady = null;
@@ -921,12 +922,9 @@
       homeSayingLocked = locked;
     }
     if (locked) {
-      // A name or public title from an earlier press must not cross into a locked disc.
-      if (opts.label && opts.label.trim() && (!homeLabelLocked || homeTitleFilename)) opts.label = null;
-      homeTitleFilename = false;
+      // A public title from an earlier press must not cross into a locked disc.
+      if (opts.label && opts.label.trim() && !homeLabelLocked) opts.label = null;
       if (opts.infoText !== " ") opts.infoText = discInfoLine(input, true);
-    } else if (homeTitleFilename && homeAttached && opts.label !== " ") {
-      opts.label = shortDiscName(homeAttached.name);
     }
     if (opts.label == null) opts.label = homeSaying;
     if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
@@ -2494,7 +2492,7 @@
      ------------------------------------------------------------------------ */
 
   function titleDraftWords(draft) {
-    return draft.filename ? shortDiscName(draft.made.name) : draft.text.trim().replace(/\s+/g, " ");
+    return draft.text.trim().replace(/\s+/g, " ");
   }
 
   function titleEditorSize() {
@@ -2510,8 +2508,7 @@
   function openTitleEditor() {
     if (!homeMade || !homeDiscOut || homePressing || homeTitleSaving) return;
     var text = homeMade.customText || homeMade.opts.label.trim() || pickDiscSaying(!!homeMade.opts.password, null, homeMade.category);
-    homeTitleDraft = { text: text, filename: homeMade.filename, made: homeMade };
-    $("titlePreview").src = $("cd").src;
+    homeTitleDraft = { text: text, made: homeMade };
     paintTitleDraft(true);
     $("titleDialog").showModal();
     titleEditorSize();
@@ -2519,59 +2516,32 @@
     else { $("titleInput").focus(); $("titleInput").select(); }
   }
 
+  /* THE ONE SENTENCE SAYS WHICHEVER THING MATTERS. A title is drawn on the
+     outside of the disc, so on a protected one it is readable without the
+     password. That is worth saying and it is worth saying instead of the
+     ordinary line, not beside it. */
   function paintTitleDraft(fillInput) {
     var draft = homeTitleDraft;
     if (!draft) return;
     var input = $("titleInput"), locked = !!draft.made.opts.password;
-    var canUseFilename = !locked && !!draft.made.name;
     var words = titleDraftWords(draft);
-    if (fillInput) input.value = draft.filename ? draft.made.name : draft.text;
-    input.readOnly = draft.filename;
-    $("titleFilenameRow").hidden = !canUseFilename;
-    $("titleFilename").checked = draft.filename;
-    $("titleFilename").disabled = !canUseFilename || homeTitleSaving;
-    $("titleFilenameHelp").textContent = canUseFilename ? draft.made.name : "";
-    $("titleHelp").textContent = draft.filename
-      ? "The disc shortens the middle to fit and keeps the extension. The original filename stays unchanged."
-      : "Start with our words, or write something of your own.";
-    var invalid = !words || (!draft.filename && draft.text.length > DISC_TITLE_MAX);
+    if (fillInput) input.value = draft.text;
+    $("titleHelp").textContent = locked
+      ? "These words show on the disc without the password."
+      : "Write the words that go on the outside of your disc.";
+    /* THE FIELD'S maxlength IS NOT THE WHOLE GUARD. It stops a longer title
+        being typed or pasted and does nothing about one set in code, so the
+        length is checked here as well as declared there. */
+    var tooLong = draft.text.length > DISC_TITLE_MAX;
+    var invalid = !words || tooLong;
     $("titleError").hidden = !invalid;
-    $("titleError").textContent = !words ? "Enter a title, or choose another saying."
-      : invalid ? "Keep the title to " + DISC_TITLE_MAX + " characters." : "";
+    $("titleError").textContent = tooLong
+      ? "Keep the title to " + DISC_TITLE_MAX + " characters."
+      : invalid ? "Enter a title." : "";
     input.setAttribute("aria-invalid", invalid ? "true" : "false");
     $("titleSave").disabled = invalid || homeTitleSaving;
     $("titleInput").disabled = homeTitleSaving;
-    $("titleAnother").disabled = draft.filename || homeTitleSaving;
-    $("titleCount").textContent = draft.filename ? "Filename" : draft.text.length + " / " + DISC_TITLE_MAX;
-    var index = DISC_SAYINGS[draft.made.category].sayings.indexOf(draft.text);
-    $("titleSayingCount").textContent = draft.filename ? "Filename selected"
-      : index >= 0 ? "Saying " + (index + 1) + " of 10" : "Your own words";
-    $("titleCaption").textContent = words || "Your title here";
-    $("titlePrivacy").hidden = !locked;
-    clearTimeout(homeTitlePreviewTimer);
-    var run = ++homeTitlePreviewRun;
-    if (!invalid && !homeTitleSaving) {
-      homeTitlePreviewTimer = setTimeout(function () { previewTitleDraft(draft, words, run); }, 180);
-    }
-  }
-
-  async function previewTitleDraft(draft, words, run) {
-    // Preview a small sample, so typing never recompresses or encrypts the payload.
-    var opts = Object.assign({}, draft.made.opts, {
-      label: words, size: 512, minSize: 512, maxSize: 512,
-      password: undefined, name: undefined, mime: undefined, tag: undefined, compress: false
-    });
-    try {
-      await ensureDiscFonts();
-      var png = await PuttyPNG.encode("Title preview", opts);
-      if (run !== homeTitlePreviewRun || homeTitleDraft !== draft) return;
-      $("titlePreview").src = png.dataUrl;
-      $("titlePreview").alt = "Disc title preview: " + words;
-    } catch (err) {
-      if (run !== homeTitlePreviewRun || homeTitleDraft !== draft) return;
-      $("titleError").textContent = "The preview could not update. " + friendly(err);
-      $("titleError").hidden = false;
-    }
+    $("titleCount").textContent = draft.text.length + " / " + DISC_TITLE_MAX;
   }
 
   async function saveDiscTitle(event) {
@@ -2579,7 +2549,7 @@
     var draft = homeTitleDraft;
     if (!draft || homeTitleSaving || homePressing) return;
     var words = titleDraftWords(draft);
-    if (!words || (!draft.filename && draft.text.length > DISC_TITLE_MAX)) { paintTitleDraft(false); return; }
+    if (!words || draft.text.length > DISC_TITLE_MAX) { paintTitleDraft(false); return; }
     var made = draft.made;
     var opts = Object.assign({}, made.opts, { label: words });
     homeTitleSaving = true;
@@ -2597,11 +2567,9 @@
       if (homeTitleDraft !== draft || homeMade !== made || !homeDiscOut) return;
       homeLastBlob = png.blob;
       homeMade.opts = opts;
-      homeMade.filename = draft.filename;
       homeMade.customText = draft.text.trim().replace(/\s+/g, " ");
-      homeTitleFilename = draft.filename;
       homeLabelLocked = !!opts.password;
-      homeEditedLabel = draft.filename ? "" : homeMade.customText;
+      homeEditedLabel = homeMade.customText;
       $("optLabel").value = homeEditedLabel;
       $("optLabelOn").checked = true;
       $("cd").src = png.dataUrl;
@@ -2620,8 +2588,6 @@
       paintDiscEdit();
       if (homeTitleDraft === draft) {
         $("titleInput").disabled = false;
-        $("titleFilename").disabled = !!made.opts.password || !made.name;
-        $("titleAnother").disabled = draft.filename;
         $("titleSave").disabled = false;
       }
     }
@@ -2629,8 +2595,6 @@
 
   function closeTitleEditor() {
     homeTitleDraft = null;
-    homeTitlePreviewRun++;
-    clearTimeout(homeTitlePreviewTimer);
     if ($("titleDialog").open) $("titleDialog").close();
   }
 
@@ -2642,22 +2606,12 @@
       homeTitleDraft.text = this.value;
       paintTitleDraft(false);
     });
-    $("titleFilename").addEventListener("change", function () {
-      homeTitleDraft.filename = this.checked;
-      paintTitleDraft(true);
-    });
-    $("titleAnother").addEventListener("click", function () {
-      homeTitleDraft.text = pickDiscSaying(!!homeTitleDraft.made.opts.password, homeTitleDraft.text, homeTitleDraft.made.category);
-      paintTitleDraft(true);
-    });
     $("titleForm").addEventListener("submit", saveDiscTitle);
-    $("titleCancel").addEventListener("click", closeTitleEditor);
     $("titleClose").addEventListener("click", closeTitleEditor);
     dialog.addEventListener("cancel", function (event) { event.preventDefault(); closeTitleEditor(); });
     dialog.addEventListener("close", function () {
       if (dialog.open) return;
       closeTitleEditor();
-      $("titlePreview").removeAttribute("src");
       if (homeDiscOut) $("discEdit").focus({ preventScroll: true });
     });
     dialog.addEventListener("keydown", function (event) {
@@ -2674,7 +2628,6 @@
     dialog.addEventListener("drop", function (event) { event.preventDefault(); event.stopPropagation(); });
     $("optLabel").addEventListener("input", function () {
       homeEditedLabel = null;
-      homeTitleFilename = false;
       homeLabelLocked = !!$("optPassword").value;
     });
     window.addEventListener("resize", titleEditorSize);
@@ -3388,7 +3341,6 @@
     // A different PuttyPNG deserves its own saying. Flipping the background
     // does not come through here, which is what keeps that one wording.
     homeSaying = null;
-    homeTitleFilename = false;
     if (homeEditedLabel !== null && $("optLabel").value === homeEditedLabel) $("optLabel").value = "";
     homeEditedLabel = null;
     homeMade = null;
@@ -3602,8 +3554,7 @@
 
       applyDiscWriting(input, opts, keepSaying);
       var made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
-        category: discCategory(homeAttached, !!opts.password), filename: homeTitleFilename,
-        customText: homeTitleFilename ? ($("optLabel").value || homeSaying) : opts.label };
+        category: discCategory(homeAttached, !!opts.password), customText: opts.label };
 
       // The faces have to be in before the canvas can letter with them.
       await ensureDiscFonts();
