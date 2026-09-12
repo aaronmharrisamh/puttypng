@@ -154,13 +154,20 @@
      The shares are read against the deck row rather than the card, because the
      deck row is the box the disc sits in.
 
-     The touch numbers are R5's own preview table, r-shell.js:16. They are
-     absolute pixels rather than a share, which is a departure from every other
-     size on this board, and the comment above is the whole defence. */
+     The touch numbers were R5's own preview table in absolute pixels until
+     v2.17.0: 150px on the smallest rung, in a window over twice that wide.
+     They are shares of the window now, like the desktop's, and the largest
+     rung stops DISC_GUTTER_PX short of each edge. The ladder is tight, because
+     every rung has to come close to filling a frame that is only as wide as a
+     phone: the step from rung to rung is 13px on a 384px screen, and the
+     gutter runs from 28px down to the 8px the largest leaves. */
   var DISC_TUNING = {
     wide: [0.575, 0.683, 0.792, 0.90],
-    touch: [150, 190, 230, 268]
+    touch: [0.88, 0.92, 0.96, 1.00]
   };
+
+  // How much white is left between the largest disc and the window's edge.
+  var DISC_GUTTER_PX = 8;
 
   // Timings for the home board, in milliseconds.
   var RUNG_MOVE_MS = 460;      // one rung sliding inward as the next grows out
@@ -1831,6 +1838,7 @@
     placeSolidSwitch();
     placeMadeActions();
     placeDiscEdit();
+    placeTransNote();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -1855,9 +1863,13 @@
       placeSolidSwitch();
       placeMadeActions();
       placeDiscEdit();
+      placeTransNote();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
+      // The notes are numbered by how many of them are in the sign off, and
+      // the move above changes that.
+      paintSendNotes();
     });
   }
 
@@ -1932,12 +1944,30 @@
     }
   }
 
-  // Move the same edit button into the phone's result window.
+  /* Move the same edit button into the row under the phone's picture.
+     First in the row, so it reads Edit, Download, Copy. placeMadeActions()
+     appends the other two, so that order holds whichever of the two runs
+     first and however many times either of them runs. */
   function placeDiscEdit() {
-    var button = $("discEdit"), win = $("discWin"), tip = document.querySelector(".cdtip");
-    if (!button || !win || !tip) return;
-    if (touchPointer.matches) win.appendChild(button);
+    var button = $("discEdit"), row = $("madeActs"), tip = document.querySelector(".cdtip");
+    if (!button || !row || !tip) return;
+    if (touchPointer.matches) row.insertBefore(button, row.firstChild);
     else tip.insertBefore(button, $("bin"));
+  }
+
+  /* THE SEE-THRU NOTICE HAS A DIFFERENT HOME ON EACH SHAPE.
+     A desktop hangs it under the disc, in the deck row's own note cell, where
+     there is room for it beside everything else. A phone has one column, and a
+     bubble of its own there reads as a second thing to deal with, so it goes
+     inside the sign off as an addendum to the line it qualifies.
+     Ahead of the sign off's own note, so a pair is always numbered in the
+     order the markup writes them. */
+  function placeTransNote() {
+    var note = $("transNote"), box = $("sendNotes"), send = $("sendIt");
+    var deck = document.querySelector(".deckrow");
+    if (!note || !box || !send || !deck) return;
+    if (touchPointer.matches) box.insertBefore(note, box.firstChild);
+    else deck.insertBefore(note, send);
   }
 
   function paintDiscEdit() {
@@ -2141,7 +2171,48 @@
       var el = $(id);
       if (el) el.hidden = !on;
     });
+    paintDiscFacts();
+  }
+
+  /* THE TWO THINGS THAT ARE READ OFF THE PICTURE ITSELF. Both need the image
+     to have loaded, because that is the only place its width is written down,
+     so both are called from the one place that waits for it. */
+  function paintDiscFacts() {
     paintDiscNote();
+    paintSendNotes();
+  }
+
+  /* THE NOTES IN THE SIGN OFF, AND THEIR NUMBERS.
+     Two notes can apply to one picture: a see-thru background, and a picture
+     over the size a chat app will recompress. A lone note is "Note:" and a
+     pair is "Note 1:" and "Note 2:", because a Note 1 with nothing under it
+     reads as a list with an item missing from it.
+     Every number is cleared before any is written, so a notice that has moved
+     out to the deck row cannot keep a number it was given in here. */
+  function paintSendNotes() {
+    var box = $("sendNotes"), big = $("bigNote"), cd = $("cd");
+    if (!box || !big || !cd) return;
+
+    /* THIS ONE IS ABOUT THE FINISHED PICTURE, so it is measured off the
+       picture. The warning under the Make button is about a picture that does
+       not exist yet, which is a different sentence at a different moment. */
+    big.hidden = !homeDiscOut || !cd.naturalWidth || cd.naturalWidth <= BIG_PASTE_PX;
+
+    var all = [$("transNote"), big];
+    all.forEach(function (el) { numberNote(el, ""); });
+    var shown = all.filter(function (el) {
+      return el && el.parentNode === box && !el.hidden;
+    });
+    if (shown.length > 1) {
+      shown.forEach(function (el, i) { numberNote(el, " " + (i + 1)); });
+    }
+    box.hidden = shown.length === 0;
+  }
+
+  // The number is a span of its own, so writing one never rewrites the word.
+  function numberNote(el, text) {
+    var n = el ? el.querySelector(".nno") : null;
+    if (n) n.textContent = text;
   }
 
   /* WHAT THE PICTURE IS. The engine returns a data URL and a blob and no
@@ -3028,14 +3099,24 @@
        itself stays as wide as the column it was pressed in. Reading the deck
        instead would draw an 828px disc on a 920px board. */
     var slot;
+    var colW = col.getBoundingClientRect().width || inner + pad * 2;
     if (touchPointer.matches) {
-      slot = DISC_TUNING.touch[homeShownRung];
+      /* A SHARE OF THE WINDOW, AND NOT THE PICTURE'S OWN SIZE.
+         A phone's window is 342px on a 384px screen, so a 256px PuttyPNG drawn
+         true would sit in it with 43px of white on each side and read as a
+         thumbnail rather than as the thing about to be sent. It is drawn to
+         fill instead, and the caption under it says what the picture really
+         measures. A desktop has the room to say that by drawing it, and a
+         phone says it in words.
+         The card is what is measured, not the window, because the two are
+         never on screen at once on a phone and they are the same width. */
+      var room = Math.max(0, Math.round(colW) - 2 - DISC_GUTTER_PX * 2);
+      slot = Math.round(room * DISC_TUNING.touch[homeShownRung]);
     } else {
       /* THE TRUE PICTURE WINS OVER THE RUNG. The rung is a band, and a disc
          drawn at the band's top would be wider than the file really is. The
          rung is the fallback for the first paint, before anything has been
-         measured. A phone keeps its own fixed sizes, above. */
-      var colW = col.getBoundingClientRect().width || inner + pad * 2;
+         measured. */
       var ceiling = homeTrueSide || RUNGS[homeShownRung].px;
       slot = Math.round(Math.min(ceiling, colW * DISC_TUNING.wide[homeShownRung]));
     }
@@ -3570,7 +3651,7 @@
         resetDisc();
         // The width and the height are read off the image, so the reading has
         // to wait for the image. once:true, or every press adds another.
-        cd.addEventListener("load", paintDiscNote, { once: true });
+        cd.addEventListener("load", paintDiscFacts, { once: true });
         cd.src = png.dataUrl;
         // The PuttyPNG exists and the tray is where it lives. On a phone that
         // is a screen of its own, so the flag moves before the disc ejects

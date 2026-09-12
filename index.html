@@ -983,10 +983,18 @@
               <button type="button" id="cdSave"></button>
             </div>
           </div>
-          <!-- WHAT THE PICTURE IS, inside the frame with it, which is where R5
-               puts it. It is a caption, so it belongs to the picture and not
-               to the column of things to do next. -->
-          <div class="discnote" id="discNote" hidden></div>
+          <!-- THE THREE THINGS TO DO WITH THE PICTURE, IN THE FRAME WITH IT.
+               Edit, Download and Copy are one row, and what the picture is
+               reads as a slim line under them. Both were outside the window
+               until v2.17.0: the caption was placed against the disc's bottom
+               corner and the two buttons were a row below the frame, which
+               cost the screen a row it needed for the sign off.
+               #madeActs is filled by placeMadeActions() and placeDiscEdit().
+               It is empty in this markup for that reason. -->
+          <div class="discfoot">
+            <div class="madeacts" id="madeActs" hidden></div>
+            <div class="discnote" id="discNote" hidden></div>
+          </div>
           </div>
 
           <!-- WHAT TO DO WITH IT, BESIDE THE PICTURE.
@@ -1023,30 +1031,42 @@
           <!-- THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
                when the board loads, and it goes the moment the switch goes back
                to Solid. A warning that outlives its cause is noise.
-               A desktop hangs it under the disc, still inside the deck row, so
-               moving it out of the window above changed nothing there: the
-               window has no box on a desktop. A phone puts it in the column. -->
+               THIS IS WHERE A DESKTOP KEEPS IT, under the disc in the deck row.
+               A phone has no room for a bubble of its own, so placeTransNote()
+               moves it into the sign off below, where it reads as an addendum
+               to the instruction it qualifies. It is moved, never copied. -->
           <div class="transnote" id="transNote" hidden>
             <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
               <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
                     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span><b>Note:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+            <span><b>Note<span class="nno"></span>:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
           </div>
 
-
-          <!-- Download and Copy are not new. They are #cdSave and #cdCopy,
-               moved out of the overlay on the disc by placeMadeActions().
-               There is one of each in the page and the gate counts them.
-               THEY COME BEFORE THE NOTE. Measured on a Galaxy S21+ on
-               2026-09-07: with the note in front of them they were the one
-               thing under the fold on the screen that exists to press them.
-               The gate checks the order. -->
-          <div class="madeacts" id="madeActs" hidden></div>
-
+          <!-- THE SIGN OFF, WHICH IS WHAT TO DO NEXT AND ANY WARNING ABOUT IT.
+               The heading names the act and the line under it names the two
+               buttons in the window above. Every note the picture has earned
+               follows, inside this box rather than in a bubble of its own:
+               two bubbles in a column read as two things to deal with, and
+               neither of these is a thing to deal with. -->
           <div class="signoff" id="sendIt" hidden>
-            <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Send it</b>
-            <span>You can now download or copy the image above to a friend!</span>
+            <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Now, send it!</b>
+            <span>Click the download or copy button above and send it off to someone!</span>
+            <div class="notes" id="sendNotes">
+              <!-- #transNote is moved in here on a phone, ahead of this one.
+                   THIS NOTE IS ABOUT THE FINISHED PICTURE, so it is measured
+                   from the picture in the tray. The warning under the Make
+                   button is about a picture that does not exist yet and can
+                   still be made smaller, which is a different sentence for a
+                   different moment. -->
+              <div class="transnote" id="bigNote" hidden>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                        stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span><b>Note<span class="nno"></span>:</b> Over 512 px. Download it and send the file instead.</span>
+              </div>
+            </div>
           </div>
 
           <div class="againrow" id="againRow" hidden>
@@ -1087,7 +1107,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.16.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.17.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>

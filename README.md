@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.16.0**, engine **2.3.0**, protocol **1**.
+Current release: page **2.17.0**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -21,8 +21,8 @@ can only fill itself over HTTP.
 
 ## Editing a disc title
 
-After making a disc, press **Edit Title** on desktop or **Edit** at the lower
-left of the mobile result. The editor holds one field, one sentence and one
+After making a disc, press **Edit Title** on desktop or **Edit** in the row
+under the picture on a phone. The editor holds one field, one sentence and one
 button. It starts with the current wording, counts what you type against a
 limit of 40 characters, and refuses an empty title.
 

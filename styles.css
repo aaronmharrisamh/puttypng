@@ -1225,7 +1225,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
    row and not one desktop pixel moves. */
 .discwin { display: contents; }
 
-.corner, .discnote, .signoff, .madeacts, .againrow { display: none; }
+.corner, .discnote, .discfoot, .signoff, .madeacts, .againrow { display: none; }
 
 /* ==========================================================================
    HOME - LOAD
@@ -2259,12 +2259,25 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      has to start under it. A solid picture is a white square, so its box
      is its edge, not only the circle drawn on it. v2.10.0 took 20px out of
      the window that the disc was not using. */
+  /* THE FOOTER'S ROOM IS RESERVED, NOT MEASURED. The row of three buttons
+     and the size line arrive with the disc, and a window that grew at that
+     moment would move the page under a thumb already reaching for it. The
+     probe asserts the reserved room really holds what goes in it. */
   .discwin {
     --disc-top: 40px;
+    --win-foot: 92px;
     display: block; position: relative; overflow: hidden; flex: none;
-    height: calc(var(--slot-w) + 94px);
+    height: calc(var(--disc-top) + var(--slot-w) + var(--win-foot));
     border: 1px solid var(--line-strong); border-radius: 12px;
     background: #fbfbfc;
+  }
+
+  /* WHAT TO DO WITH THE PICTURE, IN THE FRAME WITH IT. Placed rather than
+     flowed, because the disc above it is placed and the window's height is
+     written from the disc's size. */
+  .discfoot {
+    display: grid; gap: 6px;
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px 10px;
   }
 
   /* The tray gives up being a positioned box, so the lip and the disc position
@@ -2295,11 +2308,11 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      does both jobs on a phone. */
   .cdtip { display: none; }
 
-  .discwin > .disc-edit {
-    position: absolute; bottom: 6px; left: 10px; z-index: 10;
-    margin: 0; min-height: 44px; padding: 0 9px;
+  /* Edit takes the width of its own word and the other two share what is
+     left, so the row still reads on a 384px screen. */
+  .madeacts .disc-edit {
+    flex: none; margin: 0;
     background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
-    border-radius: 9px;
   }
   .disc-edit .edit-short { display: inline; }
   .disc-edit .edit-full { display: none; }
@@ -2307,11 +2320,11 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   /* The notice joins the column instead of being hung off the deck row. */
   .transnote { position: static; width: auto; top: auto; }
 
-  /* The caption sits at the foot of the window. The disc above it is placed
-     rather than flowed, so this is placed too. */
+  /* The caption is a slim line of its own under the row. It sat in the
+     window's bottom corner beside the Edit chip until v2.17.0, where a row of
+     three buttons left it nowhere to sit. */
   .discnote {
-    display: block; position: absolute; left: 91px; right: 12px; bottom: 16px;
-    text-align: right; font-size: 11px; color: var(--muted);
+    display: block; text-align: center; font-size: 11px; color: var(--muted);
   }
   .discnote[hidden] { display: none; }
 
@@ -2320,23 +2333,42 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
     background: #f2f8ec; border: 1px solid #d8ecc4;
   }
   .signoff[hidden] { display: none; }
-  .signoff b {
+  /* THE CHILD COMBINATOR IS THE POINT. The notes below carry a bold label and
+     a span of their own, and without it the sign off's heading rules reach
+     inside them: a note read "Note  :" in green at 15px, spaced out by the
+     heading's own flex gap. */
+  .signoff > b {
     display: flex; align-items: center; gap: 8px;
     font-size: 15px; font-weight: 700; color: #2f6b13; margin-bottom: 2px;
   }
   .signoff .ic { display: flex; flex: none; }
-  .signoff span { font-size: 13px; color: var(--ink-soft); }
+  .signoff > span { font-size: 13px; color: var(--ink-soft); }
+
+  /* THE NOTES ARE ADDENDA, so they read as part of the instruction above and
+     not as another thing to deal with. A note in here is a line and not a
+     box: it is already inside something with an edge and a colour. */
+  .signoff .notes {
+    display: grid; gap: 6px;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8ecc4;
+  }
+  .signoff .notes[hidden] { display: none; }
+  .signoff .transnote {
+    width: auto; padding: 0; border: 0; background: none; font-size: 12px;
+  }
 
   /* Copy leads somewhere, a message to a friend, so it is the filled one.
-     Download leads to a folder. */
-  .madeacts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+     Download leads to a folder. Edit is the third and it is moved in by
+     placeDiscEdit(), so the row is a flex line rather than two named columns:
+     a hidden Edit then costs the row nothing at all. */
+  .madeacts { display: flex; gap: 6px; }
   .madeacts[hidden] { display: none; }
   .madeacts button {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    min-height: 48px; padding: 0 12px; border-radius: 999px;
+    min-height: 48px; padding: 0 10px; border-radius: 999px;
     font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
     white-space: nowrap; min-width: 0;
   }
+  .madeacts #cdSave, .madeacts #cdCopy { flex: 1 1 0; }
   .madeacts #cdSave { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
   .madeacts #cdCopy { background: var(--ink); color: #fff; border: 0; }
   .madeacts #cdCopy.done { background: var(--ok); }
@@ -2361,7 +2393,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .corner .pill svg { color: var(--muted); flex: none; }
 
   /* A CENTRED MODAL ON A PHONE, NOT A SHEET STUCK TO THE BOTTOM. It was a
-     sheet until v2.16.1: full width, square top corners and a drag grip.
+     sheet until v2.16.0: full width, square top corners and a drag grip.
 
      IT STILL RISES ABOVE THE KEYBOARD, and that is what the bottom offset is
      for. Chrome does not shrink the layout viewport when the keyboard opens,
