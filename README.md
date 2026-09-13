@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.19.0**, engine **2.3.0**, protocol **1**.
+Current release: page **2.20.0**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a

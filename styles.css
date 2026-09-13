@@ -2568,6 +2568,63 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .il-stage {
   position: relative; width: min(300px, 100%); aspect-ratio: 1 / 1;
   margin: 14px auto 4px;
+  animation: il-hue var(--grow, 3000ms) cubic-bezier(.45, 0, .55, 1) both;
+
+  /* THE REAL DISC'S SURFACE, LAYER FOR LAYER. puttypng.js paints a PuttyPNG in
+     this order: a silver base, a rainbow swept round from twelve o'clock, a
+     silver wash that pushes the rainbow out towards the rim, a silver bias on
+     the left, and a soft light at the upper left. These are the same five, with
+     the same colours, so the disc the show forms is the disc that comes out.
+     The gate reads the engine's stops and these and compares them.
+     WHERE THE ENGINE SPANS HUB TO RIM, THESE SPAN THE SHOW'S HOLE TO ITS RIM.
+     scripts.js hands both in as --hole and --rim, read from the same shares it
+     cuts the disc with. The values after each comma are what they fall back to
+     if a stage is ever built without them, not a second place they are set. */
+  --cd-span: calc(var(--rim, 94%) - var(--hole, 34%));
+  --cd-silver: radial-gradient(circle closest-side,
+    #d6d8dd calc(var(--hole, 34%) * .8),
+    #eef0f3 calc(var(--hole, 34%) + var(--cd-span) * .5),
+    #cccfd5 calc(var(--hole, 34%) + var(--cd-span) * .85),
+    #b6b9c1 var(--rim, 94%));
+  --cd-rainbow: conic-gradient(from 0deg,
+    rgba(255, 120, 120, .6) 0%, rgba(255, 180, 90, .6) 14%,
+    rgba(250, 240, 130, .62) 28%, rgba(150, 235, 170, .58) 42%,
+    rgba(140, 220, 255, .6) 56%, rgba(150, 170, 255, .58) 70%,
+    rgba(210, 150, 255, .58) 84%, rgba(255, 120, 120, .6) 100%);
+  --cd-wash: radial-gradient(circle closest-side,
+    rgba(233, 235, 239, .92) var(--hole, 34%),
+    rgba(233, 235, 239, .55) calc(var(--hole, 34%) + var(--cd-span) * .5),
+    rgba(233, 235, 239, .16) calc(var(--hole, 34%) + var(--cd-span) * .8),
+    rgba(233, 235, 239, 0) var(--rim, 94%));
+  --cd-side: linear-gradient(90deg, rgba(233, 235, 239, .72),
+    rgba(233, 235, 239, .22) 45%, rgba(233, 235, 239, 0));
+  --cd-light: radial-gradient(circle farthest-corner at 34% 34%,
+    rgba(255, 255, 255, .34) 4%, rgba(255, 255, 255, .08) 40%,
+    rgba(255, 255, 255, 0));
+}
+
+/* THE LIGHT RUNNING ACROSS THE DISC. One bright band crosses the disc as it
+   finishes, the way light runs over a CD as it turns, with the faint pink and
+   blue edges a real one throws. It is the reflection, and the surface above is
+   what it reflects in.
+   IT ENDS AS THE PULL BEGINS. Its delay is --grow less its own length, so the
+   band has gone by the time the disc is taken and nothing here holds a second
+   copy of when that is.
+   IT IS MASKED TO THE DISC. Between the hole and the rim is the only place
+   there is anything to catch the light: over the paper a white band is white on
+   white, and over the light in the middle it would only dim the glow. */
+.il-stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(115deg,
+    rgba(255, 255, 255, 0) 38%, rgba(255, 214, 236, .5) 45%,
+    rgba(255, 255, 255, .85) 50%, rgba(206, 236, 255, .5) 55%,
+    rgba(255, 255, 255, 0) 62%) no-repeat;
+  background-size: 300% 100%;
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent var(--hole, 34%),
+    #000 calc(var(--hole, 34%) + 1%), #000 var(--rim, 94%), transparent calc(var(--rim, 94%) + 1%));
+  mask-image: radial-gradient(circle closest-side, transparent var(--hole, 34%),
+    #000 calc(var(--hole, 34%) + 1%), #000 var(--rim, 94%), transparent calc(var(--rim, 94%) + 1%));
+  animation: il-glint 900ms cubic-bezier(.4, 0, .2, 1) calc(var(--grow, 3000ms) - 900ms) both;
 }
 
 /* ---- The light in the middle -------------------------------------------- */
@@ -2654,16 +2711,28 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .il-ch-orbit { animation: il-swirl var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
 .il-ch, .il-mark { animation: il-inward var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
 
-/* A block of the disc. It arrives, it waits, and it is taken with the rest. */
 /* A block of the disc. It arrives, it waits, and it is taken with the rest.
-   IT IS OPAQUE AND ITS GLOW IS SHORT. Written as a wash of part-transparent
-   creams with a wide halo, sixty of them ran together into fog and the disc had
-   no blocks left in it to see. */
+
+   EVERY BLOCK IS A WINDOW ONTO ONE DISC. Each wears the whole surface above at
+   the size of the stage, shifted so that what shows through it is the part of
+   the disc that lies under the place it sits. Put back together, the blocks are
+   one disc with gaps in it, rainbow and all, rather than sixty tiles each with a
+   rainbow of its own. scripts.js works out --bgx and --bgy for each one.
+   The shift stays true while a block falls in, because the surface is painted
+   and then moved with the block, so each one carries its own piece away.
+
+   IT IS SOLID AND ITS SHADOW IS SHORT. A wide halo ran sixty of them together
+   into fog. A silver block on white paper needs a dark edge under it rather
+   than a light one round it, which is what lifts the real disc off the page. */
 .il-blk {
   --bw: 20px;
   width: var(--bw); height: var(--bw); border-radius: 2px;
-  background: linear-gradient(150deg, #fffdf6, #ffe1a9 52%, var(--clay));
-  box-shadow: 0 0 6px 1px rgba(255, 190, 120, .5);
+  background-image: var(--cd-light), var(--cd-side), var(--cd-wash),
+                    var(--cd-rainbow), var(--cd-silver);
+  background-size: var(--side, 300px) var(--side, 300px);
+  background-position: var(--bgx, 0px) var(--bgy, 0px);
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 2px rgba(34, 38, 48, .3), inset 0 0 0 .5px rgba(255, 255, 255, .7);
   animation: il-form 360ms ease-out var(--d) both;
 }
 
@@ -2691,6 +2760,16 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   to { transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo)) scale(1); opacity: 1; }
 }
 @keyframes il-throb { from { transform: scale(1); } to { transform: scale(1.16); } }
+/* A WHOLE TURN, AND NOTHING SHORT OF ONE. 360 degrees is where it started, which
+   is the point: the disc the show swallows is back in the real disc's colours. */
+@keyframes il-hue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+/* The band is three times the stage wide, so moving its image from one end to
+   the other carries the bright middle in from the left and out on the right. */
+@keyframes il-glint {
+  0% { background-position: 100% 0; opacity: 0; }
+  15%, 85% { opacity: 1; }
+  100% { background-position: 0% 0; opacity: 0; }
+}
 @keyframes il-spin { to { transform: rotate(360deg); } }
 @keyframes il-grow { from { transform: scale(.42); } to { transform: scale(1.5); } }
 @keyframes il-core-out { to { transform: scale(2.4); opacity: 0; } }

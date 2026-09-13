@@ -196,7 +196,8 @@
   var IL_DISC_AT_MS = 1150;    // when the disc starts to form over the light
   var IL_DISC_MS = 1450;       // how long it takes to form, block by block
   var IL_TOTAL_MS = IL_SUCK_AT_MS + IL_SUCK_MS + IL_FLARE_MS;
-  var IL_CHARS = 58;           // how much of what was handed over is shown
+  var IL_CHARS = 174;          // how much of what was handed over is shown
+  var IL_WORD_REACH = 24;      // how far that section may move to start on a word
   var IL_GLYPH_PX = 15;        // and at what size, which the wrap is read from
   var IL_SPIN_DEG = 540;       // how far a sprite turns on its way in
   /* THE DISC IS A GRID CUT TO A CIRCLE, NOT A SET OF RINGS. Rings were the
@@ -3737,20 +3738,46 @@
      grey block, and the point is that a person recognises their own words. */
   function interludeSource() {
     if (homeAttached) {
-      return { mark: true, text: ilSection(homeAttached.name || "your file") };
+      return { mark: true, text: ilSection(homeAttached.name || "your file", false) };
     }
     var ta = $("makeText");
-    return { mark: false, text: ilSection(ta ? ta.value : "") };
+    return { mark: false, text: ilSection(ta ? ta.value : "", true) };
   }
 
-  /* One line, at most IL_CHARS of it, with every run of whitespace flattened to
-     a single space. A newline left in would be a sprite with nothing to draw and
+  /* THE SECTION, AS ONE LINE. Every run of whitespace is flattened to a single
+     space, because a newline left in would be a sprite with nothing to draw and
      a hole in the middle of the words. The empty box says what the press says
-     about an empty box, because it is the same press. */
-  function ilSection(raw) {
+     about an empty box, because it is the same press.
+
+     A NOTE IS READ FROM ITS MIDDLE AND A NAME FROM ITS START. The start of a
+     long note is usually a title or a greeting, and the middle is the writing
+     itself, which is what a person recognises as theirs. Half a filename means
+     nothing, so a name is never cut from the middle.
+     THE MIDDLE SLIDES BACK TO LEAVE A WHOLE SECTION. A note a little longer
+     than one section would otherwise show only the last few of its words.
+     IT STARTS AND ENDS ON A WORD WHERE ONE IS NEAR, so the first sprite is the
+     start of a word and not the tail of one. It moves no further than
+     IL_WORD_REACH: a note written as one long run of characters, such as
+     base64, still shows its middle rather than wherever its first space is. */
+  function ilSection(raw, fromMiddle) {
     var flat = String(raw == null ? "" : raw).replace(/\s+/g, " ").trim();
     if (!flat) return "(empty)";
-    return flat.length > IL_CHARS ? flat.slice(0, IL_CHARS) : flat;
+    if (flat.length <= IL_CHARS) return flat;
+
+    var start = fromMiddle
+      ? Math.min(Math.floor(flat.length / 2), flat.length - IL_CHARS)
+      : 0;
+    if (start > 0 && flat.charAt(start - 1) !== " ") {
+      var next = flat.indexOf(" ", start);
+      if (next >= 0 && next - start < IL_WORD_REACH) start = next + 1;
+    }
+
+    var end = Math.min(flat.length, start + IL_CHARS);
+    if (end < flat.length && flat.charAt(end) !== " ") {
+      var back = flat.lastIndexOf(" ", end);
+      if (back > start && end - back < IL_WORD_REACH) end = back;
+    }
+    return flat.slice(start, end);
   }
 
   /* THE MARK IS THE ONE ON THE CHIP THE FILE CAME IN ON. Taken from the markup
@@ -3852,6 +3879,10 @@
       if (mark) el.appendChild(mark);
     }
     if (spot.bw) el.style.setProperty("--bw", spot.bw + "px");
+    if (spot.bgx !== undefined) {
+      el.style.setProperty("--bgx", spot.bgx.toFixed(1) + "px");
+      el.style.setProperty("--bgy", spot.bgy.toFixed(1) + "px");
+    }
 
     orbit.appendChild(el);
     return orbit;
@@ -3875,19 +3906,24 @@
         var x = gx * cell, y = gy * cell;
         var d = Math.sqrt(x * x + y * y);
         if (d < inner || d > outer) continue;
-        spots.push({ x: x, y: y, cls: "il-blk", bw: bw });
+        /* WHICH PIECE OF THE DISC SHOWS THROUGH THIS BLOCK. The surface is
+           painted at the size of the stage with its top left at the block's
+           top left, so it is pulled back by however far into the stage that
+           corner sits. */
+        spots.push({ x: x, y: y, cls: "il-blk", bw: bw,
+                     bgx: -(R + x - bw / 2), bgy: -(R + y - bw / 2) });
       }
     }
     return spots;
   }
 
   /* AN ANIMATION THAT HAS RUN DOES NOT RUN AGAIN ON ITS OWN. The light holds at
-     its last frame, so a second show would open on a ball already grown and a
-     flare already spent. Taking the property off, reading the box, and putting
-     it back is what starts them from the beginning. The same move resetDisc()
-     makes for the tray. */
+     its last frame, so a second show would open on a ball already grown, a
+     flare already spent and a colour turn already finished. Taking the property
+     off, reading the box, and putting it back is what starts them from the
+     beginning. The same move resetDisc() makes for the tray. */
   function ilRestart() {
-    var parts = [$("ilCore"), $("ilFlare")];
+    var parts = [$("ilStage"), $("ilCore"), $("ilFlare")];
     for (var i = 0; i < parts.length; i++) {
       if (!parts[i]) continue;
       parts[i].style.animation = "none";
@@ -3925,6 +3961,14 @@
       stage.style.setProperty("--glyph", IL_GLYPH_PX + "px");
 
       var side = stage.getBoundingClientRect().width;
+      /* THE DISC'S SURFACE IS SIZED FROM THE SAME NUMBERS IT IS CUT WITH. The
+         sheet paints the real disc's layers from the hole to the rim, so both
+         are handed over as shares of the radius they were cut against, and the
+         stage's own width is the size every block's window onto it is. */
+      stage.style.setProperty("--side", side + "px");
+      stage.style.setProperty("--hole", (IL_DISC_IN * 100) + "%");
+      stage.style.setProperty("--rim", (IL_DISC_OUT * 100) + "%");
+
       var text = ilTextSpots(stage, source, side);
       var disc = ilDiscSpots(side);
       var frag = document.createDocumentFragment();
@@ -4490,6 +4534,9 @@
        probe measuring the Made screen has to say it wants none of it. This is
        the switch in Advanced, reached without opening the drawer. */
     window.PuttyPNGDebug.setInterludePref = setInterludePref;
+    // The routine that chooses which part of a note the show breaks apart, so a
+    // probe can hand it a note and read the answer rather than counting sprites.
+    window.PuttyPNGDebug.interludeSection = ilSection;
     // The side the engine says the picture will be, which is what the tray is
     // capped at and what the over-512 warning is read from.
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
@@ -4499,7 +4546,10 @@
                // The phone's ramp as its two ends and the white it leaves: a
                // probe works the expected width out from these rather than
                // holding a copy of four numbers that go stale in silence.
-               disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX } };
+               disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX },
+               // How long a section is and how far it may move to land on a
+               // word, which is the room a probe has to allow either side.
+               interlude: { chars: IL_CHARS, reach: IL_WORD_REACH } };
     };
 
     // A choice made in Advanced wins, in both directions. With no choice
