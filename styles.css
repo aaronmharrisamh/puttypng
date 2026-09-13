@@ -2197,8 +2197,18 @@ html.vt-slide { view-transition-name: none; }
 html.vt-slide #boardGrid { view-transition-name: board; }
 html.vt-slide #foot { view-transition-name: foot; }
 
+/* THE MAKE BOX IS CARRIED INTO ITS COPY. On the slide to the show, the box is
+   named in the picture of the old screen and its copy in the picture of the new
+   one, so the browser moves and shrinks the one into the place of the other
+   while the screens slide. The data-view on each side is what keeps the name on
+   one of them at a time. vt-carry is put on for that slide alone, because a
+   box named on any other slide would stand still and fade as its screen left. */
+html.vt-carry .board[data-view="make"] #makeBox,
+html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
+
 ::view-transition-group(board),
-::view-transition-group(foot) {
+::view-transition-group(foot),
+::view-transition-group(box) {
   animation-duration: var(--slide, 500ms);
   animation-timing-function: cubic-bezier(.65, 0, .35, 1);
 }
@@ -2758,17 +2768,38 @@ html.vt-slide #foot { view-transition-name: foot; }
   transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo));
 }
 
-/* The letters, which read as what was typed before they break up. */
-.il-ch {
-  font: 700 var(--glyph, 15px)/1 ui-monospace, Consolas, monospace;
-  color: var(--ink); white-space: pre;
-}
-/* The mark an attachment brings, in place of the letters it does not have. */
-.il-mark { color: var(--clay-deep); display: grid; }
-.il-mark svg { width: 30px; height: 30px; }
+/* ---- The copy of the Make box ------------------------------------------- */
 
-/* The letters set off on their own stagger the moment the show starts. */
-.il-ch-orbit { animation: il-swirl var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
+/* THE BOX AS IT WAS SEEN. scripts.js gives it the box's own size and edge, read
+   off the page when the button was pressed, and scales it to fit the stage, so
+   every piece inside it sits where it sat and no line breaks again. It is
+   centred on the light: a piece that falls to the middle of the box falls into
+   the light.
+   IT CLIPS WHILE IT WAITS, AND LETS GO WHEN THE SHOW STARTS. A line half out of
+   the box's window was cut in half there and is cut in half here, and a piece
+   that has broken away must not be cut off at an edge that has faded out. */
+.il-box {
+  position: absolute; left: 50%; top: 50%; box-sizing: border-box;
+  transform-origin: 50% 50%;
+  animation: il-box-out 420ms ease-out both;
+}
+.il-stage.hold .il-box { overflow: hidden; }
+
+/* The card an attached file sits on, copied at its place in the box. */
+.il-card-copy {
+  position: absolute; box-sizing: border-box;
+  animation: il-box-out 420ms ease-out both;
+}
+
+/* EVERY PIECE IS WRITTEN IN THE LOOK IT HAD. Its font, size, weight and colour
+   come from the piece of page it was measured from, and its box is the box it
+   filled, so the words stay put. */
+.il-ch { font: inherit; color: var(--ink); white-space: pre; text-align: left; }
+/* A mark brings the tile it sat on, and its drawing is the page's own. */
+.il-mark { display: grid; place-items: center; }
+
+/* The pieces set off on their own stagger the moment the show starts. */
+.il-ch-orbit, .il-mark-orbit { animation: il-swirl var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
 .il-ch, .il-mark { animation: il-inward var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
 
 /* A block of the disc. It arrives, it waits, and it is taken with the rest.
@@ -2820,6 +2851,10 @@ html.vt-slide #foot { view-transition-name: foot; }
   to { transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo)) scale(1); opacity: 1; }
 }
 @keyframes il-throb { from { transform: scale(1); } to { transform: scale(1.16); } }
+/* The box's edge and paper go, and what was written on them is left to fall. */
+@keyframes il-box-out {
+  to { border-color: transparent; background-color: transparent; box-shadow: none; }
+}
 /* A WHOLE TURN, AND NOTHING SHORT OF ONE. 360 degrees is where it started, which
    is the point: the disc the show swallows is back in the real disc's colours. */
 @keyframes il-hue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }

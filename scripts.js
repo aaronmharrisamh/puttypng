@@ -199,9 +199,17 @@
   var IL_DISC_AT_MS = 1150;    // when the disc starts to form over the light
   var IL_DISC_MS = 1450;       // how long it takes to form, block by block
   var IL_TOTAL_MS = IL_SUCK_AT_MS + IL_SUCK_MS + IL_FLARE_MS;
-  var IL_CHARS = 174;          // how much of what was handed over is shown
-  var IL_WORD_REACH = 24;      // how far that section may move to start on a word
-  var IL_GLYPH_PX = 15;        // and at what size, which the wrap is read from
+  var IL_PIECES_MAX = 220;     // letters up to this many, then words, then lines
+  /* EVERY STYLE THAT DECIDES WHERE A LINE BREAKS. The show copies these from
+     the Make box onto an invisible copy of it, so the copy breaks its lines in
+     the places the box does and can say where each letter sat. A style left off
+     this list is a line that breaks one word early or late. */
+  var IL_WRAP_STYLES = ["fontFamily", "fontSize", "fontWeight", "fontStyle",
+    "fontStretch", "fontVariant", "fontKerning", "fontFeatureSettings",
+    "lineHeight", "letterSpacing", "wordSpacing", "textTransform", "textIndent",
+    "textAlign", "direction", "whiteSpace", "wordBreak", "overflowWrap",
+    "lineBreak", "hyphens", "tabSize", "paddingTop", "paddingRight",
+    "paddingBottom", "paddingLeft"];
   var IL_SPIN_DEG = 540;       // how far a sprite turns on its way in
   /* THE DISC IS A GRID CUT TO A CIRCLE, NOT A SET OF RINGS. Rings were the
      first shape and they read as a flower: every block lines up with the one
@@ -730,7 +738,10 @@
      that is about to slide in, so the screen arrives already showing it. */
   function setView(name, slide, changed) {
     var grid = $("boardGrid");
-    if (!grid) return Promise.resolve();
+    var done = Promise.resolve();
+    done.underway = done;
+    done.ended = done;
+    if (!grid) return done;
     var turn = ++viewTurn;
     if (slide && canSlide() && grid.getAttribute("data-view") !== name) {
       return slideView(grid, name, changed, turn);
@@ -742,8 +753,6 @@
     if (activeSlide) activeSlide.skipTransition();
     if (grid.getAttribute("data-view") !== name) showView(grid, name);
     if (changed) changed();
-    var done = Promise.resolve();
-    done.underway = done;
     return done;
   }
 
@@ -803,6 +812,9 @@
     var slide = null, begun = false;
     var markUnderway = function () {};
     var underway = new Promise(function (resolve) { markUnderway = resolve; });
+    // Ended is when the browser has let go of the slide: finished, or given up.
+    var markEnded = function () {};
+    var ended = new Promise(function (resolve) { markEnded = resolve; });
 
     var arrived = new Promise(function (resolve) {
       var landed = false;
@@ -821,6 +833,7 @@
       });
       activeSlide = slide;
       function over() {
+        markEnded();
         // A later slide owns the class now, and taking it off would unname the
         // board in the middle of that one.
         if (run !== slideRun) return arrive();
@@ -856,6 +869,7 @@
     }, VIEW_SLIDE_WAIT_MS);
 
     arrived.underway = underway;
+    arrived.ended = ended;
     return arrived;
   }
 
@@ -3842,127 +3856,274 @@
     if (box) box.checked = !interludeShow;
   }
 
-  /* WHAT BREAKS APART. A note breaks into its own letters. An attachment has no
-     letters, so it breaks into the paperclip it was attached with and the name
-     it arrived under, which is the whole of what the board knows about it.
-     IT IS A SECTION, NOT THE WHOLE THING. At this size a wall of letters is a
-     grey block, and the point is that a person recognises their own words. */
+  /* WHAT BREAKS APART IS WHAT WAS IN VIEW, LAID OUT AS IT WAS SEEN.
+     Measured on the Make screen before the slide begins, because the box stops
+     being on the page the moment the slide's change runs.
+
+     A source is the box's own size, how its edge looked, the card an attached
+     file sits on, and the pieces. Every piece carries its place, measured from
+     the box's top left corner, what it draws, and how it is written. */
   function interludeSource() {
-    if (homeAttached) {
-      return { mark: true, text: ilSection(homeAttached.name || "your file", false) };
+    var box = $("makeBox");
+    if (!box) return null;
+    var boxRect = box.getBoundingClientRect();
+    var source = { w: boxRect.width, h: boxRect.height, look: "", card: null,
+                   pieces: [], wrapHeight: 0 };
+    if (homeAttached) ilMeasureFileRow(source, boxRect);
+    else ilMeasureText(source, $("makeText"), boxRect);
+    return source;
+  }
+
+  // How a box's edge looked, read off the page so its copy is drawn the same.
+  function ilEdgeLook(cs) {
+    return "border:" + cs.borderTopWidth + " " + cs.borderTopStyle + " " +
+           cs.borderTopColor + ";border-radius:" + cs.borderTopLeftRadius +
+           ";background-color:" + cs.backgroundColor + ";box-shadow:" + cs.boxShadow + ";";
+  }
+
+  // How a piece of writing looked, read off the page.
+  function ilTextLook(cs, colour) {
+    return "font-family:" + cs.fontFamily + ";font-size:" + cs.fontSize +
+           ";font-weight:" + cs.fontWeight + ";font-style:" + cs.fontStyle +
+           ";letter-spacing:" + cs.letterSpacing + ";color:" + (colour || cs.color) + ";";
+  }
+
+  /* ONE ENTRY FOR EACH LETTER A PERSON WOULD COUNT. A flag or an accented letter
+     built from several code points is one piece, not several pieces of one. */
+  function ilGraphemes(text) {
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+      return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text),
+                        function (s) { return { text: s.segment, index: s.index }; });
     }
-    var ta = $("makeText");
-    return { mark: false, text: ilSection(ta ? ta.value : "", true) };
+    var out = [], at = 0;
+    Array.from(text).forEach(function (ch) { out.push({ text: ch, index: at }); at += ch.length; });
+    return out;
   }
 
-  /* THE SECTION, AS ONE LINE. Every run of whitespace is flattened to a single
-     space, because a newline left in would be a sprite with nothing to draw and
-     a hole in the middle of the words. The empty box says what the press says
-     about an empty box, because it is the same press.
+  /* THE BOX CANNOT SAY WHERE ITS LETTERS ARE, SO A COPY OF IT DOES.
+     A text box tells a page how far it has scrolled and how tall it is, and
+     nothing about the lines inside it. An invisible copy with every style that
+     decides a line break, the same text and the same width breaks its lines in
+     the same places, and a range over its text says where each letter sits.
+     wrapHeight is kept so a probe can hold the copy's height to the box's own.
 
-     A NOTE IS READ FROM ITS MIDDLE AND A NAME FROM ITS START. The start of a
-     long note is usually a title or a greeting, and the middle is the writing
-     itself, which is what a person recognises as theirs. Half a filename means
-     nothing, so a name is never cut from the middle.
-     THE MIDDLE SLIDES BACK TO LEAVE A WHOLE SECTION. A note a little longer
-     than one section would otherwise show only the last few of its words.
-     IT STARTS AND ENDS ON A WORD WHERE ONE IS NEAR, so the first sprite is the
-     start of a word and not the tail of one. It moves no further than
-     IL_WORD_REACH: a note written as one long run of characters, such as
-     base64, still shows its middle rather than wherever its first space is. */
-  function ilSection(raw, fromMiddle) {
-    var flat = String(raw == null ? "" : raw).replace(/\s+/g, " ").trim();
-    if (!flat) return "(empty)";
-    if (flat.length <= IL_CHARS) return flat;
+     IN VIEW MEANS IN THE BOX'S WINDOW AND ON THE SCREEN. A long note scrolled
+     inside the box, or a box partly scrolled off the top of a phone, shows only
+     part of itself, and only that part comes across. */
+  function ilMeasureText(source, ta, boxRect) {
+    var cs = getComputedStyle(ta);
+    var typed = ta.value;
+    var shown = typed.length ? typed : (ta.placeholder || "");
+    source.look = ilEdgeLook(cs);
+    if (!shown) return;
 
-    var start = fromMiddle
-      ? Math.min(Math.floor(flat.length / 2), flat.length - IL_CHARS)
-      : 0;
-    if (start > 0 && flat.charAt(start - 1) !== " ") {
-      var next = flat.indexOf(" ", start);
-      if (next >= 0 && next - start < IL_WORD_REACH) start = next + 1;
+    var copy = document.createElement("div");
+    for (var i = 0; i < IL_WRAP_STYLES.length; i++) {
+      copy.style[IL_WRAP_STYLES[i]] = cs[IL_WRAP_STYLES[i]];
     }
+    var padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+    var bl = parseFloat(cs.borderLeftWidth) || 0, bt = parseFloat(cs.borderTopWidth) || 0;
+    /* THE WIDTH THE WRITING REALLY HAS: inside the padding, and without the
+       scroll bar a desktop takes out of it. clientWidth is already short of
+       both borders and the scroll bar. */
+    copy.style.cssText += "box-sizing:content-box;border:0;position:fixed;left:0;top:0;" +
+      "visibility:hidden;pointer-events:none;width:" + (ta.clientWidth - padL - padR) + "px;";
+    // A text box keeps a line for a newline at its very end, and a div drops it.
+    copy.textContent = shown + "\u200b";
+    document.body.appendChild(copy);
+    source.wrapHeight = copy.scrollHeight;
 
-    var end = Math.min(flat.length, start + IL_CHARS);
-    if (end < flat.length && flat.charAt(end) !== " ") {
-      var back = flat.lastIndexOf(" ", end);
-      if (back > start && end - back < IL_WORD_REACH) end = back;
-    }
-    return flat.slice(start, end);
-  }
+    var taRect = ta.getBoundingClientRect();
+    // From a place in the copy to a place in the box, scroll included.
+    var offX = taRect.left - boxRect.left + bl;
+    var offY = taRect.top - boxRect.top + bt - ta.scrollTop;
+    var viewTop = Math.max(taRect.top + bt, 0) - boxRect.top;
+    var viewBottom = Math.min(taRect.top + bt + ta.clientHeight, window.innerHeight) - boxRect.top;
 
-  /* THE MARK IS THE ONE ON THE CHIP THE FILE CAME IN ON. Taken from the markup
-     rather than drawn again here, so the symbol that breaks apart can never be a
-     different paperclip from the one a person pressed to attach. */
-  function ilMarkNode() {
-    var btn = $("homeAttachBtn");
-    var svg = btn && btn.querySelector("svg");
-    return svg ? svg.cloneNode(true) : null;
-  }
+    var look = ilTextLook(cs, typed.length ? "" : getComputedStyle(ta, "::placeholder").color);
+    var node = copy.firstChild, range = document.createRange();
+    var parts = ilGraphemes(shown);
 
-  /* THE ADVANCE IS MEASURED AND NEVER ASSUMED. Android's monospace face is
-     wider than a PC's, so a layout worked out from a guessed width overlaps on
-     one and spreads on the other. Ten characters, measured once a show. */
-  function ilCharWidth(stage) {
-    var probe = document.createElement("i");
-    probe.className = "il-sprite il-ch";
-    probe.style.cssText = "position:absolute;visibility:hidden;animation:none;transform:none";
-    probe.textContent = "0000000000";
-    stage.appendChild(probe);
-    var w = probe.getBoundingClientRect().width / 10;
-    probe.parentNode.removeChild(probe);
-    return w || IL_GLYPH_PX * 0.6;
-  }
-
-  /* The words, broken into lines that fit across the stage. Whole words where
-     they fit, because a person has to recognise what they typed, and a break
-     inside a word only where one word is longer than the line. */
-  function ilWrap(text, cols) {
-    var words = text.split(" ");
-    var lines = [], line = "";
-    for (var i = 0; i < words.length; i++) {
-      var w = words[i];
-      while (w.length > cols) {
-        if (line) { lines.push(line); line = ""; }
-        lines.push(w.slice(0, cols));
-        w = w.slice(cols);
+    function place(i) {
+      range.setStart(node, parts[i].index);
+      range.setEnd(node, parts[i].index + parts[i].text.length);
+      var rects = range.getClientRects();
+      for (var k = 0; k < rects.length; k++) {
+        if (rects[k].width > 0 && rects[k].height > 0) {
+          return { x: rects[k].left + offX, y: rects[k].top + offY,
+                   w: rects[k].width, h: rects[k].height };
+        }
       }
-      if (!w) continue;
-      if (!line) line = w;
-      else if (line.length + 1 + w.length <= cols) line += " " + w;
-      else { lines.push(line); line = w; }
+      return null;
     }
-    if (line) lines.push(line);
-    return lines;
+
+    /* THE FIRST LETTER IN VIEW IS FOUND WITHOUT MEASURING EVERY LETTER ABOVE IT.
+       Writing only runs downward, so a halving search over the letters finds
+       the first one whose line reaches into view, however long the note is. A
+       letter with nothing to measure, such as a newline, is looked past. */
+    var lo = 0, hi = parts.length;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1, probe = mid, at = null;
+      while (probe < hi && !(at = place(probe))) probe++;
+      if (at && at.y + at.h <= viewTop) lo = probe + 1;
+      else hi = mid;
+    }
+
+    var letters = [], word = 0;
+    for (var j = lo; j < parts.length; j++) {
+      if (/^\s+$/.test(parts[j].text)) { word++; continue; }
+      var got = place(j);
+      if (!got) continue;
+      if (got.y >= viewBottom) break;
+      /* A LETTER COMES ACROSS WHEN ITS MIDDLE WAS IN VIEW. A line with only a
+         sliver showing at the box's edge was not read, and taken whole it would
+         appear below the copy's edge the moment the edge faded. */
+      var middle = got.y + got.h / 2;
+      if (middle < viewTop || middle > viewBottom) continue;
+      letters.push({ text: parts[j].text, index: parts[j].index,
+                     end: parts[j].index + parts[j].text.length, word: word,
+                     x: got.x, y: got.y, w: got.w, h: got.h, style: look, cls: "il-ch" });
+    }
+    copy.parentNode.removeChild(copy);
+    source.pieces = ilGroupPieces(letters, shown);
   }
 
-  /* WHERE EVERY LETTER STARTS: the place it would sit if this were a block of
-     text, measured from the middle of the stage. It reads as what was typed for
-     as long as it takes a person to see it, and then it comes apart.
-     A space is a gap and not a sprite. There is nothing to draw and nothing to
-     swallow, and one that was drawn would be a letter arriving at the light
-     with no letter in it. */
-  function ilTextSpots(stage, source, side) {
-    var cw = ilCharWidth(stage);
-    var lh = IL_GLYPH_PX * 1.75;
-    var cols = Math.max(6, Math.floor((side * 0.86) / cw));
-    var lines = ilWrap(source.text, cols);
-    var rows = lines.length + (source.mark ? 1 : 0);
-    var top = -((rows - 1) / 2) * lh;
-    var spots = [], first = 0;
+  /* LETTERS WHILE THERE ARE FEW ENOUGH, THEN WORDS, THEN LINES. A full box on
+     a phone holds about 600 letters, and every piece is two boxes and two
+     animations. Past IL_PIECES_MAX the same writing breaks apart in bigger
+     pieces, and each is drawn as the run of text it covers, so the box reads
+     the same at rest whichever size its pieces are. */
+  function ilGroupPieces(letters, text) {
+    if (letters.length <= IL_PIECES_MAX) return letters;
+    var words = ilJoin(letters, text, function (a, b) {
+      return a.word === b.word && Math.abs(a.y - b.y) < 1;
+    });
+    if (words.length <= IL_PIECES_MAX) return words;
+    return ilJoin(letters, text, function (a, b) { return Math.abs(a.y - b.y) < 1; });
+  }
 
-    if (source.mark) { spots.push({ x: 0, y: top, cls: "il-mark" }); first = 1; }
+  // Runs of neighbouring letters that belong together, as one piece each.
+  function ilJoin(letters, text, together) {
+    var out = [], piece = null, last = null;
+    for (var i = 0; i < letters.length; i++) {
+      var l = letters[i];
+      if (piece && together(last, l)) {
+        piece.left = Math.min(piece.left, l.x);
+        piece.right = Math.max(piece.right, l.x + l.w);
+        piece.end = l.end;
+      } else {
+        if (piece) out.push(piece);
+        piece = { left: l.x, right: l.x + l.w, y: l.y, h: l.h, index: l.index,
+                  end: l.end, style: l.style, cls: l.cls };
+      }
+      last = l;
+    }
+    if (piece) out.push(piece);
+    for (var j = 0; j < out.length; j++) {
+      out[j].x = out[j].left;
+      out[j].w = out[j].right - out[j].left;
+      out[j].text = text.slice(out[j].index, out[j].end);
+    }
+    return out;
+  }
 
-    for (var i = 0; i < lines.length; i++) {
-      var chars = lines[i].split("");
-      var x0 = -((chars.length - 1) / 2) * cw;
-      for (var j = 0; j < chars.length; j++) {
-        if (chars[j] === " ") continue;
-        spots.push({ x: x0 + j * cw, y: top + (first + i) * lh,
-                     text: chars[j], cls: "il-ch" });
+  /* AN ATTACHED FILE IS MEASURED WHERE IT STANDS. Its row is ordinary page
+     content, so each part can say where it is without a copy: the card it sits
+     on, the file's mark, its name letter by letter, its size, and the cross. */
+  function ilMeasureFileRow(source, boxRect) {
+    var pill = $("filePill");
+    if (!pill) return;
+    var pr = pill.getBoundingClientRect();
+    source.card = { x: pr.left - boxRect.left, y: pr.top - boxRect.top,
+                    w: pr.width, h: pr.height, look: ilEdgeLook(getComputedStyle(pill)) };
+    var pieces = [];
+    ilMarkPiece(pieces, $("fileIcon"), boxRect);
+
+    /* A LONG NAME IS CUT SHORT WITH AN ELLIPSIS, AND COMES ACROSS CUT SHORT.
+       The letters past the end of the name's own box are there in the page and
+       not seen, so they are left out, and the ellipsis the browser drew in their
+       place is written as a piece of its own where they began. */
+    var name = $("homeFileName");
+    if (name && name.firstChild) {
+      var ns = getComputedStyle(name), look = ilTextLook(ns), range = document.createRange();
+      var nr = name.getBoundingClientRect();
+      var full = name.scrollWidth > name.clientWidth + 0.5 && ns.textOverflow === "ellipsis";
+      /* THE ELLIPSIS TAKES ROOM OF ITS OWN, so the letters it covers are the
+         last ones that would have fitted, not only the ones past the edge. Its
+         width is read in the name's own font. */
+      var room = nr.right;
+      if (full) {
+        var pen = document.createElement("canvas").getContext("2d");
+        pen.font = ns.fontStyle + " " + ns.fontWeight + " " + ns.fontSize + " " + ns.fontFamily;
+        room -= pen.measureText("\u2026").width;
+      }
+      var gone = null;
+      ilGraphemes(name.textContent).forEach(function (p) {
+        if (/^\s+$/.test(p.text)) return;
+        range.setStart(name.firstChild, p.index);
+        range.setEnd(name.firstChild, p.index + p.text.length);
+        var r = range.getBoundingClientRect();
+        if (!r.width) return;
+        if (gone || (full && r.right > room + 0.5)) { gone = gone || r; return; }
+        pieces.push({ text: p.text, x: r.left - boxRect.left, y: r.top - boxRect.top,
+                      w: r.width, h: r.height, style: look, cls: "il-ch" });
+      });
+      if (gone) {
+        pieces.push({ text: "\u2026", x: gone.left - boxRect.left, y: gone.top - boxRect.top,
+                      w: Math.max(1, nr.right - gone.left), h: gone.height,
+                      style: look, cls: "il-ch" });
       }
     }
-    return spots;
+
+    /* THE SIZE COMES ACROSS WHOLE. On a phone it carries "goes inside" from the
+       stylesheet, which no range can reach, so it is one piece the width of its
+       own line with the words it showed. */
+    var size = $("homeFileSize");
+    if (size && size.getClientRects().length) {
+      var sr = size.getBoundingClientRect();
+      var after = getComputedStyle(size, "::after").content;
+      var tail = after && after !== "none" && after !== "normal" ? after.replace(/^"|"$/g, "") : "";
+      pieces.push({ text: size.textContent + tail, x: sr.left - boxRect.left,
+                    y: sr.top - boxRect.top, w: sr.width, h: sr.height,
+                    style: ilTextLook(getComputedStyle(size)), cls: "il-ch" });
+    }
+    ilMarkPiece(pieces, $("fileX"), boxRect);
+    source.pieces = pieces;
+  }
+
+  /* A MARK IS COPIED WITH THE TILE IT SITS ON. The file's mark has a pale tile
+     behind it on a phone, and the tile is part of what was seen. The drawing is
+     the page's own, cloned rather than drawn again, so it cannot differ. */
+  function ilMarkPiece(pieces, el, boxRect) {
+    if (!el || !el.getClientRects().length) return;
+    var r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    var svg = el.querySelector("svg");
+    var sr = svg ? svg.getBoundingClientRect() : null;
+    pieces.push({ x: r.left - boxRect.left, y: r.top - boxRect.top, w: r.width, h: r.height,
+                  node: svg, markW: sr ? sr.width : 0, markH: sr ? sr.height : 0,
+                  style: "color:" + cs.color + ";background-color:" + cs.backgroundColor +
+                         ";border-radius:" + cs.borderTopLeftRadius + ";", cls: "il-mark" });
+  }
+
+  /* THE COPY OF THE BOX, AT THE BOX'S OWN SIZE. Its pieces are laid out at the
+     size they were measured at and the whole frame is scaled to fit the stage,
+     so no line is broken a second time and nothing moves against anything
+     else. It is centred on the light, which is why every piece that falls to
+     the middle of the frame lands in the light. */
+  function ilFillFrame(frame, source, side) {
+    while (frame.firstChild) frame.removeChild(frame.firstChild);
+    if (!source) { frame.removeAttribute("style"); return; }
+    var s = Math.min(1, side / source.w, side / source.h);
+    frame.style.cssText = source.look + "width:" + source.w + "px;height:" + source.h +
+      "px;margin:" + (-source.h / 2) + "px 0 0 " + (-source.w / 2) + "px;" +
+      "transform:scale(" + s.toFixed(4) + ");";
+    if (source.card) {
+      var card = document.createElement("i");
+      card.className = "il-card-copy";
+      card.style.cssText = source.card.look + "left:" + source.card.x + "px;top:" +
+        source.card.y + "px;width:" + source.card.w + "px;height:" + source.card.h + "px;";
+      frame.appendChild(card);
+    }
   }
 
   /* A SPRITE IS TWO BOXES, AND THE REASON IS THE SPIRAL. The orbit turns and
@@ -3983,11 +4144,21 @@
 
     var el = document.createElement("i");
     el.className = "il-sprite " + spot.cls;
+    /* A MEASURED PIECE IS DRAWN AT THE SIZE IT WAS MEASURED, in the look it had.
+       Its box is exactly the box it filled on Make, so centring the box on the
+       place it came from puts its writing back where it was. */
+    if (spot.style) {
+      el.style.cssText = spot.style + "width:" + spot.w.toFixed(2) + "px;height:" +
+        spot.h.toFixed(2) + "px;line-height:" + spot.h.toFixed(2) + "px;";
+    }
     el.style.setProperty("--r", r.toFixed(1) + "px");
     if (spot.text) el.textContent = spot.text;
-    if (spot.cls === "il-mark") {
-      var mark = ilMarkNode();
-      if (mark) el.appendChild(mark);
+    if (spot.node) {
+      var mark = spot.node.cloneNode(true);
+      mark.removeAttribute("id");
+      mark.style.width = spot.markW + "px";
+      mark.style.height = spot.markH + "px";
+      el.appendChild(mark);
     }
     if (spot.bw) el.style.setProperty("--bw", spot.bw + "px");
     if (spot.bgx !== undefined) {
@@ -4034,7 +4205,7 @@
      off, reading the box, and putting it back is what starts them from the
      beginning. The same move resetDisc() makes for the tray. */
   function ilRestart() {
-    var parts = [$("ilStage"), $("ilCore"), $("ilFlare")];
+    var parts = [$("ilStage"), $("ilCore"), $("ilFlare"), $("ilBox")];
     for (var i = 0; i < parts.length; i++) {
       if (!parts[i]) continue;
       parts[i].style.animation = "none";
@@ -4075,7 +4246,6 @@
       stage.style.setProperty("--grow", IL_SUCK_AT_MS + "ms");
       stage.style.setProperty("--sms", IL_SUCK_MS + "ms");
       stage.style.setProperty("--fms", IL_FLARE_MS + "ms");
-      stage.style.setProperty("--glyph", IL_GLYPH_PX + "px");
 
       var side = stage.getBoundingClientRect().width;
       /* THE DISC'S SURFACE IS SIZED FROM THE SAME NUMBERS IT IS CUT WITH. The
@@ -4086,26 +4256,35 @@
       stage.style.setProperty("--hole", (IL_DISC_IN * 100) + "%");
       stage.style.setProperty("--rim", (IL_DISC_OUT * 100) + "%");
 
-      var text = ilTextSpots(stage, source, side);
-      var disc = ilDiscSpots(side);
-      var frag = document.createDocumentFragment();
+      var frame = $("ilBox");
+      ilFillFrame(frame, source, side);
+      var pieces = source ? source.pieces : [];
+      var words = document.createDocumentFragment();
 
-      // The letters, spread over the time left once a fall is taken off, so the
-      // last one to set off is still swallowed before the disc is pulled.
+      /* THE PIECES, IN THE ORDER THEY WERE READ. Each is placed from the middle
+         of the frame, which is the middle of the box it came from, and they set
+         off over the time left once a fall is taken off, so the last one is
+         still swallowed before the disc is pulled. */
       var spread = Math.max(0, IL_SUCK_AT_MS - IL_FALL_MS);
-      for (var i = 0; i < text.length; i++) {
-        var at = text.length < 2 ? 0 : (i / (text.length - 1)) * spread;
-        frag.appendChild(ilSprite(text[i], at, IL_SPIN_DEG + Math.random() * 180));
+      for (var i = 0; i < pieces.length; i++) {
+        var p = pieces[i];
+        var spot = { x: p.x + p.w / 2 - source.w / 2, y: p.y + p.h / 2 - source.h / 2,
+                     w: p.w, h: p.h, text: p.text, node: p.node, markW: p.markW,
+                     markH: p.markH, style: p.style, cls: p.cls };
+        var at = pieces.length < 2 ? 0 : (i / (pieces.length - 1)) * spread;
+        words.appendChild(ilSprite(spot, at, IL_SPIN_DEG + Math.random() * 180));
       }
+      frame.appendChild(words);
 
       // The disc arrives in no order, which is what makes it materialise rather
       // than sweep round like a hand.
+      var disc = ilDiscSpots(side);
+      var blocks = document.createDocumentFragment();
       for (var k = 0; k < disc.length; k++) {
-        frag.appendChild(ilSprite(disc[k], IL_DISC_AT_MS + Math.random() * IL_DISC_MS,
-                                  IL_SPIN_DEG));
+        blocks.appendChild(ilSprite(disc[k], IL_DISC_AT_MS + Math.random() * IL_DISC_MS,
+                                    IL_SPIN_DEG));
       }
-
-      stage.appendChild(frag);
+      stage.appendChild(blocks);
     },
 
     /* SET MOVING. Everything built starts from its first frame at this one
@@ -4128,6 +4307,8 @@
       for (var i = 0; i < gone.length; i++) {
         gone[i].parentNode.removeChild(gone[i]);
       }
+      // The copy of the box is in the markup too, emptied and put back to no size.
+      ilFillFrame($("ilBox"), null, 0);
     }
   };
 
@@ -4145,6 +4326,10 @@
     var panel = $("interlude"), stage = $("ilStage");
     if (!panel || !stage || !interludeOn() || ilRunning) return Promise.resolve();
 
+    /* WHAT WAS IN VIEW IS MEASURED FIRST, while the Make box is still on the page
+       and before anything about the board has changed. */
+    var source = interludeSource();
+
     ilRunning = true;
     ilOver = false;
     var run = ++ilRun;
@@ -4154,9 +4339,17 @@
     if (skipBtn) skipBtn.disabled = false;
     var over = new Promise(function (resolve) { ilResolve = resolve; });
 
+    /* THE BOX TRAVELS WITH THE SLIDE. vt-carry names the Make box in the picture
+       of the old screen and its copy in the picture of the new one, so the
+       browser moves one into the place of the other while the screens slide.
+       It is for this slide alone: a Make box named on the slide to Made would
+       stand still and fade while its own screen slid away. */
+    var root = document.documentElement;
+    if (canSlide()) root.classList.add("vt-carry");
+
     var change = setView("making", true, function () {
       if (!ilRunning || run !== ilRun) return;
-      INTERLUDE.build(stage, interludeSource());
+      INTERLUDE.build(stage, source);
       /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone
          because nothing moves there, and this is the one thing that does. The
          board behind is inert, so focus must not be left standing on it. */
@@ -4169,6 +4362,11 @@
       INTERLUDE.start(stage);
       ilLater(interludeTimeUp, INTERLUDE.ms);
     });
+    /* THE NAMES COME OFF WHEN THE SLIDE HAS ENDED, and not when the show is
+       told it has arrived. The show can hear that from a timer a moment before
+       the slide's last frame, and a name taken off while the browser is still
+       moving that box can make it drop the picture. */
+    change.ended.then(function () { root.classList.remove("vt-carry"); });
 
     /* WHEN THE PRESS MAY START ITS WORK. The slide needs a free frame or two to
        picture both screens, and an encode that began in the same instant could
@@ -4732,9 +4930,9 @@
        probe measuring the Made screen has to say it wants none of it. This is
        the switch in Advanced, reached without opening the drawer. */
     window.PuttyPNGDebug.setInterludePref = setInterludePref;
-    // The routine that chooses which part of a note the show breaks apart, so a
-    // probe can hand it a note and read the answer rather than counting sprites.
-    window.PuttyPNGDebug.interludeSection = ilSection;
+    /* THE MEASUREMENT OF WHAT WAS IN VIEW, as the show takes it, so a probe can
+       set the box up, ask, and hold the answer to the box it came from. */
+    window.PuttyPNGDebug.interludeSource = interludeSource;
     // The side the engine says the picture will be, which is what the tray is
     // capped at and what the over-512 warning is read from.
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
@@ -4745,9 +4943,8 @@
                // probe works the expected width out from these rather than
                // holding a copy of four numbers that go stale in silence.
                disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX },
-               // How long a section is and how far it may move to land on a
-               // word, which is the room a probe has to allow either side.
-               interlude: { chars: IL_CHARS, reach: IL_WORD_REACH },
+               // How many letters break apart before words do, and words before lines.
+               interlude: { pieces: IL_PIECES_MAX },
                // How long a phone's slide is, and the most a slide that never
                // draws may keep the next step waiting.
                slide: { ms: VIEW_SLIDE_MS, slack: VIEW_SLIDE_SLACK_MS,
