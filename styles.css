@@ -2125,19 +2125,44 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 
   .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad"; }
   .board[data-view="made"]   { grid-template-areas: "hm" "sm"; }
+  .board[data-view="making"] { grid-template-areas: "iv"; }
   .board[data-view="loaded"] { grid-template-areas: "hl" "cl"; }
 
   .board[data-view="make"]   > .head.hl,
   .board[data-view="make"]   > .col.load,
   .board[data-view="make"]   > .deckrow,
+  .board[data-view="make"]   > .interlude,
   .board[data-view="made"]   > .col.make,
   .board[data-view="made"]   > .drawer,
   .board[data-view="made"]   > .head.hl,
   .board[data-view="made"]   > .col.load,
+  .board[data-view="made"]   > .interlude,
+  .board[data-view="making"] > .head.hm,
+  .board[data-view="making"] > .head.hl,
+  .board[data-view="making"] > .col.make,
+  .board[data-view="making"] > .col.load,
+  .board[data-view="making"] > .drawer,
+  .board[data-view="making"] > .deckrow,
   .board[data-view="loaded"] > .head.hm,
   .board[data-view="loaded"] > .col.make,
   .board[data-view="loaded"] > .drawer,
-  .board[data-view="loaded"] > .deckrow { display: none; }
+  .board[data-view="loaded"] > .deckrow,
+  .board[data-view="loaded"] > .interlude { display: none; }
+
+  /* WHAT THE SHOW LOOKS LIKE ON A PHONE IS BESIDE THE SHOW ITSELF, further down
+     this section. This block is the contract, which says which regions each
+     screen has, and the rules that change a component are kept with it. */
+
+  /* THE SCREEN THAT ARRIVES COMES IN FROM THE RIGHT. Only the region the grid
+     is showing can move: the rest are display:none and an animation cannot
+     reach them. The length is written in by scripts.js, which is where the
+     handover is timed, so there is no second copy of it here.
+     overflow IS FOR THE 280ms THE SLIDE TAKES. A region standing to the right
+     of its place makes the page scrollable sideways while it is there. clip is
+     the one that does not make a scroll container; hidden is what a browser
+     that has not learned clip falls back to. */
+  .board.sliding { overflow-x: hidden; overflow-x: clip; }
+  .board.sliding > * { animation: il-slide-in var(--slide, 280ms) cubic-bezier(.3, 0, .2, 1); }
 
   /* The heading names the screen. The first word is the desktop's, the second
      belongs to the screen this phone has arrived at. */
@@ -2481,6 +2506,249 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 }
 .peek-body:empty { display: none; }
 .peek-acts { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* --------------------------------------------------------------------------
+   THE INTERLUDE: THE SHOW BETWEEN MAKE AND MADE
+
+   What a person handed over breaks apart, is drawn into the middle, and a disc
+   forms over the light before the whole lot is swallowed. Everything here is
+   look and motion. scripts.js owns the timeline and writes its two durations in
+   as --ms and --sms, so the numbers are named in one place and the stylesheet
+   reads them rather than holding a second copy that goes stale in silence.
+
+   THIS IS THE DESKTOP'S HALF. A desktop shows every region of the board at
+   once and has no screen to slide to, so the show stands over the board with
+   the page dimmed behind it, the way the peek panel and the title editor do. A
+   phone makes the same element a region of the board instead: Section 7.
+
+   AN AUTHOR'S display BEATS THE hidden ATTRIBUTE, so the pair below is not
+   optional. Without it the show is drawn over an untouched board while its
+   attribute says it is away.
+   -------------------------------------------------------------------------- */
+.interlude {
+  display: grid; place-items: center; position: fixed; inset: 0; z-index: 60;
+  padding: 20px; background: rgba(26, 26, 26, .6);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+.interlude[hidden] { display: none; }
+
+.il-card {
+  position: relative; width: min(420px, 100%); padding: 22px 20px 16px;
+  background: var(--paper); border: 1px solid var(--line-strong);
+  border-radius: 16px; box-shadow: var(--shadow-lift); text-align: center;
+}
+.il-card h2 {
+  margin: 0; font-family: var(--display-font), cursive; font-size: 34px;
+  line-height: 1.1; letter-spacing: .5px;
+}
+/* THE SAME PAIR THE BOARD'S OWN HEADINGS CARRY. The heading takes focus when
+   the show opens, so the screen change is announced, and a ring drawn for a
+   focus nobody asked for reads as a box around the title. A keyboard still gets
+   its ring, which is the whole point of the second rule. */
+.il-card h2:focus { outline: none; }
+.il-card h2:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 4px; }
+.il-sub { margin: 5px 0 0; font-size: 14px; color: var(--muted); }
+
+/* THE WAY OUT. A cross in the corner on a desktop, which is how its other
+   modals close, and red because it stops something rather than finishing it.
+   The word beside the mark is for a phone, where there is room for it. */
+.il-x {
+  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px;
+  display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
+  border: 1px solid var(--line-strong); border-radius: 50%;
+  background: var(--paper); color: var(--bad);
+  transition: background .15s, border-color .15s;
+}
+.il-x .say { display: none; }
+
+.il-always { justify-content: center; margin-top: 12px; font-size: 13px; }
+
+/* WHERE THE SPRITES LIVE. A square, because the show is a circle of letters
+   falling into the middle of it, and the middle is read from this box. */
+.il-stage {
+  position: relative; width: min(300px, 100%); aspect-ratio: 1 / 1;
+  margin: 14px auto 4px;
+}
+
+/* ---- The light in the middle -------------------------------------------- */
+
+/* THREE LAYERS, BECAUSE THEY MOVE AT THREE SPEEDS. The box grows across the
+   whole show as it takes the letters in, the flares turn, and the ball throbs.
+   One element cannot carry three transforms, so the ball and the flares are
+   this box's own two pseudo-elements. */
+.il-core {
+  position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+  margin: -22px 0 0 -22px; border-radius: 50%;
+  box-shadow: 0 0 30px 10px rgba(201, 111, 82, .4),
+              0 0 80px 26px rgba(255, 205, 130, .28);
+  animation: il-grow var(--grow, 3000ms) cubic-bezier(.5, 0, .7, .4) both;
+}
+/* The sun flares: spokes of light, turning, with no edge where they stop. */
+.il-core::before {
+  content: ""; position: absolute; inset: -150%; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255, 226, 160, .85) 0deg 2.5deg, rgba(255, 226, 160, 0) 2.5deg 18deg);
+  -webkit-mask-image: radial-gradient(circle, #000 6%, rgba(0, 0, 0, .65) 30%, transparent 66%);
+  mask-image: radial-gradient(circle, #000 6%, rgba(0, 0, 0, .65) 30%, transparent 66%);
+  animation: il-spin 9s linear infinite;
+}
+/* The ball. White at the centre so it reads as light and not as a coloured
+   dot, warming to the site's clay at the rim. */
+.il-core::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    #fff 0 24%, #fff6d8 38%, #f3b98a 60%, rgba(201, 111, 82, .88) 78%,
+    rgba(201, 111, 82, 0) 100%);
+  animation: il-throb 1100ms ease-in-out infinite alternate;
+}
+
+/* ---- The flare that ends it --------------------------------------------- */
+
+/* TWO CROSSED BARS ARE A DIAMOND. It fires as the disc lands, which is why its
+   delay is the length of the pull and not a number of its own. */
+.il-flare { position: absolute; left: 50%; top: 50%; opacity: 0; }
+.il-flare::before, .il-flare::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 42% 58%, rgba(255, 255, 255, 0));
+  box-shadow: 0 0 14px 4px rgba(255, 236, 190, .75);
+}
+.il-flare::before { width: 240px; height: 3px; margin: -1.5px 0 0 -120px; }
+.il-flare::after { width: 3px; height: 240px; margin: -120px 0 0 -1.5px; }
+
+/* ---- A sprite, and the spiral it falls in ------------------------------- */
+
+/* A TRUE SPIRAL NEEDS TWO BOXES. The orbit turns and the sprite inside it
+   walks in along one line, so the path on screen is a curve without any
+   trigonometry in the stylesheet. Polar, not x and y: scripts.js hands every
+   sprite the angle it sits at and how far out it is.
+   --a-undo IS WHY A LETTER IS NOT UPSIDE DOWN. The orbit's turn reaches
+   everything inside it, so every sprite takes that turn back off itself and
+   stands square while it waits. It is a variable rather than a fixed rule
+   because a sprite is still free to lean: what it must not do is lean by
+   wherever it happens to sit. */
+/* EVERY ONE OF THESE HAS A VALUE HERE AS WELL AS FROM scripts.js. A var() with
+   nothing behind it invalidates the whole declaration it sits in, so one sprite
+   built without its angle would lose its animation shorthand outright and stand
+   still on the stage with no sign of why. */
+.il-orbit {
+  --a: 0deg; --spin: 540deg; --d: 0ms;
+  position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+  transform: rotate(var(--a));
+}
+.il-sprite {
+  --a-undo: calc(-1 * var(--a)); --r: 0px;
+  position: absolute; left: 0; top: 0; will-change: transform, opacity;
+  transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo));
+}
+
+/* The letters, which read as what was typed before they break up. */
+.il-ch {
+  font: 700 var(--glyph, 15px)/1 ui-monospace, Consolas, monospace;
+  color: var(--ink); white-space: pre;
+}
+/* The mark an attachment brings, in place of the letters it does not have. */
+.il-mark { color: var(--clay-deep); display: grid; }
+.il-mark svg { width: 30px; height: 30px; }
+
+/* The letters set off on their own stagger the moment the show starts. */
+.il-ch-orbit { animation: il-swirl var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
+.il-ch, .il-mark { animation: il-inward var(--ms, 3000ms) cubic-bezier(.5, .03, .64, 1) var(--d) both; }
+
+/* A block of the disc. It arrives, it waits, and it is taken with the rest. */
+/* A block of the disc. It arrives, it waits, and it is taken with the rest.
+   IT IS OPAQUE AND ITS GLOW IS SHORT. Written as a wash of part-transparent
+   creams with a wide halo, sixty of them ran together into fog and the disc had
+   no blocks left in it to see. */
+.il-blk {
+  --bw: 20px;
+  width: var(--bw); height: var(--bw); border-radius: 2px;
+  background: linear-gradient(150deg, #fffdf6, #ffe1a9 52%, var(--clay));
+  box-shadow: 0 0 6px 1px rgba(255, 190, 120, .5);
+  animation: il-form 360ms ease-out var(--d) both;
+}
+
+/* ---- Everything the pull changes, carried by one class ------------------ */
+
+/* ONE CLASS AT ONE MOMENT. The disc is pulled in, the flare fires as it lands,
+   and the throb stops rather than fading while it is lit. */
+.il-stage.suck .il-blk-orbit { animation: il-swirl var(--sms, 400ms) cubic-bezier(.42, 0, .58, 1) forwards; }
+.il-stage.suck .il-blk { animation: il-inward var(--sms, 400ms) cubic-bezier(.42, 0, .58, 1) forwards; }
+.il-stage.suck .il-core { animation: il-core-out 460ms ease-in var(--sms, 400ms) forwards; }
+.il-stage.suck .il-core::after { animation: none; }
+.il-stage.suck .il-flare { animation: il-flare var(--fms, 420ms) ease-out var(--sms, 400ms) forwards; }
+
+@keyframes il-swirl {
+  from { transform: rotate(var(--a)); }
+  to { transform: rotate(calc(var(--a) + var(--spin))); }
+}
+@keyframes il-inward {
+  from { transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo)) scale(1); opacity: 1; }
+  72% { opacity: 1; }
+  to { transform: translate(-50%, -50%) translateX(0) rotate(var(--a-undo)) scale(.06); opacity: 0; }
+}
+@keyframes il-form {
+  from { transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo)) scale(.2); opacity: 0; }
+  to { transform: translate(-50%, -50%) translateX(var(--r)) rotate(var(--a-undo)) scale(1); opacity: 1; }
+}
+@keyframes il-throb { from { transform: scale(1); } to { transform: scale(1.16); } }
+@keyframes il-spin { to { transform: rotate(360deg); } }
+@keyframes il-grow { from { transform: scale(.42); } to { transform: scale(1.5); } }
+@keyframes il-core-out { to { transform: scale(2.4); opacity: 0; } }
+@keyframes il-flare {
+  0% { opacity: 0; transform: scale(.2) rotate(0deg); }
+  35% { opacity: 1; transform: scale(1) rotate(14deg); }
+  100% { opacity: 0; transform: scale(1.3) rotate(26deg); }
+}
+/* The phone's handover, used by the rule in Section 7. It is declared out here
+   with the rest of them: a keyframes block inside the touch query reads as an
+   open rule to anything that walks the sheet counting braces. */
+@keyframes il-slide-in {
+  from { transform: translateX(22%); }
+  to { transform: none; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* THE CROSS DARKENS AND DOES NOT WASH. It is red already, so a mouse takes
+     it to a deeper red, which is a darker version of itself rather than a
+     colour the control did not have. */
+  .il-x:hover { border-color: var(--muted); color: #9e1f1f; }
+}
+
+/* THE SHOW IS A SCREEN ON A PHONE, NOT A SHEET OVER ONE. A phone has somewhere
+   to go, so the dim, the blur and the fixed frame all come off and the panel
+   becomes the one region the board is showing. It carries its own heading, so
+   the board's heading stays away and there is one heading on the screen.
+   IT IS HERE AND NOT UP IN THE VIEW CONTRACT, because this section holds the
+   contract first and the components after it. Written up there, every line
+   below this point would win and a phone would get the desktop's sheet. The
+   contract still says which regions each screen has; this says what one of
+   them looks like. */
+@media (hover: none), (pointer: coarse) {
+  .interlude {
+    grid-area: iv; position: static; inset: auto; z-index: auto;
+    padding: 0; background: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  /* A COLUMN, SO THE WAY OUT CAN GO LAST. The cross is written first in the
+     markup because that is where a corner mark belongs on a desktop and where a
+     screen reader should meet it. Taken out of its corner it would flow first
+     as well, and the screen would open on its own Skip button. */
+  .il-card {
+    display: flex; flex-direction: column; align-items: center;
+    border: 0; box-shadow: none; background: none; padding: 8px 0 0;
+  }
+  .il-card h2 { font-size: clamp(26px, 4.5vw, 41px); }
+
+  /* THE CROSS BECOMES A BUTTON WITH A WORD IN IT. A mark in a corner is a
+     mouse's target: a thumb wants the word, and the foot of the screen is
+     where this screen's own controls already are. */
+  .il-x {
+    order: 5; position: static; width: auto; height: auto; min-height: 44px;
+    grid-auto-flow: column; gap: 7px; padding: 0 18px; margin: 10px auto 0;
+    border-radius: 999px; font-size: 15px; font-weight: 600;
+  }
+  .il-x .say { display: inline; }
+}
 
 /* ==========================================================================
    THE GLOW CHAIN

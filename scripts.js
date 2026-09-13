@@ -180,6 +180,34 @@
   var DISC_DRAG_MS = 300;      // the carried copy fading after it is let go
   var DISC_SLACK_PX = 5;       // movement before a press counts as a drag
   var HOME_SAVE_MS = 4000;     // how long a download URL is kept alive
+  var VIEW_SLIDE_MS = 280;     // the screen that arrives coming in from the right
+
+  /* THE SHOW BETWEEN MAKE AND MADE, TIMED IN ONE PLACE.
+     The stage in Section 5 reads every one of these, and hands the stylesheet
+     the four lengths it needs as custom properties, so not one of these numbers
+     has a second copy in the sheet that could move on one side only.
+     THE LAST LETTER IS IN BEFORE THE DISC IS PULLED. That is why the stagger is
+     the difference between the two: a letter takes IL_FALL_MS whenever it sets
+     off, and the last one sets off early enough to land on time. */
+  var IL_FALL_MS = 1700;       // one letter's fall, from breaking off to swallowed
+  var IL_SUCK_AT_MS = 3000;    // when the disc is pulled in, every letter in by then
+  var IL_SUCK_MS = 400;        // how long that pull takes
+  var IL_FLARE_MS = 420;       // the flare as the disc lands, which ends the show
+  var IL_DISC_AT_MS = 1150;    // when the disc starts to form over the light
+  var IL_DISC_MS = 1450;       // how long it takes to form, block by block
+  var IL_TOTAL_MS = IL_SUCK_AT_MS + IL_SUCK_MS + IL_FLARE_MS;
+  var IL_CHARS = 58;           // how much of what was handed over is shown
+  var IL_GLYPH_PX = 15;        // and at what size, which the wrap is read from
+  var IL_SPIN_DEG = 540;       // how far a sprite turns on its way in
+  /* THE DISC IS A GRID CUT TO A CIRCLE, NOT A SET OF RINGS. Rings were the
+     first shape and they read as a flower: every block lines up with the one
+     outside it, and the gaps between them run out from the middle as spokes. A
+     grid has the edge a disc has, and the squares left in it are what makes it
+     read as a picture still forming. All three are shares of the stage's own
+     radius, so the disc is the same disc on any screen. */
+  var IL_DISC_CELL = 0.20;     // one block and its gap, against that radius
+  var IL_DISC_IN = 0.34;       // the hole in the middle, where the light is
+  var IL_DISC_OUT = 0.94;      // and the rim
 
   // The line art the home board draws for itself. One shape serves every place
   // that needs it, so a mark can never drift between two copies of itself.
@@ -242,6 +270,12 @@
      way round this would read undefined without a word. */
   var CELEBRATION_DEFAULT = false;
   var celebrationOn = CELEBRATION_DEFAULT;
+
+  /* THE SHOW IS ON UNTIL SOMEBODY TURNS IT OFF. It is the answer to what
+     pressing the button does, so a first visit gets it. Animations off turns it
+     off as well, which is not a second preference: the show is movement and
+     nothing else. */
+  var interludeShow = true;
 
   // The formation, as it is running now. The defaults are the FORM_ constants
   // and a stored choice replaces them at startup.
@@ -683,14 +717,37 @@
      its CSS never reads this attribute. The phone shows the one region named
      here. Setting it on a desktop is harmless and keeps one code path for both
      shapes, which is the whole reason there is one block of markup. */
-  function setView(name) {
+  function setView(name, slide) {
     var grid = $("boardGrid");
     if (!grid || grid.getAttribute("data-view") === name) return;
     grid.setAttribute("data-view", name);
+    if (slide) slideBoard(grid);
     focusView(name);
     paintGlow();
     paintMakeSay(false);
     paintMadeScreen();
+  }
+
+  /* THE SCREEN THAT ARRIVES COMES IN FROM THE RIGHT.
+     Only the arriving region moves. A region the grid does not ask for is taken
+     out with display:none, so there is no outgoing screen left to move and
+     nothing here softens one to visibility to get an animation out of it.
+
+     THE CALLER ASKS FOR IT, AND ONLY THE SHOW DOES. The other screens change
+     because a person pressed something and they are better arriving at once.
+     The two handovers around the show are a journey, which is the whole reason
+     the show exists, so those two ask and nothing else does. */
+  var slideTimer = null;
+
+  function slideBoard(grid) {
+    // The length is named here and read there, so the class and the animation
+    // can never be told two different numbers.
+    grid.style.setProperty("--slide", VIEW_SLIDE_MS + "ms");
+    grid.classList.add("sliding");
+    if (slideTimer) clearTimeout(slideTimer);
+    slideTimer = setTimeout(function () {
+      grid.classList.remove("sliding");
+    }, VIEW_SLIDE_MS);
   }
 
   /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
@@ -700,7 +757,8 @@
      next tab starts again at the top of the document.
      The desktop shows every region at once, so nothing moved and nothing is
      focused there. */
-  var VIEW_HEAD = { make: "headMake", made: "headMake", loaded: "headLoad" };
+  var VIEW_HEAD = { make: "headMake", made: "headMake", making: "headMaking",
+    loaded: "headLoad" };
 
   function focusView(name) {
     if (!touchPointer.matches) return;
@@ -1089,6 +1147,7 @@
     read: "ppng.seen.read",
     animations: "ppng.pref.animations",
     celebration: "ppng.pref.celebration",
+    interlude: "ppng.pref.interlude",
     formStyle: "ppng.pref.formStyle",
     formMs: "ppng.pref.formMs",
     formOverlap: "ppng.pref.formOverlap"
@@ -1574,11 +1633,19 @@
   function wireDisplayToggles() {
     var anim = document.getElementById("optAnimations");
     var celeb = document.getElementById("optCelebration");
-    if (!anim || !celeb) return;
+    var show = document.getElementById("optInterlude");
     if (!anim || !celeb) return;
 
     anim.checked = animationsOn;
     celeb.checked = celebrationOn;
+    // The show's switch and the box on the panel are one preference, so it is
+    // painted rather than set here, and the same routine paints both of them.
+    paintInterludePref();
+    if (show) {
+      show.addEventListener("change", function () {
+        setInterludePref(show.checked);
+      });
+    }
     applyMotionPreference();
 
     anim.addEventListener("change", function () {
@@ -1826,6 +1893,7 @@
     wireTitleEditor();
     wireHomeLoad();
     wireExamples();
+    wireInterlude();
 
     // Before the first paint of the board, because both of these decide which
     // card a control is drawn in, and a control that arrives and then jumps
@@ -2018,6 +2086,9 @@
     var view = grid ? grid.getAttribute("data-view") : "make";
     if (view === "made") return "copy";
     if (view === "loaded") return "done";
+    // The glow points at what to do next, and during the show there is nothing
+    // to do. Every light is out until the picture arrives.
+    if (view === "making") return "idle";
 
     var ta = $("makeText");
     var has = (ta && ta.value.length > 0) || !!homeAttached;
@@ -2102,8 +2173,14 @@
     var view = grid ? grid.getAttribute("data-view") : "make";
     var ta = $("makeText");
     var carrying = !!(ta && ta.value.length) || !!homeAttached;
+    /* EVERY SCREEN IS NAMED, AND THERE IS NO ELSE. The show in the middle has
+       no corner: it is a screen a person waits through rather than one they
+       work on, and the skip control on the panel is its way out. Written as an
+       else, the show took the loaded screen's job and offered to close a
+       PuttyPNG nobody had opened. */
     var job = view === "make" ? (carrying ? "clear" : "")
-            : view === "made" ? "close" : "closeload";
+            : view === "made" ? "close"
+            : view === "loaded" ? "closeload" : "";
 
     /* THE CORNER BELONGS TO THE HEADING THAT IS ON SCREEN, and there is one of
        it. The loaded screen shows the Load heading, so the button moves there
@@ -3597,6 +3674,380 @@
   }
 
   /* ==========================================================================
+     THE INTERLUDE - THE SHOW BETWEEN MAKE AND MADE
+
+     What a person handed over breaks apart, is drawn into the middle, and a
+     disc forms over the light before the whole lot is swallowed. It answers
+     nothing and it proves nothing. It is here to show what pressing the button
+     does, which is the one thing about this site a person cannot see.
+
+     IT HANGS ON ONE SEAM. playInterlude() returns a promise and the press waits
+     on it. With no stage, with animations off, or for a person who has asked
+     never to see it again, that promise is already resolved and the press runs
+     exactly as it ran before there was a show. That is the whole of the
+     contract: another show replaces INTERLUDE, and deleting this block and its
+     region leaves the board working.
+
+     THE STAGE IS THREE MEMBERS AND NOTHING ELSE KNOWS WHAT IS IN THEM. ms is
+     how long the press should wait, build() puts the show on, and clear() takes
+     it off again. The timeline inside build() is the stage's own business.
+     ========================================================================== */
+
+  var ilTimers = [];       // every timer the show owns, so skipping cancels all
+  var ilResolve = null;    // what the press is waiting on
+  var ilRunning = false;
+
+  function ilLater(fn, ms) { ilTimers.push(setTimeout(fn, ms)); }
+
+  function ilStopTimers() {
+    for (var i = 0; i < ilTimers.length; i++) clearTimeout(ilTimers[i]);
+    ilTimers = [];
+  }
+
+  /* Whether there is a show at all. Two things have to agree: the person's own
+     choice, and the movement setting, because this is movement and nothing but,
+     so animations off takes it with everything else. */
+  function interludeOn() {
+    return interludeShow && animationsOn;
+  }
+
+  /* ONE BIT, TWO CONTROLS, AND THEY CANNOT DRIFT. The switch in Advanced says
+     whether there is a show. The box on the panel says whether to always skip
+     one, which is the same bit read the other way round. Both go through here,
+     and nothing else writes the preference.
+     THE PANEL'S BOX NEEDS THE SWITCH IN ADVANCED TO EXIST. Ticking it turns off
+     the screen it is on, so without a second place to untick it the only way
+     back would be clearing the site's data. */
+  function setInterludePref(on) {
+    interludeShow = !!on;
+    writePref("interlude", interludeShow);
+    paintInterludePref();
+  }
+
+  function paintInterludePref() {
+    var sw = $("optInterlude"), box = $("ilAlways");
+    if (sw) sw.checked = interludeShow;
+    if (box) box.checked = !interludeShow;
+  }
+
+  /* WHAT BREAKS APART. A note breaks into its own letters. An attachment has no
+     letters, so it breaks into the paperclip it was attached with and the name
+     it arrived under, which is the whole of what the board knows about it.
+     IT IS A SECTION, NOT THE WHOLE THING. At this size a wall of letters is a
+     grey block, and the point is that a person recognises their own words. */
+  function interludeSource() {
+    if (homeAttached) {
+      return { mark: true, text: ilSection(homeAttached.name || "your file") };
+    }
+    var ta = $("makeText");
+    return { mark: false, text: ilSection(ta ? ta.value : "") };
+  }
+
+  /* One line, at most IL_CHARS of it, with every run of whitespace flattened to
+     a single space. A newline left in would be a sprite with nothing to draw and
+     a hole in the middle of the words. The empty box says what the press says
+     about an empty box, because it is the same press. */
+  function ilSection(raw) {
+    var flat = String(raw == null ? "" : raw).replace(/\s+/g, " ").trim();
+    if (!flat) return "(empty)";
+    return flat.length > IL_CHARS ? flat.slice(0, IL_CHARS) : flat;
+  }
+
+  /* THE MARK IS THE ONE ON THE CHIP THE FILE CAME IN ON. Taken from the markup
+     rather than drawn again here, so the symbol that breaks apart can never be a
+     different paperclip from the one a person pressed to attach. */
+  function ilMarkNode() {
+    var btn = $("homeAttachBtn");
+    var svg = btn && btn.querySelector("svg");
+    return svg ? svg.cloneNode(true) : null;
+  }
+
+  /* THE ADVANCE IS MEASURED AND NEVER ASSUMED. Android's monospace face is
+     wider than a PC's, so a layout worked out from a guessed width overlaps on
+     one and spreads on the other. Ten characters, measured once a show. */
+  function ilCharWidth(stage) {
+    var probe = document.createElement("i");
+    probe.className = "il-sprite il-ch";
+    probe.style.cssText = "position:absolute;visibility:hidden;animation:none;transform:none";
+    probe.textContent = "0000000000";
+    stage.appendChild(probe);
+    var w = probe.getBoundingClientRect().width / 10;
+    probe.parentNode.removeChild(probe);
+    return w || IL_GLYPH_PX * 0.6;
+  }
+
+  /* The words, broken into lines that fit across the stage. Whole words where
+     they fit, because a person has to recognise what they typed, and a break
+     inside a word only where one word is longer than the line. */
+  function ilWrap(text, cols) {
+    var words = text.split(" ");
+    var lines = [], line = "";
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      while (w.length > cols) {
+        if (line) { lines.push(line); line = ""; }
+        lines.push(w.slice(0, cols));
+        w = w.slice(cols);
+      }
+      if (!w) continue;
+      if (!line) line = w;
+      else if (line.length + 1 + w.length <= cols) line += " " + w;
+      else { lines.push(line); line = w; }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  /* WHERE EVERY LETTER STARTS: the place it would sit if this were a block of
+     text, measured from the middle of the stage. It reads as what was typed for
+     as long as it takes a person to see it, and then it comes apart.
+     A space is a gap and not a sprite. There is nothing to draw and nothing to
+     swallow, and one that was drawn would be a letter arriving at the light
+     with no letter in it. */
+  function ilTextSpots(stage, source, side) {
+    var cw = ilCharWidth(stage);
+    var lh = IL_GLYPH_PX * 1.75;
+    var cols = Math.max(6, Math.floor((side * 0.86) / cw));
+    var lines = ilWrap(source.text, cols);
+    var rows = lines.length + (source.mark ? 1 : 0);
+    var top = -((rows - 1) / 2) * lh;
+    var spots = [], first = 0;
+
+    if (source.mark) { spots.push({ x: 0, y: top, cls: "il-mark" }); first = 1; }
+
+    for (var i = 0; i < lines.length; i++) {
+      var chars = lines[i].split("");
+      var x0 = -((chars.length - 1) / 2) * cw;
+      for (var j = 0; j < chars.length; j++) {
+        if (chars[j] === " ") continue;
+        spots.push({ x: x0 + j * cw, y: top + (first + i) * lh,
+                     text: chars[j], cls: "il-ch" });
+      }
+    }
+    return spots;
+  }
+
+  /* A SPRITE IS TWO BOXES, AND THE REASON IS THE SPIRAL. The orbit turns and
+     the sprite inside it walks straight in, so what is drawn is a curve and the
+     stylesheet needs no trigonometry. The angle and the radius are worked out
+     here, once, and the place in x and y is never used again.
+     The angle is set on the orbit alone. Custom properties inherit, so the
+     sprite reads the same one to take the orbit's turn back off itself. */
+  function ilSprite(spot, delayMs, spin) {
+    var orbit = document.createElement("i");
+    var a = Math.atan2(spot.y, spot.x) * 180 / Math.PI;
+    var r = Math.sqrt(spot.x * spot.x + spot.y * spot.y);
+
+    orbit.className = "il-orbit " + spot.cls + "-orbit";
+    orbit.style.setProperty("--a", a.toFixed(2) + "deg");
+    orbit.style.setProperty("--spin", Math.round(spin) + "deg");
+    orbit.style.setProperty("--d", Math.round(delayMs) + "ms");
+
+    var el = document.createElement("i");
+    el.className = "il-sprite " + spot.cls;
+    el.style.setProperty("--r", r.toFixed(1) + "px");
+    if (spot.text) el.textContent = spot.text;
+    if (spot.cls === "il-mark") {
+      var mark = ilMarkNode();
+      if (mark) el.appendChild(mark);
+    }
+    if (spot.bw) el.style.setProperty("--bw", spot.bw + "px");
+
+    orbit.appendChild(el);
+    return orbit;
+  }
+
+  /* THE DISC, BLOCK BY BLOCK. Each one is its own object: they arrive one at a
+     time in no order, which is what makes it materialise rather than sweep
+     round like a hand, and they are taken all at once.
+     THE GRID IS WALKED AND THE RING IS CUT OUT OF IT. Every cell whose middle
+     falls in the band between the hole and the rim becomes a block, so the edge
+     is a circle drawn in squares and the hole is a real hole. */
+  function ilDiscSpots(side) {
+    var R = side / 2;
+    var cell = R * IL_DISC_CELL;
+    var bw = Math.max(6, Math.round(cell * 0.84));    // the rest is the gap
+    var inner = R * IL_DISC_IN, outer = R * IL_DISC_OUT;
+    var half = Math.ceil(outer / cell);
+    var spots = [];
+    for (var gx = -half; gx <= half; gx++) {
+      for (var gy = -half; gy <= half; gy++) {
+        var x = gx * cell, y = gy * cell;
+        var d = Math.sqrt(x * x + y * y);
+        if (d < inner || d > outer) continue;
+        spots.push({ x: x, y: y, cls: "il-blk", bw: bw });
+      }
+    }
+    return spots;
+  }
+
+  /* AN ANIMATION THAT HAS RUN DOES NOT RUN AGAIN ON ITS OWN. The light holds at
+     its last frame, so a second show would open on a ball already grown and a
+     flare already spent. Taking the property off, reading the box, and putting
+     it back is what starts them from the beginning. The same move resetDisc()
+     makes for the tray. */
+  function ilRestart() {
+    var parts = [$("ilCore"), $("ilFlare")];
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i]) continue;
+      parts[i].style.animation = "none";
+      void parts[i].getBoundingClientRect();
+      parts[i].style.animation = "";
+    }
+  }
+
+  /* NOTHING BEHIND THE SHOW CAN BE REACHED WHILE IT IS UP. A phone takes every
+     other region out with display:none, so there is nothing there to reach. A
+     desktop leaves the whole board standing behind the dim, where a Tab would
+     walk straight into it, so every region beside the show is made inert for as
+     long as it runs. */
+  function ilInert(on) {
+    var grid = $("boardGrid");
+    if (!grid) return;
+    var kids = grid.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].id === "interlude") continue;
+      kids[i].inert = on;
+    }
+  }
+
+  var INTERLUDE = {
+    ms: IL_TOTAL_MS,
+
+    build: function (stage, source) {
+      ilRestart();
+      /* THE FOUR LENGTHS THE STYLESHEET NEEDS, written from the constants in
+         Section 2. The sheet holds no copy of any of them. */
+      stage.style.setProperty("--ms", IL_FALL_MS + "ms");
+      stage.style.setProperty("--grow", IL_SUCK_AT_MS + "ms");
+      stage.style.setProperty("--sms", IL_SUCK_MS + "ms");
+      stage.style.setProperty("--fms", IL_FLARE_MS + "ms");
+      stage.style.setProperty("--glyph", IL_GLYPH_PX + "px");
+
+      var side = stage.getBoundingClientRect().width;
+      var text = ilTextSpots(stage, source, side);
+      var disc = ilDiscSpots(side);
+      var frag = document.createDocumentFragment();
+
+      // The letters, spread over the time left once a fall is taken off, so the
+      // last one to set off is still swallowed before the disc is pulled.
+      var spread = Math.max(0, IL_SUCK_AT_MS - IL_FALL_MS);
+      for (var i = 0; i < text.length; i++) {
+        var at = text.length < 2 ? 0 : (i / (text.length - 1)) * spread;
+        frag.appendChild(ilSprite(text[i], at, IL_SPIN_DEG + Math.random() * 180));
+      }
+
+      // The disc arrives in no order, which is what makes it materialise rather
+      // than sweep round like a hand.
+      for (var k = 0; k < disc.length; k++) {
+        frag.appendChild(ilSprite(disc[k], IL_DISC_AT_MS + Math.random() * IL_DISC_MS,
+                                  IL_SPIN_DEG));
+      }
+
+      stage.appendChild(frag);
+      // ONE CLASS AT ONE MOMENT carries the whole ending: the disc is pulled in,
+      // the flare fires as it lands, and the throb stops instead of fading out
+      // while it is still lit.
+      ilLater(function () { stage.classList.add("suck"); }, IL_SUCK_AT_MS);
+    },
+
+    clear: function (stage) {
+      stage.classList.remove("suck");
+      // The light and the flare are in the markup and stay. Everything else was
+      // built for this show and goes with it, so a show that has run leaves
+      // nothing behind for the next one to clean up.
+      var gone = stage.querySelectorAll(".il-orbit");
+      for (var i = 0; i < gone.length; i++) {
+        gone[i].parentNode.removeChild(gone[i]);
+      }
+    }
+  };
+
+  /* THE SEAM. The press calls this and waits on what it hands back.
+     THE PANEL IS ON SCREEN BEFORE THE SHOW IS BUILT. The layout is measured off
+     the stage, and on a phone the stage has no box at all until the board is
+     showing it, so a show built any earlier is laid out inside nothing. */
+  function playInterlude() {
+    var panel = $("interlude"), stage = $("ilStage");
+    if (!panel || !stage || !interludeOn() || ilRunning) return Promise.resolve();
+
+    ilRunning = true;
+    panel.hidden = false;
+    ilInert(true);
+    setView("making", true);
+    INTERLUDE.build(stage, interludeSource());
+
+    /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone because
+       nothing moves there, and this is the one thing that does. The board behind
+       is inert, so focus must not be left standing on it. */
+    var head = $("headMaking");
+    if (head) head.focus();
+
+    ilLater(endInterlude, INTERLUDE.ms);
+    return new Promise(function (resolve) { ilResolve = resolve; });
+  }
+
+  /* THE ONE WAY OUT, WHATEVER ENDED IT: the clock, the skip control, Escape, or
+     an encode that threw. It runs once, and a second call has nothing left to
+     resolve.
+     IT GOES BACK TO MAKE AND NOT ON TO MADE. Only the press knows whether there
+     is a picture yet, and often there is not: somebody who skips is still
+     waiting on the encode. Left on the show's own screen with the panel taken
+     off, a phone would be looking at nothing at all, because that screen has no
+     other region on it. Make is where the show came from and it is always
+     there. The press moves on to Made in its own time, and on a first press
+     that happens in the same turn, so this screen is never painted. */
+  function endInterlude() {
+    if (!ilRunning) return;
+    ilRunning = false;
+    ilStopTimers();
+
+    var panel = $("interlude"), stage = $("ilStage");
+    if (stage) INTERLUDE.clear(stage);
+    if (panel) panel.hidden = true;
+    ilInert(false);
+    setView("make");
+
+    /* FOCUS CANNOT BE LEFT ON WHAT HAS GONE, or the next Tab starts again at the
+       top of the document. A phone's next screen takes focus on its own through
+       focusView, and a desktop has no change of screen, so it is put back on the
+       heading of the board it came from. */
+    if (!touchPointer.matches) {
+      var head = $("headMake");
+      if (head) head.focus();
+    }
+
+    var done = ilResolve;
+    ilResolve = null;
+    if (done) done();
+  }
+
+  function wireInterlude() {
+    var skip = $("ilSkip"), always = $("ilAlways");
+    if (!skip || !always) return;
+
+    skip.addEventListener("click", function () { endInterlude(); });
+
+    always.addEventListener("change", function () {
+      // Ticked means no show, so the stored preference is the box read the other
+      // way round. Somebody who has said they never want one does not want the
+      // rest of this one either.
+      setInterludePref(!always.checked);
+      endInterlude();
+    });
+
+    /* ESCAPE IS THE KEYBOARD'S SKIP. It is on the document rather than the
+       panel, because the show is not a native dialog and Escape would otherwise
+       only work while focus happened to be inside it. */
+    document.addEventListener("keydown", function (e) {
+      if (!ilRunning || e.key !== "Escape") return;
+      e.preventDefault();
+      endInterlude();
+    });
+  }
+
+
+  /* ==========================================================================
      THE HOME BOARD - MAKE, AND THE DISC THAT COMES OUT
      ========================================================================== */
 
@@ -3650,10 +4101,25 @@
       var made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
         category: discCategory(homeAttached, !!opts.password), customText: opts.label };
 
+      /* THE SHOW AND THE WORK RUN TOGETHER, AND THE SHOW IS THE FLOOR. The
+         encode is usually over in a blink, so the show is not covering a wait:
+         it is the wait, and it is there to say what the press did. A big
+         attachment and the first press of all, which fetches the two faces,
+         finish underneath it and cost nothing on top of it.
+         WITH NO SHOW THIS IS AN ALREADY RESOLVED PROMISE, and the two lines
+         around the encode are the only trace of it in the press.
+         THE SHOW BELONGS TO THE MAKE BUTTON AND TO NOTHING ELSE. keepSaying is
+         the background switch pressing the same picture again, where a person
+         is changing one thing about a picture they already have. Taking them
+         through the whole show for that would move the screen out from under
+         the switch they are still looking at. */
+      var show = keepSaying ? Promise.resolve() : playInterlude();
+
       // The faces have to be in before the canvas can letter with them.
       await ensureDiscFonts();
       var png = await PuttyPNG.encode(input, opts);
       homeLastBlob = png.blob;
+      await show;
       maybeCelebrate("make");
       tossDisc(function () {
         var cd = $("cd");
@@ -3669,7 +4135,9 @@
         // The PuttyPNG exists and the tray is where it lives. On a phone that
         // is a screen of its own, so the flag moves before the disc ejects
         // into it. On a desktop nothing moves and the flag is a record.
-        setView("made");
+        // It slides in, because this is the far side of the handover the show
+        // exists to make: the picture arrives from where the words went.
+        setView("made", true);
         // A timer, not requestAnimationFrame. The frame callback does not run
         // in a headless test, and the disc would then never be told to come out.
         setTimeout(function () {
@@ -3679,6 +4147,10 @@
         }, DISC_EJECT_MS);
       });
     } catch (err) {
+      /* A SHOW WITH NOTHING COMING AFTER IT HAS TO BE TAKEN OFF. The encode
+         throws underneath it, and the message belongs on the screen with the
+         button that failed, not over a panel saying it is working. */
+      endInterlude();
       toast(friendly(err), "bad");
     }
     lab.innerHTML = label;
@@ -4007,6 +4479,17 @@
     // How the console and the probe drive the dropdown without opening it.
     window.PuttyPNGDebug.pickExample = pickExample;
     window.PuttyPNGDebug.offerExample = offerExample;
+    /* HOW THE SHOW IS WATCHED WITHOUT PRESSING ANYTHING. A press encodes, and
+       what a probe needs is the panel on screen with its sprites in it so it can
+       be stopped at a chosen moment and measured. These two are the same pair
+       the press uses. */
+    window.PuttyPNGDebug.playInterlude = playInterlude;
+    window.PuttyPNGDebug.endInterlude = endInterlude;
+    /* HOW A PROBE THAT IS NOT ABOUT THE SHOW TURNS IT OFF. Pressing Make now
+       takes the best part of four seconds and ends on a different screen, so a
+       probe measuring the Made screen has to say it wants none of it. This is
+       the switch in Advanced, reached without opening the drawer. */
+    window.PuttyPNGDebug.setInterludePref = setInterludePref;
     // The side the engine says the picture will be, which is what the tray is
     // capped at and what the over-512 warning is read from.
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
@@ -4026,6 +4509,10 @@
     animationsOn = (savedAnim === null) ? !prefersLessMotion() : (savedAnim === "on");
     var savedCeleb = readPref("celebration");
     celebrationOn = (savedCeleb === null) ? CELEBRATION_DEFAULT : (savedCeleb === "on");
+    // The show is on with nothing stored. A person who has never pressed the
+    // button is the person it is for.
+    var savedShow = readPref("interlude");
+    if (savedShow !== null) interludeShow = (savedShow === "on");
 
     markCurrentPage();
     wireHome();

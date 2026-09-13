@@ -940,9 +940,15 @@
                 </div>
           </div>
           <div class="subpanel hidden" data-sub="display" role="tabpanel" aria-label="Display">
-              <!-- Display. Two separate switches: one for the motion, one
-                   for the celebration. A person may want one without the
-                   other, so neither controls the other. -->
+              <!-- Display. Animations and Celebration are separate on purpose:
+                   a person may want one without the other, so neither controls
+                   the other.
+                   MAKING SHOW IS THE ONE THAT IS NOT INDEPENDENT. It is
+                   movement and nothing else, so animations off takes it with
+                   everything else and this switch only decides whether it
+                   happens while animations are on. It is here because the box
+                   on the panel itself turns off the screen that box is on, and
+                   something has to be able to turn it back on. -->
               <div style="margin-top:16px; border-top:1px solid var(--line); padding-top:12px;">
                 <div class="small" style="font-weight:600; margin-bottom:8px;">Display</div>
                 <div class="row" style="gap:20px;">
@@ -954,8 +960,12 @@
                     <input type="checkbox" id="optCelebration" checked>
                     <span class="track"></span> Celebration
                   </label>
+                  <label class="switch">
+                    <input type="checkbox" id="optInterlude" checked>
+                    <span class="track"></span> Making show
+                  </label>
                 </div>
-                <div class="small muted" style="margin-top:6px;">Animations is the movement. Celebration is the confetti. Your choice is remembered on this device.</div>
+                <div class="small muted" style="margin-top:6px;">Animations is the movement. Celebration is the confetti. Making show is what happens between pressing the button and your picture. Your choice is remembered on this device.</div>
               </div>
           </div>
         </div>
@@ -1074,6 +1084,60 @@
           </div>
         </div>
 
+        <!-- THE SHOW BETWEEN MAKE AND MADE. What a person handed over breaks
+             apart, is drawn into the middle, and a disc forms over the light
+             before the whole lot is swallowed and the finished picture arrives.
+             It says nothing the board does not already say. It is there to show
+             what pressing the button does.
+
+             IT IS ONE REGION AND IT IS MEANT TO BE REPLACEABLE. Everything the
+             show needs is inside it and scripts.js reaches all of it through
+             one object, so another show can take its place, and taking this out
+             leaves the press on the path it took before there was a show.
+
+             ONE ELEMENT, TWO FRAMES. A phone makes this the screen the board
+             slides to, in styles.css Section 7. A desktop shows every region at
+             once and has no screen to slide to, so there it is fixed over the
+             board with the page dimmed behind it, the way the peek panel and
+             the title editor already stand over the page.
+
+             THE SPRITES ARE NOT IN THE MARKUP. Every letter, every block of the
+             disc and the light in the middle are built when the show starts and
+             taken out again when it ends, so a page nobody has pressed carries
+             none of them and a show that has run leaves nothing behind. -->
+        <div class="interlude" id="interlude" hidden>
+          <div class="il-card">
+            <!-- ONE WAY OUT, READ TWO WAYS. A phone has the room for the word
+                 beside the mark. A desktop keeps the mark alone in the corner,
+                 in red, which is how its other modals close. Two buttons would
+                 be two things doing one job. -->
+            <button type="button" class="il-x" id="ilSkip" aria-label="Skip the animation">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M7.5 7.5l9 9M16.5 7.5l-9 9" fill="none" stroke="currentColor"
+                      stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <span class="say">Skip</span>
+            </button>
+            <h2 id="headMaking" tabindex="-1">MAKING...</h2>
+            <p class="il-sub">Data is being compressed... hold tight!</p>
+            <!-- aria-hidden, BECAUSE A FIELD OF SINGLE LETTERS SAYS NOTHING.
+                 The heading and the line above it are the whole message, and
+                 they are read once. -->
+            <div class="il-stage" id="ilStage" aria-hidden="true">
+              <div class="il-core" id="ilCore"></div>
+              <div class="il-flare" id="ilFlare"></div>
+            </div>
+            <!-- THE SWITCH TURNS OFF THE SCREEN THE SWITCH IS ON, so it is not
+                 the only one: the same preference is a switch in Advanced,
+                 under Display, which is where this site keeps what it
+                 remembers. Both read and write through one routine. -->
+            <label class="switch il-always">
+              <input type="checkbox" id="ilAlways">
+              <span class="track"></span> Always skip
+            </label>
+          </div>
+        </div>
+
       </div>
 
     </main>
@@ -1107,7 +1171,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.18.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.19.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
