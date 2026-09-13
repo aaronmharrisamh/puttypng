@@ -180,7 +180,9 @@
   var DISC_DRAG_MS = 300;      // the carried copy fading after it is let go
   var DISC_SLACK_PX = 5;       // movement before a press counts as a drag
   var HOME_SAVE_MS = 4000;     // how long a download URL is kept alive
-  var VIEW_SLIDE_MS = 280;     // the screen that arrives coming in from the right
+  var VIEW_SLIDE_MS = 500;     // one screen sliding out as the next slides in
+  var VIEW_SLIDE_SLACK_MS = 60;  // what a slow phone takes to picture the new screen
+  var VIEW_SLIDE_START_MS = 250; // a slide not begun by then is given up
 
   /* THE SHOW BETWEEN MAKE AND MADE, TIMED IN ONE PLACE.
      The stage in Section 5 reads every one of these, and hands the stylesheet
@@ -718,37 +720,133 @@
      its CSS never reads this attribute. The phone shows the one region named
      here. Setting it on a desktop is harmless and keeps one code path for both
      shapes, which is the whole reason there is one block of markup. */
-  function setView(name, slide) {
+  /* IT HANDS BACK A PROMISE THAT RESOLVES WHEN THE SCREEN HAS ARRIVED: at once
+     when nothing slides, and once the slide is over when something does. A
+     caller that has more to do on the new screen waits on it, so nothing starts
+     moving on a screen that is still moving itself.
+     changed() RUNS THE MOMENT THE NEW SCREEN IS IN PLACE, before a frame of it
+     is drawn. It is the one moment a caller can lay something out on a screen
+     that is about to slide in, so the screen arrives already showing it. */
+  function setView(name, slide, changed) {
     var grid = $("boardGrid");
-    if (!grid || grid.getAttribute("data-view") === name) return;
+    if (!grid) return Promise.resolve();
+    var turn = ++viewTurn;
+    if (slide && canSlide() && grid.getAttribute("data-view") !== name) {
+      return slideView(grid, name, changed, turn);
+    }
+
+    /* A CHANGE THAT DOES NOT SLIDE ENDS ANY SLIDE STILL RUNNING. Skipping the
+       show part way through its slide goes back to Make at once, and a slide
+       left to finish would carry the show's screen in over the one asked for. */
+    if (activeSlide) activeSlide.skipTransition();
+    if (grid.getAttribute("data-view") !== name) showView(grid, name);
+    if (changed) changed();
+    var done = Promise.resolve();
+    done.underway = done;
+    return done;
+  }
+
+  // Everything a change of screen does, whether or not the change slides.
+  function showView(grid, name) {
     grid.setAttribute("data-view", name);
-    if (slide) slideBoard(grid);
     focusView(name);
     paintGlow();
     paintMakeSay(false);
     paintMadeScreen();
   }
 
-  /* THE SCREEN THAT ARRIVES COMES IN FROM THE RIGHT.
-     Only the arriving region moves. A region the grid does not ask for is taken
-     out with display:none, so there is no outgoing screen left to move and
-     nothing here softens one to visibility to get an animation out of it.
+  /* A SLIDE NEEDS A PHONE, MOVEMENT, AND A BROWSER THAT CAN DO IT. A desktop
+     shows every region at once, so both pictures of its board would be the same
+     picture sliding past itself. Animations off is a person asking for nothing
+     to move. A browser without view transitions changes screen at once, the way
+     every screen changed before there was a slide. */
+  function canSlide() {
+    return touchPointer.matches && animationsOn &&
+           typeof document.startViewTransition === "function";
+  }
 
-     THE CALLER ASKS FOR IT, AND ONLY THE SHOW DOES. The other screens change
-     because a person pressed something and they are better arriving at once.
-     The two handovers around the show are a journey, which is the whole reason
-     the show exists, so those two ask and nothing else does. */
-  var slideTimer = null;
+  /* THE OLD SCREEN SLIDES OUT AS THE NEW ONE SLIDES IN.
+     A view transition, because the view contract cannot give a slide anything
+     to move. A screen the grid does not ask for is display:none, so there is no
+     outgoing screen left on the page. The browser pictures the board before the
+     change and after it, and slides the two pictures past each other over a
+     page that has already changed underneath. Nothing in the contract bends.
+     It used to be the arriving screen alone, 22 per cent of the way over 280ms,
+     with the old one gone before it started: a snap with a short run-up.
 
-  function slideBoard(grid) {
-    // The length is named here and read there, so the class and the animation
-    // can never be told two different numbers.
-    grid.style.setProperty("--slide", VIEW_SLIDE_MS + "ms");
-    grid.classList.add("sliding");
-    if (slideTimer) clearTimeout(slideTimer);
-    slideTimer = setTimeout(function () {
-      grid.classList.remove("sliding");
-    }, VIEW_SLIDE_MS);
+     ONLY THE BOARD SLIDES, AND ONLY WHILE IT SLIDES. vt-slide names the board
+     and takes the name off the page, so the masthead and the footer stand still
+     rather than fading through themselves. The class comes off when the slide is
+     over, because a board named for good would change the fade between pages.
+
+     THE SHOW IS NOT MADE TO WAIT ON A SLIDE THAT NEVER COMES. finished is the
+     browser's word that the slide is over, and a browser that cannot draw the
+     slide gives that word four seconds late. A timer that starts when the new
+     screen is in place stands in for it, so the most anyone waits is the slide. */
+  var activeSlide = null;
+  var slideRun = 0;
+
+  /* EVERY CHANGE OF SCREEN TAKES A TURN, AND A SLIDE ONLY LANDS ON ITS OWN.
+     The browser runs a slide's change a frame or two after it is asked for.
+     Anything that changes the screen in between, a skip in the first instant
+     of the show being the one that happens, has already decided where the board
+     is, and a late change would put the show's screen back over it. */
+  var viewTurn = 0;
+
+  function slideView(grid, name, changed, turn) {
+    var root = document.documentElement;
+    var run = ++slideRun;
+    root.style.setProperty("--slide", VIEW_SLIDE_MS + "ms");
+    root.classList.add("vt-slide");
+
+    var slide = null, begun = false;
+    var markUnderway = function () {};
+    var underway = new Promise(function (resolve) { markUnderway = resolve; });
+
+    var arrived = new Promise(function (resolve) {
+      var landed = false;
+      function arrive() {
+        if (landed) return;
+        landed = true;
+        markUnderway();
+        resolve();
+      }
+      slide = document.startViewTransition(function () {
+        begun = true;
+        if (turn !== viewTurn) return;
+        showView(grid, name);
+        if (changed) changed();
+        setTimeout(arrive, VIEW_SLIDE_MS + VIEW_SLIDE_SLACK_MS);
+      });
+      activeSlide = slide;
+      function over() {
+        // A later slide owns the class now, and taking it off would unname the
+        // board in the middle of that one.
+        if (run !== slideRun) return arrive();
+        activeSlide = null;
+        root.classList.remove("vt-slide");
+        arrive();
+      }
+      slide.finished.then(over, over);
+    });
+
+    /* UNDER WAY IS WHEN BOTH PICTURES ARE TAKEN. From there the slide runs off
+       the main thread, and heavy work cannot make it stutter, so a caller with
+       heavy work to do waits for this rather than for the whole slide. */
+    slide.ready.then(markUnderway, markUnderway);
+
+    /* A SLIDE THAT HAS NOT BEGUN IS GIVEN UP. A browser needs a free frame to
+       picture the old screen, and one that has not had one by now would have
+       the person looking at a screen that has stopped responding. The change is
+       made at once instead. A phone that can slide begins in a frame or two, so
+       this never fires there; the test harness draws no frames and needs it
+       every time. */
+    setTimeout(function () {
+      if (!begun) slide.skipTransition();
+    }, VIEW_SLIDE_START_MS);
+
+    arrived.underway = underway;
+    return arrived;
   }
 
   /* WHERE FOCUS GOES WHEN THE SCREEN CHANGES. The heading of the view that is
@@ -3689,14 +3787,17 @@
      contract: another show replaces INTERLUDE, and deleting this block and its
      region leaves the board working.
 
-     THE STAGE IS THREE MEMBERS AND NOTHING ELSE KNOWS WHAT IS IN THEM. ms is
-     how long the press should wait, build() puts the show on, and clear() takes
-     it off again. The timeline inside build() is the stage's own business.
+     THE STAGE IS FOUR MEMBERS AND NOTHING ELSE KNOWS WHAT IS IN THEM. ms is how
+     long the show runs once it is moving, build() lays it out standing still,
+     start() sets it moving, and clear() takes it off again. The seam decides
+     when each is called; the timeline inside them is the stage's own business.
      ========================================================================== */
 
   var ilTimers = [];       // every timer the show owns, so skipping cancels all
   var ilResolve = null;    // what the press is waiting on
   var ilRunning = false;
+  var ilRun = 0;           // which show this is, so a late step of an old one stops
+  var ilOver = false;      // its time is up, and it is only waiting to be taken down
 
   function ilLater(fn, ms) { ilTimers.push(setTimeout(fn, ms)); }
 
@@ -3950,7 +4051,13 @@
   var INTERLUDE = {
     ms: IL_TOTAL_MS,
 
+    /* LAID OUT, AND STANDING STILL. Every animation in the show is born paused
+       under hold, so whatever the screen shows while it slides in is the show's
+       first frame: the words as text, the light small, the disc not begun. hold
+       goes on before anything is built or restarted, so nothing gets a frame of
+       movement in between. */
     build: function (stage, source) {
+      stage.classList.add("hold");
       ilRestart();
       /* THE FOUR LENGTHS THE STYLESHEET NEEDS, written from the constants in
          Section 2. The sheet holds no copy of any of them. */
@@ -3989,6 +4096,13 @@
       }
 
       stage.appendChild(frag);
+    },
+
+    /* SET MOVING. Everything built starts from its first frame at this one
+       moment, and the ending is timed from here rather than from the build, so
+       a slide however long it took costs the show none of its own time. */
+    start: function (stage) {
+      stage.classList.remove("hold");
       // ONE CLASS AT ONE MOMENT carries the whole ending: the disc is pulled in,
       // the flare fires as it lands, and the throb stops instead of fading out
       // while it is still lit.
@@ -3996,7 +4110,7 @@
     },
 
     clear: function (stage) {
-      stage.classList.remove("suck");
+      stage.classList.remove("suck", "hold");
       // The light and the flare are in the markup and stay. Everything else was
       // built for this show and goes with it, so a show that has run leaves
       // nothing behind for the next one to clean up.
@@ -4008,40 +4122,79 @@
   };
 
   /* THE SEAM. The press calls this and waits on what it hands back.
-     THE PANEL IS ON SCREEN BEFORE THE SHOW IS BUILT. The layout is measured off
-     the stage, and on a phone the stage has no box at all until the board is
-     showing it, so a show built any earlier is laid out inside nothing. */
+
+     LAID OUT AS ITS SCREEN ARRIVES, SET MOVING ONCE IT HAS. build() runs in the
+     instant the show's screen is in place, so the screen that slides in is
+     already carrying the words, standing still. start() waits for the slide to
+     be over. A show that began moving while its own screen was still sliding
+     is the snap this replaced, and a person could not follow either of them.
+     THE STAGE HAS NO BOX UNTIL ITS SCREEN IS UP. The layout is measured off it,
+     and on a phone the board is not showing it until the change has run, which
+     is the other reason the build waits for the change. */
   function playInterlude() {
     var panel = $("interlude"), stage = $("ilStage");
     if (!panel || !stage || !interludeOn() || ilRunning) return Promise.resolve();
 
     ilRunning = true;
+    ilOver = false;
+    var run = ++ilRun;
     panel.hidden = false;
     ilInert(true);
-    setView("making", true);
-    INTERLUDE.build(stage, interludeSource());
+    var skipBtn = $("ilSkip");
+    if (skipBtn) skipBtn.disabled = false;
+    var over = new Promise(function (resolve) { ilResolve = resolve; });
 
-    /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone because
-       nothing moves there, and this is the one thing that does. The board behind
-       is inert, so focus must not be left standing on it. */
-    var head = $("headMaking");
-    if (head) head.focus();
+    var change = setView("making", true, function () {
+      if (!ilRunning || run !== ilRun) return;
+      INTERLUDE.build(stage, interludeSource());
+      /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone
+         because nothing moves there, and this is the one thing that does. The
+         board behind is inert, so focus must not be left standing on it. */
+      var head = $("headMaking");
+      if (head) head.focus();
+    });
+    change.then(function () {
+      // Skipped while its screen was still arriving: there is nothing to start.
+      if (!ilRunning || run !== ilRun) return;
+      INTERLUDE.start(stage);
+      ilLater(interludeTimeUp, INTERLUDE.ms);
+    });
 
-    ilLater(endInterlude, INTERLUDE.ms);
-    return new Promise(function (resolve) { ilResolve = resolve; });
+    /* WHEN THE PRESS MAY START ITS WORK. The slide needs a free frame or two to
+       picture both screens, and an encode that began in the same instant could
+       take them. Once they are taken the slide runs on its own. */
+    over.ready = change.underway || change;
+    return over;
   }
 
-  /* THE ONE WAY OUT, WHATEVER ENDED IT: the clock, the skip control, Escape, or
-     an encode that threw. It runs once, and a second call has nothing left to
-     resolve.
-     IT GOES BACK TO MAKE AND NOT ON TO MADE. Only the press knows whether there
-     is a picture yet, and often there is not: somebody who skips is still
-     waiting on the encode. Left on the show's own screen with the panel taken
-     off, a phone would be looking at nothing at all, because that screen has no
-     other region on it. Make is where the show came from and it is always
-     there. The press moves on to Made in its own time, and on a first press
-     that happens in the same turn, so this screen is never painted. */
-  function endInterlude() {
+  /* THE SHOW'S TIME IS UP, AND IT STAYS WHERE IT IS.
+     The press is told it can go on, and nothing is taken down. The press takes
+     the show down itself, in the same change that brings Made up, so the screen
+     that slides out is the show's own.
+     IT USED TO GO BACK TO MAKE HERE, and that was invisible while screens
+     changed at once, because Made followed in the same turn. A slide pictures
+     the screen as it stands a frame later, and that was Make: the show's screen
+     snapped to Make, and then Make slid away.
+     A PICTURE STILL BEING PRESSED IS WAITED FOR ON THIS SCREEN. It still says
+     it is working, and it is still true. */
+  function interludeTimeUp() {
+    /* THERE IS NOTHING LEFT TO SKIP. The press may already be sliding to Made,
+       and a skip that landed in that instant would cancel the slide and leave
+       the finished picture behind a Make screen with nothing to bring it back. */
+    ilOver = true;
+    var skip = $("ilSkip");
+    if (skip) skip.disabled = true;
+    var done = ilResolve;
+    ilResolve = null;
+    if (done) done();
+  }
+
+  /* TAKE THE SHOW DOWN AND LEAVE THE SCREEN TO THE CALLER. The press hands this
+     to the change that brings Made up, so it runs in the instant Made is in
+     place: the show's screen is off the board by then and is cleared unseen. With
+     no show up it does nothing, which is what lets the press hand it over every
+     time. */
+  function finishInterlude() {
     if (!ilRunning) return;
     ilRunning = false;
     ilStopTimers();
@@ -4050,20 +4203,36 @@
     if (stage) INTERLUDE.clear(stage);
     if (panel) panel.hidden = true;
     ilInert(false);
-    setView("make");
 
-    /* FOCUS CANNOT BE LEFT ON WHAT HAS GONE, or the next Tab starts again at the
-       top of the document. A phone's next screen takes focus on its own through
-       focusView, and a desktop has no change of screen, so it is put back on the
-       heading of the board it came from. */
-    if (!touchPointer.matches) {
+    /* FOCUS GOES TO THE SCREEN THAT IS UP, AND ONLY NOW CAN IT. Focus cannot be
+       left on what has gone, or the next Tab starts again at the top of the
+       document. The board was inert while the show stood over it, and an inert
+       heading cannot take focus, so the change that brought Made up asked for
+       its heading and got nothing. The board is reachable again from here.
+       A phone's heading is the heading of whichever screen is up. A desktop has
+       no change of screen, so its focus goes back to the board's Make heading. */
+    if (touchPointer.matches) {
+      focusView($("boardGrid").getAttribute("data-view"));
+    } else {
       var head = $("headMake");
       if (head) head.focus();
     }
 
-    var done = ilResolve;
-    ilResolve = null;
-    if (done) done();
+    interludeTimeUp();
+  }
+
+  /* THE WAY OUT BEFORE THE END: the skip control, Escape, or an encode that
+     threw. It runs once, and a second call has nothing left to take down.
+     IT GOES BACK TO MAKE AND NOT ON TO MADE. Only the press knows whether there
+     is a picture yet, and often there is not: somebody who skips is still
+     waiting on the encode. Left on the show's own screen with the panel taken
+     off, a phone would be looking at nothing at all, because that screen has no
+     other region on it. Make is where the show came from and it is always
+     there, and the press slides on to Made from it when the picture is ready. */
+  function endInterlude() {
+    if (!ilRunning) return;
+    finishInterlude();
+    setView("make");
   }
 
   function wireInterlude() {
@@ -4077,14 +4246,15 @@
       // way round. Somebody who has said they never want one does not want the
       // rest of this one either.
       setInterludePref(!always.checked);
-      endInterlude();
+      if (!ilOver) endInterlude();
     });
 
     /* ESCAPE IS THE KEYBOARD'S SKIP. It is on the document rather than the
        panel, because the show is not a native dialog and Escape would otherwise
-       only work while focus happened to be inside it. */
+       only work while focus happened to be inside it. Like the button, it has
+       nothing to skip once the show's time is up. */
     document.addEventListener("keydown", function (e) {
-      if (!ilRunning || e.key !== "Escape") return;
+      if (!ilRunning || ilOver || e.key !== "Escape") return;
       e.preventDefault();
       endInterlude();
     });
@@ -4158,6 +4328,11 @@
          through the whole show for that would move the screen out from under
          the switch they are still looking at. */
       var show = keepSaying ? Promise.resolve() : playInterlude();
+      /* THE SLIDE IS UNDER WAY BEFORE THE WORK BEGINS. Pressing a picture is
+         heavy for a moment, and a phone's slide needs that moment free to take
+         its two pictures. It waits a frame or two for them and no more, because
+         once they are taken the slide runs without the main thread. */
+      if (show.ready) await show.ready;
 
       // The faces have to be in before the canvas can letter with them.
       await ensureDiscFonts();
@@ -4181,14 +4356,27 @@
         // into it. On a desktop nothing moves and the flag is a record.
         // It slides in, because this is the far side of the handover the show
         // exists to make: the picture arrives from where the words went.
-        setView("made", true);
-        // A timer, not requestAnimationFrame. The frame callback does not run
-        // in a headless test, and the disc would then never be told to come out.
-        setTimeout(function () {
-          cd.classList.add("out"); homeDiscOut = true;
-          // The screen can only be right once there is a disc to be right about.
-          paintMadeScreen();
-        }, DISC_EJECT_MS);
+        /* THE DISC COMES OUT ONCE THE SCREEN HAS STOPPED. An eject that ran while
+           the screen slid was two movements at once, and the slide hides the
+           slot the disc comes out of. A desktop has no slide, so there the
+           promise is already kept and the disc comes out as it always did.
+           IT CHECKS IT IS STILL THIS DISC, ON THIS SCREEN. The slide is long
+           enough for the corner's Close to be pressed, and a late eject would
+           push a disc out onto Make, where nothing is showing the tray. */
+        var run = homeDiscRun;
+        /* THE SHOW COMES DOWN IN THE CHANGE THAT BRINGS MADE UP, so the screen
+           a phone slides out is the show's own and not a Make screen put back
+           for one frame. With no show up, finishInterlude does nothing. */
+        setView("made", true, finishInterlude).then(function () {
+          // A timer, not requestAnimationFrame. The frame callback does not run
+          // in a headless test, and the disc would then never be told to come out.
+          setTimeout(function () {
+            if (run !== homeDiscRun || $("boardGrid").getAttribute("data-view") !== "made") return;
+            cd.classList.add("out"); homeDiscOut = true;
+            // The screen can only be right once there is a disc to be right about.
+            paintMadeScreen();
+          }, DISC_EJECT_MS);
+        });
       });
     } catch (err) {
       /* A SHOW WITH NOTHING COMING AFTER IT HAS TO BE TAKEN OFF. The encode
@@ -4549,7 +4737,11 @@
                disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX },
                // How long a section is and how far it may move to land on a
                // word, which is the room a probe has to allow either side.
-               interlude: { chars: IL_CHARS, reach: IL_WORD_REACH } };
+               interlude: { chars: IL_CHARS, reach: IL_WORD_REACH },
+               // How long a phone's slide is, and the most a slide that never
+               // draws may keep the next step waiting.
+               slide: { ms: VIEW_SLIDE_MS, slack: VIEW_SLIDE_SLACK_MS,
+                        start: VIEW_SLIDE_START_MS } };
     };
 
     // A choice made in Advanced wins, in both directions. With no choice

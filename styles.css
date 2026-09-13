@@ -395,11 +395,19 @@ nav.tabs a {
 .head h2 .w-b { display: none; }
 
 /* The heading takes focus when a phone changes screen. It is not in the tab
-   order, so it must not look like a control that is. */
-.head h2:focus { outline: none; }
-.head h2:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 4px; }
+   order, so it must not look like a control that is. The show's heading is one
+   of them: it names a screen and takes focus in the same way. */
+.head h2:focus,
+.il-card h2:focus { outline: none; }
+.head h2:focus-visible,
+.il-card h2:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 4px; }
 
-.head h2 {
+/* EVERY SCREEN'S NAME IS WRITTEN THE SAME WAY. Make, Made!, Load, Loaded! and
+   Making... are one rule, so the show's heading cannot drift from the board's.
+   It had a rule of its own until v2.20.1, in black and at a size of its own,
+   and it read as a different page's title. */
+.head h2,
+.il-card h2 {
   font-family: var(--display-font), cursive;
   font-size: clamp(27px, 4.5vw, 41px);
   font-weight: 400;
@@ -2120,7 +2128,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      its own. The corner pill centres against the word rather than sitting on
      its baseline. The clamp keeps a tablet at the desktop's size. */
   .head { align-items: center; gap: 4px 12px; }
-  .head h2 { font-size: clamp(26px, 4.5vw, 41px); }
+  .head h2,
+  .il-card h2 { font-size: clamp(26px, 4.5vw, 41px); }
   .head .say { line-height: 1.45; }
 
   .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad"; }
@@ -2153,17 +2162,6 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      this section. This block is the contract, which says which regions each
      screen has, and the rules that change a component are kept with it. */
 
-  /* THE SCREEN THAT ARRIVES COMES IN FROM THE RIGHT. Only the region the grid
-     is showing can move: the rest are display:none and an animation cannot
-     reach them. The length is written in by scripts.js, which is where the
-     handover is timed, so there is no second copy of it here.
-     overflow IS FOR THE 280ms THE SLIDE TAKES. A region standing to the right
-     of its place makes the page scrollable sideways while it is there. clip is
-     the one that does not make a scroll container; hidden is what a browser
-     that has not learned clip falls back to. */
-  .board.sliding { overflow-x: hidden; overflow-x: clip; }
-  .board.sliding > * { animation: il-slide-in var(--slide, 280ms) cubic-bezier(.3, 0, .2, 1); }
-
   /* The heading names the screen. The first word is the desktop's, the second
      belongs to the screen this phone has arrived at. */
   .board[data-view="made"]   .head.hm h2 .w-a,
@@ -2171,6 +2169,51 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .board[data-view="made"]   .head.hm h2 .w-b,
   .board[data-view="loaded"] .head.hl h2 .w-b { display: inline; }
 }
+
+/* CHANGING SCREEN ON A PHONE: THE OLD SCREEN SLIDES OUT AS THE NEW ONE SLIDES IN.
+   scripts.js makes the change inside a view transition and puts vt-slide on the
+   page for as long as it lasts. The browser pictures the board before the change
+   and after it, and these rules slide the two pictures past each other. The real
+   board has already changed underneath, so the contract above is never bent to
+   get a slide out of it.
+
+   THE BOARD IS NAMED ONLY WHILE IT SLIDES, AND THE PAGE IS UNNAMED. The masthead
+   and the footer stand still rather than fading through themselves, and a board
+   named for good would change the fade between pages that @view-transition
+   gives the whole site.
+
+   A WHOLE SCREEN'S WIDTH EACH WAY. Moved by the board's own width, each picture
+   left a sliver of itself standing in the side gutter. The length is --slide,
+   written by scripts.js from VIEW_SLIDE_MS, and the curve sets off slowly and
+   stops slowly, so neither picture jumps as it starts or ends.
+
+   THE FOOTER GLIDES TO WHERE THE NEW SCREEN ENDS. Every screen is a different
+   height, so the footer has somewhere else to be. Left out of the slide it
+   jumped there in the first frame, and its words showed round the edge of the
+   screen still sliding away over it. Named too, it moves on the same curve
+   over the same length, and its two pictures are the same footer, so nothing
+   is seen to fade. */
+html.vt-slide { view-transition-name: none; }
+html.vt-slide #boardGrid { view-transition-name: board; }
+html.vt-slide #foot { view-transition-name: foot; }
+
+::view-transition-group(board),
+::view-transition-group(foot) {
+  animation-duration: var(--slide, 500ms);
+  animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+}
+::view-transition-old(board),
+::view-transition-new(board) {
+  mix-blend-mode: normal;
+  animation-duration: var(--slide, 500ms);
+  animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+  animation-fill-mode: both;
+}
+::view-transition-old(board) { animation-name: vt-slide-out; }
+::view-transition-new(board) { animation-name: vt-slide-in; }
+
+@keyframes vt-slide-out { from { transform: none; } to { transform: translateX(-100vw); } }
+@keyframes vt-slide-in { from { transform: translateX(100vw); } to { transform: none; } }
 
 /* Cards / sections */
 .muted { color: var(--muted); }
@@ -2537,16 +2580,8 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   background: var(--paper); border: 1px solid var(--line-strong);
   border-radius: 16px; box-shadow: var(--shadow-lift); text-align: center;
 }
-.il-card h2 {
-  margin: 0; font-family: var(--display-font), cursive; font-size: 34px;
-  line-height: 1.1; letter-spacing: .5px;
-}
-/* THE SAME PAIR THE BOARD'S OWN HEADINGS CARRY. The heading takes focus when
-   the show opens, so the screen change is announced, and a ring drawn for a
-   focus nobody asked for reads as a box around the title. A keyboard still gets
-   its ring, which is the whole point of the second rule. */
-.il-card h2:focus { outline: none; }
-.il-card h2:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 4px; }
+/* The heading is the board's own heading rule, in Section 4, with its focus
+   pair. Nothing about how it looks is written here. */
 .il-sub { margin: 5px 0 0; font-size: 14px; color: var(--muted); }
 
 /* THE WAY OUT. A cross in the corner on a desktop, which is how its other
@@ -2560,8 +2595,21 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   transition: background .15s, border-color .15s;
 }
 .il-x .say { display: none; }
+/* Once the show's time is up there is nothing left to skip, and the control
+   says so rather than taking a press that does nothing. */
+.il-x:disabled { opacity: .4; cursor: default; }
 
 .il-always { justify-content: center; margin-top: 12px; font-size: 13px; }
+
+/* STILL UNTIL ITS SCREEN HAS ARRIVED. build() puts hold on and start() takes it
+   off, so while the screen slides in every animation in the show waits on its
+   first frame, delay and all, and then all of them set off together.
+   IT IS IMPORTANT BECAUSE EVERY SPRITE'S OWN RULE SETS animation AS A SHORTHAND,
+   and a shorthand puts the play state back to running. */
+.il-stage.hold, .il-stage.hold::after,
+.il-stage.hold *, .il-stage.hold *::before, .il-stage.hold *::after {
+  animation-play-state: paused !important;
+}
 
 /* WHERE THE SPRITES LIVE. A square, because the show is a circle of letters
    falling into the middle of it, and the middle is read from this box. */
@@ -2778,13 +2826,6 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   35% { opacity: 1; transform: scale(1) rotate(14deg); }
   100% { opacity: 0; transform: scale(1.3) rotate(26deg); }
 }
-/* The phone's handover, used by the rule in Section 7. It is declared out here
-   with the rest of them: a keyframes block inside the touch query reads as an
-   open rule to anything that walks the sheet counting braces. */
-@keyframes il-slide-in {
-  from { transform: translateX(22%); }
-  to { transform: none; }
-}
 
 @media (hover: hover) and (pointer: fine) {
   /* THE CROSS DARKENS AND DOES NOT WASH. It is red already, so a mouse takes
@@ -2816,7 +2857,6 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
     display: flex; flex-direction: column; align-items: center;
     border: 0; box-shadow: none; background: none; padding: 8px 0 0;
   }
-  .il-card h2 { font-size: clamp(26px, 4.5vw, 41px); }
 
   /* THE CROSS BECOMES A BUTTON WITH A WORD IN IT. A mark in a corner is a
      mouse's target: a thumb wants the word, and the foot of the screen is
