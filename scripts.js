@@ -182,7 +182,8 @@
   var HOME_SAVE_MS = 4000;     // how long a download URL is kept alive
   var VIEW_SLIDE_MS = 500;     // one screen sliding out as the next slides in
   var VIEW_SLIDE_SLACK_MS = 60;  // what a slow phone takes to picture the new screen
-  var VIEW_SLIDE_START_MS = 250; // a slide not begun by then is given up
+  var VIEW_SLIDE_START_MS = 250; // a slide not begun by then, with nothing drawn, is given up
+  var VIEW_SLIDE_WAIT_MS = 700;  // and one not begun by then is given up whatever is drawn
 
   /* THE SHOW BETWEEN MAKE AND MADE, TIMED IN ONE PLACE.
      The stage in Section 5 reads every one of these, and hands the stylesheet
@@ -835,15 +836,24 @@
        heavy work to do waits for this rather than for the whole slide. */
     slide.ready.then(markUnderway, markUnderway);
 
-    /* A SLIDE THAT HAS NOT BEGUN IS GIVEN UP. A browser needs a free frame to
-       picture the old screen, and one that has not had one by now would have
-       the person looking at a screen that has stopped responding. The change is
-       made at once instead. A phone that can slide begins in a frame or two, so
-       this never fires there; the test harness draws no frames and needs it
-       every time. */
+    /* A SLIDE THAT HAS NOT BEGUN IS GIVEN UP, SOONER WHEN NOTHING IS DRAWN.
+       A browser has to picture the old screen before the slide can begin, and
+       a person is looking at a screen that has stopped responding while it does.
+       A phone at nearly three pixels to the point took 193ms to picture the Make
+       screen, so a single short wait would give up slides a phone was part way
+       through taking. A browser that is drawing frames is given VIEW_SLIDE_WAIT_MS.
+       One that has drawn none is not going to slide at all, and is given up at
+       VIEW_SLIDE_START_MS: that is the test harness, every time.
+       THE FRAME IS ONLY LISTENED FOR. Nothing waits on it, because a frame
+       callback never runs in a headless test; the timers do the work. */
+    var drawing = false;
+    requestAnimationFrame(function () { drawing = true; });
+    setTimeout(function () {
+      if (!begun && !drawing) slide.skipTransition();
+    }, VIEW_SLIDE_START_MS);
     setTimeout(function () {
       if (!begun) slide.skipTransition();
-    }, VIEW_SLIDE_START_MS);
+    }, VIEW_SLIDE_WAIT_MS);
 
     arrived.underway = underway;
     return arrived;
@@ -4741,7 +4751,7 @@
                // How long a phone's slide is, and the most a slide that never
                // draws may keep the next step waiting.
                slide: { ms: VIEW_SLIDE_MS, slack: VIEW_SLIDE_SLACK_MS,
-                        start: VIEW_SLIDE_START_MS } };
+                        start: VIEW_SLIDE_START_MS, wait: VIEW_SLIDE_WAIT_MS } };
     };
 
     // A choice made in Advanced wins, in both directions. With no choice

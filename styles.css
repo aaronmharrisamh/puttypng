@@ -2575,6 +2575,18 @@ html.vt-slide #foot { view-transition-name: foot; }
 }
 .interlude[hidden] { display: none; }
 
+/* NOTHING IN THE SHOW CAN MAKE THE PAGE WIDER THAN THE SCREEN.
+   At its end the light bursts to over twice its size while its flares turn,
+   and a turning square is wider than itself: on a 384px phone the page grew
+   to 435px. A phone lets a page grow like that, so the screen could pan
+   sideways as the flash went off, and the slide to Made was refused outright,
+   because a view transition will not run between two pages of different
+   widths and the show's page was wider than Made's.
+   clip AND NOT hidden. hidden makes a scroll container, and clip only cuts,
+   so nothing inside the show is laid out any differently for it. Only the
+   width is cut: what spills above and below changes nothing a slide checks. */
+.interlude { overflow-x: clip; }
+
 .il-card {
   position: relative; width: min(420px, 100%); padding: 22px 20px 16px;
   background: var(--paper); border: 1px solid var(--line-strong);
