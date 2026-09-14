@@ -2197,12 +2197,13 @@ html.vt-slide { view-transition-name: none; }
 html.vt-slide #boardGrid { view-transition-name: board; }
 html.vt-slide #foot { view-transition-name: foot; }
 
-/* THE MAKE BOX IS CARRIED INTO ITS COPY. On the slide to the show, the box is
-   named in the picture of the old screen and its copy in the picture of the new
-   one, so the browser moves and shrinks the one into the place of the other
-   while the screens slide. The data-view on each side is what keeps the name on
-   one of them at a time. vt-carry is put on for that slide alone, because a
-   box named on any other slide would stand still and fade as its screen left. */
+/* THE MAKE BOX IS CARRIED INTO ITS COPY. On the way to the show, the box is
+   named in the picture before the change and its copy in the picture after it,
+   so the browser moves the one into the place of the other: across the slide on
+   a phone, and up into the middle of the dim on a desktop. The data-view on each
+   side is what keeps the name on one of them at a time. vt-carry is put on for
+   that change alone, because a box named on any other would stand still and
+   fade while the page round it moved. */
 html.vt-carry .board[data-view="make"] #makeBox,
 html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
 
@@ -2224,6 +2225,18 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
 
 @keyframes vt-slide-out { from { transform: none; } to { transform: translateX(-100vw); } }
 @keyframes vt-slide-in { from { transform: translateX(100vw); } to { transform: none; } }
+
+/* A DESKTOP FADES AS THE SHOW COMES AND GOES. Nothing is renamed: the browser
+   fades the whole page from its picture before the change to its picture after,
+   so the dim gathers round the show as the box rises into it, and clears away
+   again at the end. vt-fade holds the fade to the slide's length and curve, so
+   the box and the dim arrive together, and the fade between pages that
+   @view-transition gives the whole site keeps its own. */
+html.vt-fade::view-transition-old(root),
+html.vt-fade::view-transition-new(root) {
+  animation-duration: var(--slide, 500ms);
+  animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+}
 
 /* Cards / sections */
 .muted { color: var(--muted); }
@@ -2571,8 +2584,15 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
 
    THIS IS THE DESKTOP'S HALF. A desktop shows every region of the board at
    once and has no screen to slide to, so the show stands over the board with
-   the page dimmed behind it, the way the peek panel and the title editor do. A
-   phone makes the same element a region of the board instead: Section 7.
+   the page dimmed behind it. A phone makes the same element a region of the
+   board instead: Section 7.
+
+   IT FLOATS, AND NOTHING FRAMES IT. The dim clears to paper in the middle, and
+   the show stands in that light with no card round it. The Make box rises into
+   the light at its own size, and a card's edge would be one more box for it to
+   be put inside. The words and the disc are drawn for paper, so the middle is
+   paper. The light is the shape of the column it lights: a rectangle with
+   round corners, whose edge fades into the dim rather than stopping at a line.
 
    AN AUTHOR'S display BEATS THE hidden ATTRIBUTE, so the pair below is not
    optional. Without it the show is drawn over an untouched board while its
@@ -2580,7 +2600,8 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
    -------------------------------------------------------------------------- */
 .interlude {
   display: grid; place-items: center; position: fixed; inset: 0; z-index: 60;
-  padding: 20px; background: rgba(26, 26, 26, .6);
+  padding: 20px;
+  background: rgba(26, 26, 26, .6);
   -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
 .interlude[hidden] { display: none; }
@@ -2598,9 +2619,19 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
 .interlude { overflow-x: clip; }
 
 .il-card {
-  position: relative; width: min(420px, 100%); padding: 22px 20px 16px;
-  background: var(--paper); border: 1px solid var(--line-strong);
-  border-radius: 16px; box-shadow: var(--shadow-lift); text-align: center;
+  position: relative; width: min(480px, 100%); padding: 22px 20px 16px;
+  text-align: center;
+}
+/* THE LIGHT THE SHOW STANDS IN. It is drawn from the column's own box, so it
+   grows and shrinks with the show and a short window never leaves the heading
+   in the dim. The blur is what softens the edge: the paper gives way to the
+   dim across the blur's width instead of at a border, corners included.
+   z-index -1 puts it under the column's content and over the dim, because the
+   panel is a stacking context of its own. */
+.il-card::before {
+  content: ""; position: absolute; inset: -28px -44px; z-index: -1;
+  border-radius: 64px; background: var(--paper); pointer-events: none;
+  filter: blur(6px);
 }
 /* The heading is the board's own heading rule, in Section 4, with its focus
    pair. Nothing about how it looks is written here. */
@@ -2634,9 +2665,13 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
 }
 
 /* WHERE THE SPRITES LIVE. A square, because the show is a circle of letters
-   falling into the middle of it, and the middle is read from this box. */
+   falling into the middle of it, and the middle is read from this box.
+   A DESKTOP'S STAGE IS AS WIDE AS ITS MAKE BOX, so the box lands in the light at
+   the size it was and not shrunk into it. The height of the window caps it,
+   less the room the heading and the switch take, so a short window still shows
+   the whole show. */
 .il-stage {
-  position: relative; width: min(300px, 100%); aspect-ratio: 1 / 1;
+  position: relative; width: min(440px, 100%, calc(100vh - 240px)); aspect-ratio: 1 / 1;
   margin: 14px auto 4px;
   animation: il-hue var(--grow, 3000ms) cubic-bezier(.45, 0, .55, 1) both;
 
@@ -2902,8 +2937,12 @@ html.vt-carry .board[data-view="making"] #ilBox { view-transition-name: box; }
      as well, and the screen would open on its own Skip button. */
   .il-card {
     display: flex; flex-direction: column; align-items: center;
-    border: 0; box-shadow: none; background: none; padding: 8px 0 0;
+    width: min(420px, 100%); padding: 8px 0 0;
   }
+  /* A phone's show is a screen on paper already, with no dim to clear. */
+  .il-card::before { content: none; }
+  /* A phone's stage is the width of its screen's column, not of a desktop's box. */
+  .il-stage { width: min(300px, 100%); }
 
   /* THE CROSS BECOMES A BUTTON WITH A WORD IN IT. A mark in a corner is a
      mouse's target: a thumb wants the word, and the foot of the screen is

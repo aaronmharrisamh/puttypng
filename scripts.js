@@ -730,9 +730,9 @@
      here. Setting it on a desktop is harmless and keeps one code path for both
      shapes, which is the whole reason there is one block of markup. */
   /* IT HANDS BACK A PROMISE THAT RESOLVES WHEN THE SCREEN HAS ARRIVED: at once
-     when nothing slides, and once the slide is over when something does. A
-     caller that has more to do on the new screen waits on it, so nothing starts
-     moving on a screen that is still moving itself.
+     when nothing moves, and once the slide or the fade is over when something
+     does. A caller that has more to do on the new screen waits on it, so nothing
+     starts moving on a screen that is still moving itself.
      changed() RUNS THE MOMENT THE NEW SCREEN IS IN PLACE, before a frame of it
      is drawn. It is the one moment a caller can lay something out on a screen
      that is about to slide in, so the screen arrives already showing it. */
@@ -743,8 +743,16 @@
     done.ended = done;
     if (!grid) return done;
     var turn = ++viewTurn;
-    if (slide && canSlide() && grid.getAttribute("data-view") !== name) {
-      return slideView(grid, name, changed, turn);
+    var from = grid.getAttribute("data-view");
+    if (slide && from !== name) {
+      if (canSlide()) return transitionView(grid, name, changed, turn, "vt-slide");
+      /* A DESKTOP HAS NO SCREEN TO SLIDE TO, BUT THE SHOW COMES AND GOES OVER
+         IT. The page dims as the show comes up and clears as it goes. Every
+         other change on a desktop stays instant, because both of its pictures
+         would be the same board. */
+      if (canFade() && (from === "making" || name === "making")) {
+        return transitionView(grid, name, changed, turn, "vt-fade");
+      }
     }
 
     /* A CHANGE THAT DOES NOT SLIDE ENDS ANY SLIDE STILL RUNNING. Skipping the
@@ -775,6 +783,13 @@
            typeof document.startViewTransition === "function";
   }
 
+  /* A FADE IS THE DESKTOP'S HALF OF THE SAME QUESTION. A mouse, movement, and a
+     browser that can picture the page before and after a change. */
+  function canFade() {
+    return !touchPointer.matches && animationsOn &&
+           typeof document.startViewTransition === "function";
+  }
+
   /* THE OLD SCREEN SLIDES OUT AS THE NEW ONE SLIDES IN.
      A view transition, because the view contract cannot give a slide anything
      to move. A screen the grid does not ask for is display:none, so there is no
@@ -788,6 +803,12 @@
      and takes the name off the page, so the masthead and the footer stand still
      rather than fading through themselves. The class comes off when the slide is
      over, because a board named for good would change the fade between pages.
+
+     A DESKTOP FADES INSTEAD, THROUGH THE SAME ROUTINE. vt-fade leaves the page
+     named, so the browser fades the whole page from its picture before the
+     change to its picture after: the dim comes in round the show, or clears
+     away from it. It has the slide's length and curve, so the two shapes move
+     at the same pace, and every guard below holds for both.
 
      THE SHOW IS NOT MADE TO WAIT ON A SLIDE THAT NEVER COMES. finished is the
      browser's word that the slide is over, and a browser that cannot draw the
@@ -803,11 +824,11 @@
      is, and a late change would put the show's screen back over it. */
   var viewTurn = 0;
 
-  function slideView(grid, name, changed, turn) {
+  function transitionView(grid, name, changed, turn, kind) {
     var root = document.documentElement;
     var run = ++slideRun;
     root.style.setProperty("--slide", VIEW_SLIDE_MS + "ms");
-    root.classList.add("vt-slide");
+    root.classList.add(kind);
 
     var slide = null, begun = false;
     var markUnderway = function () {};
@@ -838,7 +859,7 @@
         // board in the middle of that one.
         if (run !== slideRun) return arrive();
         activeSlide = null;
-        root.classList.remove("vt-slide");
+        root.classList.remove(kind);
         arrive();
       }
       slide.finished.then(over, over);
@@ -3857,8 +3878,8 @@
   }
 
   /* WHAT BREAKS APART IS WHAT WAS IN VIEW, LAID OUT AS IT WAS SEEN.
-     Measured on the Make screen before the slide begins, because the box stops
-     being on the page the moment the slide's change runs.
+     Measured on the Make screen before the change to the show begins, because
+     on a phone the box stops being on the page the moment that change runs.
 
      A source is the box's own size, how its edge looked, the card an attached
      file sits on, and the pieces. Every piece carries its place, measured from
@@ -4233,8 +4254,9 @@
     ms: IL_TOTAL_MS,
 
     /* LAID OUT, AND STANDING STILL. Every animation in the show is born paused
-       under hold, so whatever the screen shows while it slides in is the show's
-       first frame: the words as text, the light small, the disc not begun. hold
+       under hold, so whatever the screen shows while it slides or fades in is
+       the show's first frame: the words as text, the light small, the disc not
+       begun. hold
        goes on before anything is built or restarted, so nothing gets a frame of
        movement in between. */
     build: function (stage, source) {
@@ -4289,7 +4311,8 @@
 
     /* SET MOVING. Everything built starts from its first frame at this one
        moment, and the ending is timed from here rather than from the build, so
-       a slide however long it took costs the show none of its own time. */
+       a slide or a fade, however long it took, costs the show none of its own
+       time. */
     start: function (stage) {
       stage.classList.remove("hold");
       // ONE CLASS AT ONE MOMENT carries the whole ending: the disc is pulled in,
@@ -4315,10 +4338,10 @@
   /* THE SEAM. The press calls this and waits on what it hands back.
 
      LAID OUT AS ITS SCREEN ARRIVES, SET MOVING ONCE IT HAS. build() runs in the
-     instant the show's screen is in place, so the screen that slides in is
-     already carrying the words, standing still. start() waits for the slide to
-     be over. A show that began moving while its own screen was still sliding
-     is the snap this replaced, and a person could not follow either of them.
+     instant the show's screen is in place, so the screen that slides or fades
+     in is already carrying the words, standing still. start() waits for the
+     change to be over. A show that began moving while its own screen was still
+     sliding is the snap this replaced, and a person could not follow either.
      THE STAGE HAS NO BOX UNTIL ITS SCREEN IS UP. The layout is measured off it,
      and on a phone the board is not showing it until the change has run, which
      is the other reason the build waits for the change. */
@@ -4333,22 +4356,26 @@
     ilRunning = true;
     ilOver = false;
     var run = ++ilRun;
-    panel.hidden = false;
     ilInert(true);
     var skipBtn = $("ilSkip");
     if (skipBtn) skipBtn.disabled = false;
     var over = new Promise(function (resolve) { ilResolve = resolve; });
 
-    /* THE BOX TRAVELS WITH THE SLIDE. vt-carry names the Make box in the picture
-       of the old screen and its copy in the picture of the new one, so the
-       browser moves one into the place of the other while the screens slide.
-       It is for this slide alone: a Make box named on the slide to Made would
-       stand still and fade while its own screen slid away. */
+    /* THE BOX TRAVELS WITH THE CHANGE, ON EITHER SHAPE. vt-carry names the Make
+       box in the picture before the change and its copy in the picture after
+       it, so the browser moves one into the place of the other: across the
+       slide on a phone, and up into the middle of the dim on a desktop. It is
+       for this change alone: a Make box named on the way to Made would stand
+       still and fade while the screen round it moved. */
     var root = document.documentElement;
-    if (canSlide()) root.classList.add("vt-carry");
+    if (canSlide() || canFade()) root.classList.add("vt-carry");
 
     var change = setView("making", true, function () {
       if (!ilRunning || run !== ilRun) return;
+      /* THE PANEL COMES UP IN THE CHANGE, NOT BEFORE IT. A desktop's panel is
+         the dim, and one shown before the change would already be in the
+         picture the change starts from, so there would be nothing to fade in. */
+      panel.hidden = false;
       INTERLUDE.build(stage, source);
       /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone
          because nothing moves there, and this is the one thing that does. The
@@ -4362,15 +4389,16 @@
       INTERLUDE.start(stage);
       ilLater(interludeTimeUp, INTERLUDE.ms);
     });
-    /* THE NAMES COME OFF WHEN THE SLIDE HAS ENDED, and not when the show is
+    /* THE NAMES COME OFF WHEN THE CHANGE HAS ENDED, and not when the show is
        told it has arrived. The show can hear that from a timer a moment before
-       the slide's last frame, and a name taken off while the browser is still
+       the change's last frame, and a name taken off while the browser is still
        moving that box can make it drop the picture. */
     change.ended.then(function () { root.classList.remove("vt-carry"); });
 
-    /* WHEN THE PRESS MAY START ITS WORK. The slide needs a free frame or two to
-       picture both screens, and an encode that began in the same instant could
-       take them. Once they are taken the slide runs on its own. */
+    /* WHEN THE PRESS MAY START ITS WORK. A slide or a fade needs a free frame or
+       two to take both of its pictures, and an encode that began in the same
+       instant could take those frames. Once the pictures are taken it runs on
+       its own. */
     over.ready = change.underway || change;
     return over;
   }
@@ -4566,8 +4594,9 @@
         // exists to make: the picture arrives from where the words went.
         /* THE DISC COMES OUT ONCE THE SCREEN HAS STOPPED. An eject that ran while
            the screen slid was two movements at once, and the slide hides the
-           slot the disc comes out of. A desktop has no slide, so there the
-           promise is already kept and the disc comes out as it always did.
+           slot the disc comes out of. A desktop coming out of the show waits for
+           the dim to clear from over the tray, and a desktop with no show up has
+           nothing to wait for, so the disc comes out as it always did.
            IT CHECKS IT IS STILL THIS DISC, ON THIS SCREEN. The slide is long
            enough for the corner's Close to be pressed, and a late eject would
            push a disc out onto Make, where nothing is showing the tray. */
