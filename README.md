@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.22.2**, engine **2.3.0**, protocol **1**.
+Current release: page **2.23.0**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -89,7 +89,7 @@ sentence says so.
 | `styles.css` | All presentation. Seven sections. |
 | `scripts.js` | All page behavior. Seven sections. |
 | `puttypng.js` | The engine. Nine sections. |
-| `examples.js` | The five examples behind the Examples menu. Generated, and loaded only when one is picked. |
+| `examples.js` | The two examples behind the Examples menu, one of each kind. Generated, and loaded only when one is picked. |
 
 Every page carries the same head, masthead, navigation, and footer, marked with
 `SYNC` comments. `.devtools/sync-chrome.mjs` checks the five copies agree.
@@ -101,7 +101,7 @@ Beside them sit `fonts/`, which holds the one display face the page sets its
 name and its two column headings in, and `assets/`, which holds the icons and
 the flag. Both are served from the folder and never over a network. Delete
 `fonts/` and the page falls back to a system face. `examples/` holds the same
-five examples as files anyone can open and read.
+two examples as files anyone can open and read.
 
 No build step and no dependencies. Drop the folder on any static host and it
 runs.

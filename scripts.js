@@ -199,6 +199,14 @@
   var IL_DISC_AT_MS = 1150;    // when the disc starts to form over the light
   var IL_DISC_MS = 1450;       // how long it takes to form, block by block
   var IL_TOTAL_MS = IL_SUCK_AT_MS + IL_SUCK_MS + IL_FLARE_MS;
+  /* A SHOW AFTER THE FIRST IN A VISIT IS SHORTER. The first one shows what
+     pressing does, and waiting the whole length again is only waiting. Every
+     length above is multiplied by this share once a person has seen a show
+     play out, so one number sets how much shorter, and every rule between the
+     lengths still holds at any share. 1 turns it off. */
+  var IL_AGAIN_SHARE = 0.5;
+  // Where the visit remembers it. sessionStorage, so a new visit starts long.
+  var IL_SEEN_KEY = "ppng.visit.interludeSeen";
   var IL_PIECES_MAX = 220;     // letters up to this many, then words, then lines
   /* EVERY STYLE THAT DECIDES WHERE A LINE BREAKS. The show copies these from
      the Make box onto an invisible copy of it, so the copy breaks its lines in
@@ -604,6 +612,8 @@
   var homeSayingLocked = false;
   var homeEditedLabel = null;
   var homeLabelLocked = false;
+  // The title of the example on the board, until anything on the board changes.
+  var homeExampleTitle = null;
   var homeMade = null;
   var homeTitleDraft = null;
   var homeTitleSaving = false;
@@ -1131,6 +1141,10 @@
       if (opts.label && opts.label.trim() && !homeLabelLocked) opts.label = null;
       if (opts.infoText !== " ") opts.infoText = discInfoLine(input, true);
     }
+    /* AN EXAMPLE NAMES ITSELF, and only while it is still what the board holds.
+       The drawer's own words win over it. A locked disc never takes it, because
+       a title that names the contents is a content detail on the outside. */
+    if (opts.label == null && !locked && homeExampleTitle) opts.label = homeExampleTitle;
     if (opts.label == null) opts.label = homeSaying;
     if (opts.infoText == null) opts.infoText = discInfoLine(input, locked);
   }
@@ -1145,7 +1159,7 @@
     return discFontsReady;
   }
 
-  /* THE EXAMPLES ARE 600KB OF OTHER PEOPLE'S WRITING, so they are not on the
+  /* THE EXAMPLES ARE 440KB OF OTHER PEOPLE'S WRITING, so they are not on the
      page until somebody asks for them. A script tag rather than a fetch,
      because Chrome refuses fetch on file:// and the site promises to work from
      a disk. The promise is held so a second press waits on the first load
@@ -1174,9 +1188,10 @@
      titles: somebody who wants to see the thing work does not want to read a
      menu first. The board chooses which one, and the slot then says which one
      it chose.
-     IT NEVER GIVES THE SAME ONE TWICE RUNNING. Three text examples chosen with
-     no memory repeat one press in three, and a person who asks for another and
-     gets the same one reads it as broken. */
+     IT NEVER GIVES THE SAME ONE TWICE RUNNING WHEN IT HAS A CHOICE. Three text
+     examples chosen with no memory repeat one press in three, and a person who
+     asks for another and gets the same one reads it as broken. A kind with one
+     example gives that one every time. */
   var lastOfKind = {};
 
   function randomOfKind(all, kind) {
@@ -3656,6 +3671,7 @@
     // A different PuttyPNG deserves its own saying. Flipping the background
     // does not come through here, which is what keeps that one wording.
     homeSaying = null;
+    homeExampleTitle = null;
     if (homeEditedLabel !== null && $("optLabel").value === homeEditedLabel) $("optLabel").value = "";
     homeEditedLabel = null;
     homeMade = null;
@@ -3767,8 +3783,7 @@
   /* THE SHORT NAME THE TICK SHOWS. The list rows carry a title and a size
      because a person is choosing between them; the tick has one job, which is
      to say that the thing they chose went in. */
-  var EG_SHORT = { tom: "Tom Sawyer", alice: "Alice", if: "Kipling",
-                   cast: "Cast list", cal: "Calendar" };
+  var EG_SHORT = { tom: "Tom Sawyer", cal: "Calendar" };
 
   function flashExamplePick(shortName) {
     var slot = $("egLabel");
@@ -3792,6 +3807,9 @@
       clearBoard();
       if (ex.kind === "file") await applyFileExample(ex);
       else applyTextExample(ex);
+      // After the example is on: putting it there went through noteHomeInput,
+      // which forgets any title, and this is the title for what is there now.
+      homeExampleTitle = ex.title || null;
       /* THE METER IS TOLD AT ONCE, WHICHEVER PATH RAN. The settle wait exists
          so the meter does not redraw on every keystroke, and an example is not
          typed. The attach path waits by default, so without this the rung and
@@ -3836,6 +3854,9 @@
      long the show runs once it is moving, build() lays it out standing still,
      start() sets it moving, and clear() takes it off again. The seam decides
      when each is called; the timeline inside them is the stage's own business.
+     THE SEAM ALSO DECIDES THE SHARE. build() and start() are handed the share
+     of ms this show gets, and the seam's clock runs out at that share, so a
+     show that replaces this one has only to spend what it is given.
      ========================================================================== */
 
   var ilTimers = [];       // every timer the show owns, so skipping cancels all
@@ -3856,6 +3877,38 @@
      so animations off takes it with everything else. */
   function interludeOn() {
     return interludeShow && animationsOn;
+  }
+
+  /* SEEN ONCE IN THIS VISIT. sessionStorage lasts as long as the tab: across a
+     reload and the other four pages, and a new visit starts with the whole show
+     again. A browser that refuses storage keeps the answer for this page.
+     A SHOW IS SEEN WHEN IT HAS PLAYED ITS WHOLE TIME. One skipped part way
+     through was not watched, so the next one is still the whole show. */
+  var ilSeenHere = false;
+
+  function interludeSeen() {
+    try { return ilSeenHere || sessionStorage.getItem(IL_SEEN_KEY) === "1"; }
+    catch (err) { return ilSeenHere; }
+  }
+
+  function markInterludeSeen() {
+    ilSeenHere = true;
+    try { sessionStorage.setItem(IL_SEEN_KEY, "1"); }
+    catch (err) { /* this page still remembers it */ }
+  }
+
+  // How much of its whole time the next show gets.
+  function interludeShare() {
+    return interludeSeen() ? IL_AGAIN_SHARE : 1;
+  }
+
+  /* EVERY LENGTH IN THE SHOW, AT A SHARE OF ITS WHOLE TIME. One share scales
+     them all together, so the last letter still lands before the pull, and the
+     colour turn and the glint still end as the pull begins. */
+  function ilLengths(share) {
+    return { fall: IL_FALL_MS * share, suckAt: IL_SUCK_AT_MS * share,
+             suck: IL_SUCK_MS * share, flare: IL_FLARE_MS * share,
+             discAt: IL_DISC_AT_MS * share, disc: IL_DISC_MS * share };
   }
 
   /* ONE BIT, TWO CONTROLS, AND THEY CANNOT DRIFT. The switch in Advanced says
@@ -4259,15 +4312,16 @@
        begun. hold
        goes on before anything is built or restarted, so nothing gets a frame of
        movement in between. */
-    build: function (stage, source) {
+    build: function (stage, source, share) {
       stage.classList.add("hold");
       ilRestart();
+      var t = ilLengths(share);
       /* THE FOUR LENGTHS THE STYLESHEET NEEDS, written from the constants in
-         Section 2. The sheet holds no copy of any of them. */
-      stage.style.setProperty("--ms", IL_FALL_MS + "ms");
-      stage.style.setProperty("--grow", IL_SUCK_AT_MS + "ms");
-      stage.style.setProperty("--sms", IL_SUCK_MS + "ms");
-      stage.style.setProperty("--fms", IL_FLARE_MS + "ms");
+         Section 2 at this show's share. The sheet holds no copy of any of them. */
+      stage.style.setProperty("--ms", t.fall + "ms");
+      stage.style.setProperty("--grow", t.suckAt + "ms");
+      stage.style.setProperty("--sms", t.suck + "ms");
+      stage.style.setProperty("--fms", t.flare + "ms");
 
       var side = stage.getBoundingClientRect().width;
       /* THE DISC'S SURFACE IS SIZED FROM THE SAME NUMBERS IT IS CUT WITH. The
@@ -4287,7 +4341,7 @@
          of the frame, which is the middle of the box it came from, and they set
          off over the time left once a fall is taken off, so the last one is
          still swallowed before the disc is pulled. */
-      var spread = Math.max(0, IL_SUCK_AT_MS - IL_FALL_MS);
+      var spread = Math.max(0, t.suckAt - t.fall);
       for (var i = 0; i < pieces.length; i++) {
         var p = pieces[i];
         var spot = { x: p.x + p.w / 2 - source.w / 2, y: p.y + p.h / 2 - source.h / 2,
@@ -4303,7 +4357,7 @@
       var disc = ilDiscSpots(side);
       var blocks = document.createDocumentFragment();
       for (var k = 0; k < disc.length; k++) {
-        blocks.appendChild(ilSprite(disc[k], IL_DISC_AT_MS + Math.random() * IL_DISC_MS,
+        blocks.appendChild(ilSprite(disc[k], t.discAt + Math.random() * t.disc,
                                     IL_SPIN_DEG));
       }
       stage.appendChild(blocks);
@@ -4313,12 +4367,12 @@
        moment, and the ending is timed from here rather than from the build, so
        a slide or a fade, however long it took, costs the show none of its own
        time. */
-    start: function (stage) {
+    start: function (stage, share) {
       stage.classList.remove("hold");
       // ONE CLASS AT ONE MOMENT carries the whole ending: the disc is pulled in,
       // the flare fires as it lands, and the throb stops instead of fading out
       // while it is still lit.
-      ilLater(function () { stage.classList.add("suck"); }, IL_SUCK_AT_MS);
+      ilLater(function () { stage.classList.add("suck"); }, ilLengths(share).suckAt);
     },
 
     clear: function (stage) {
@@ -4352,6 +4406,9 @@
     /* WHAT WAS IN VIEW IS MEASURED FIRST, while the Make box is still on the page
        and before anything about the board has changed. */
     var source = interludeSource();
+    /* HOW MUCH OF ITS TIME THIS SHOW GETS, decided once, so a show that plays
+       out while it runs does not change its own length part way through. */
+    var share = interludeShare();
 
     ilRunning = true;
     ilOver = false;
@@ -4376,7 +4433,7 @@
          the dim, and one shown before the change would already be in the
          picture the change starts from, so there would be nothing to fade in. */
       panel.hidden = false;
-      INTERLUDE.build(stage, source);
+      INTERLUDE.build(stage, source, share);
       /* A DESKTOP MOVES FOCUS HERE TOO. focusView leaves a desktop alone
          because nothing moves there, and this is the one thing that does. The
          board behind is inert, so focus must not be left standing on it. */
@@ -4386,8 +4443,8 @@
     change.then(function () {
       // Skipped while its screen was still arriving: there is nothing to start.
       if (!ilRunning || run !== ilRun) return;
-      INTERLUDE.start(stage);
-      ilLater(interludeTimeUp, INTERLUDE.ms);
+      INTERLUDE.start(stage, share);
+      ilLater(interludePlayedOut, INTERLUDE.ms * share);
     });
     /* THE NAMES COME OFF WHEN THE CHANGE HAS ENDED, and not when the show is
        told it has arrived. The show can hear that from a timer a moment before
@@ -4413,6 +4470,13 @@
      snapped to Make, and then Make slid away.
      A PICTURE STILL BEING PRESSED IS WAITED FOR ON THIS SCREEN. It still says
      it is working, and it is still true. */
+  /* THE SHOW PLAYED ITS WHOLE TIME. Only the show's own clock comes here, so this
+     is the one place a show is counted as seen. */
+  function interludePlayedOut() {
+    markInterludeSeen();
+    interludeTimeUp();
+  }
+
   function interludeTimeUp() {
     /* THERE IS NOTHING LEFT TO SKIP. The press may already be sliding to Made,
        and a skip that landed in that instant would cancel the slide and leave
@@ -4965,6 +5029,11 @@
     // The side the engine says the picture will be, which is what the tray is
     // capped at and what the over-512 warning is read from.
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
+    /* WHAT THE LAST DISC SAYS ACROSS ITS TOP, and which press made it, so a probe
+       that presses twice reads the second disc and not the first one again. */
+    window.PuttyPNGDebug.madeDisc = function () {
+      return { run: homeDiscRun, out: homeDiscOut, title: homeMade ? homeMade.customText : null };
+    };
     window.PuttyPNGDebug.tuning = function () {
       return { rungs: RUNGS.length, wide: METER_TUNING.wide.share,
                touch: METER_TUNING.touch.share,
@@ -4972,8 +5041,11 @@
                // probe works the expected width out from these rather than
                // holding a copy of four numbers that go stale in silence.
                disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX },
-               // How many letters break apart before words do, and words before lines.
-               interlude: { pieces: IL_PIECES_MAX },
+               // How many letters break apart before words do, and words before
+               // lines; the share a show after the first gets; and the whole
+               // show's time and its wait for the pull, at full length.
+               interlude: { pieces: IL_PIECES_MAX, again: IL_AGAIN_SHARE, total: IL_TOTAL_MS,
+                            grow: IL_SUCK_AT_MS },
                // How long a phone's slide is, and the most a slide that never
                // draws may keep the next step waiting.
                slide: { ms: VIEW_SLIDE_MS, slack: VIEW_SLIDE_SLACK_MS,
