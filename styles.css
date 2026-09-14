@@ -1113,7 +1113,7 @@ details.sect > summary::-webkit-details-marker { display: none; }
    its right edge up with the invitation above it. Stretched, the bin would
    sit against the far edge of the board. */
 .deckrow > .cdtip { grid-area: tip; justify-self: start; }
-.deckrow > .transnote { grid-area: note; }
+.deckrow > .decknotes { grid-area: note; }
 
 .tray {
   position: relative; flex: none;
@@ -2292,6 +2292,18 @@ html.vt-fade::view-transition-new(root) {
    it has to be said here or the notice never goes away. */
 .transnote[hidden] { display: none; }
 
+/* A DESKTOP'S NOTES SHARE ONE BOX, and a note inside it is a line rather than a
+   box of its own, the way the sign off holds them on a phone. On its own the
+   see-thru notice looks as it always did. Wider than one notice, because the
+   Telegram note is a long sentence and three lines of it read better than
+   five. */
+.decknotes {
+  display: grid; gap: 6px; width: min(420px, 100%); padding: 8px 10px;
+  border: 1px solid #e8dcae; border-radius: var(--radius-sm); background: #fffaec;
+}
+.decknotes[hidden] { display: none; }
+.decknotes .transnote { width: auto; padding: 0; border: 0; background: none; }
+
 /* THE NOTICE GOES UNDER THE TIP AND THE BIN, NOT ON TOP OF THEM.
    A wide screen puts the tip beside the disc, so the band under the disc holds
    the bin and then the notice, and none of them meet. Below 760px there is no
@@ -2618,36 +2630,52 @@ html.vt-fade::view-transition-new(root) {
    width is cut: what spills above and below changes nothing a slide checks. */
 .interlude { overflow-x: clip; }
 
+/* THE FOOT IS ONE ROW: Always skip and the Skip pill side by side, under the
+   stage. A grid of a spacer, the two, and a spacer, with everything above
+   spanning all four, so the pill sits beside the switch without adding a row
+   of height to a show that has to fit a short window. */
 .il-card {
   position: relative; width: min(480px, 100%); padding: 22px 20px 16px;
   text-align: center;
+  display: grid; grid-template-columns: 1fr auto auto 1fr;
+  column-gap: 14px; align-items: center;
 }
+.il-card > h2 { grid-row: 1; grid-column: 1 / -1; }
+.il-sub { grid-row: 2; grid-column: 1 / -1; }
+.il-stage { grid-row: 3; grid-column: 1 / -1; }
+.il-always { grid-row: 4; grid-column: 2; }
+.il-x { grid-row: 4; grid-column: 3; }
 /* THE LIGHT THE SHOW STANDS IN. It is drawn from the column's own box, so it
    grows and shrinks with the show and a short window never leaves the heading
    in the dim. The blur is what softens the edge: the paper gives way to the
    dim across the blur's width instead of at a border, corners included.
    z-index -1 puts it under the column's content and over the dim, because the
-   panel is a stacking context of its own. */
+   panel is a stacking context of its own.
+   IT CATCHES A CLICK. A press on the dim skips the show, and the light is part
+   of the show, so a press anywhere in it is a press on the card and not on the
+   dim behind. */
 .il-card::before {
   content: ""; position: absolute; inset: -28px -44px; z-index: -1;
-  border-radius: 64px; background: var(--paper); pointer-events: none;
+  border-radius: 64px; background: var(--paper); pointer-events: auto;
   filter: blur(6px);
 }
 /* The heading is the board's own heading rule, in Section 4, with its focus
    pair. Nothing about how it looks is written here. */
 .il-sub { margin: 5px 0 0; font-size: 14px; color: var(--muted); }
 
-/* THE WAY OUT. A cross in the corner on a desktop, which is how its other
-   modals close, and red because it stops something rather than finishing it.
-   The word beside the mark is for a phone, where there is room for it. */
+/* THE WAY OUT IS A PILL WITH ITS WORD, ON BOTH SHAPES. It was a cross alone in
+   the desktop's corner until v2.23.1, a mouse's target small enough to miss
+   while four seconds of animation run beside it. Red because it stops
+   something rather than finishing it. */
 .il-x {
-  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px;
-  display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
-  border: 1px solid var(--line-strong); border-radius: 50%;
+  display: grid; grid-auto-flow: column; place-items: center; gap: 7px;
+  min-height: 44px; padding: 0 18px; margin-top: 12px; cursor: pointer;
+  border: 1px solid var(--line-strong); border-radius: 999px;
   background: var(--paper); color: var(--bad);
+  font-size: 15px; font-weight: 600;
   transition: background .15s, border-color .15s;
 }
-.il-x .say { display: none; }
+.il-x .say { display: inline; }
 /* Once the show's time is up there is nothing left to skip, and the control
    says so rather than taking a press that does nothing. */
 .il-x:disabled { opacity: .4; cursor: default; }
@@ -2910,9 +2938,9 @@ html.vt-fade::view-transition-new(root) {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  /* THE CROSS DARKENS AND DOES NOT WASH. It is red already, so a mouse takes
-     it to a deeper red, which is a darker version of itself rather than a
-     colour the control did not have. */
+  /* THE SKIP PILL DARKENS AND DOES NOT WASH. Its mark and word are red already,
+     so a mouse takes them to a deeper red, which is a darker version of itself
+     rather than a colour the control did not have. */
   .il-x:hover { border-color: var(--muted); color: #9e1f1f; }
 }
 
@@ -2931,10 +2959,10 @@ html.vt-fade::view-transition-new(root) {
     padding: 0; background: none;
     -webkit-backdrop-filter: none; backdrop-filter: none;
   }
-  /* A COLUMN, SO THE WAY OUT CAN GO LAST. The cross is written first in the
-     markup because that is where a corner mark belongs on a desktop and where a
-     screen reader should meet it. Taken out of its corner it would flow first
-     as well, and the screen would open on its own Skip button. */
+  /* A COLUMN, SO THE WAY OUT CAN GO LAST. The pill is written first in the
+     markup because that is where a screen reader should meet it. A desktop's
+     grid places it in the foot row; a phone's column would flow it first as
+     well, and the screen would open on its own Skip button. */
   .il-card {
     display: flex; flex-direction: column; align-items: center;
     width: min(420px, 100%); padding: 8px 0 0;
@@ -2944,15 +2972,9 @@ html.vt-fade::view-transition-new(root) {
   /* A phone's stage is the width of its screen's column, not of a desktop's box. */
   .il-stage { width: min(300px, 100%); }
 
-  /* THE CROSS BECOMES A BUTTON WITH A WORD IN IT. A mark in a corner is a
-     mouse's target: a thumb wants the word, and the foot of the screen is
-     where this screen's own controls already are. */
-  .il-x {
-    order: 5; position: static; width: auto; height: auto; min-height: 44px;
-    grid-auto-flow: column; gap: 7px; padding: 0 18px; margin: 10px auto 0;
-    border-radius: 999px; font-size: 15px; font-weight: 600;
-  }
-  .il-x .say { display: inline; }
+  /* THE PILL GOES UNDER THE SWITCH ON A PHONE, at the foot of the screen, where
+     this screen's own controls already are. */
+  .il-x { order: 5; margin: 10px auto 0; }
 }
 
 /* ==========================================================================

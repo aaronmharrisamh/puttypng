@@ -2061,7 +2061,7 @@
     placeSolidSwitch();
     placeMadeActions();
     placeDiscEdit();
-    placeTransNote();
+    placeNotes();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -2086,7 +2086,7 @@
       placeSolidSwitch();
       placeMadeActions();
       placeDiscEdit();
-      placeTransNote();
+      placeNotes();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
@@ -2178,19 +2178,24 @@
     else tip.insertBefore(button, $("bin"));
   }
 
-  /* THE SEE-THRU NOTICE HAS A DIFFERENT HOME ON EACH SHAPE.
-     A desktop hangs it under the disc, in the deck row's own note cell, where
-     there is room for it beside everything else. A phone has one column, and a
-     bubble of its own there reads as a second thing to deal with, so it goes
-     inside the sign off as an addendum to the line it qualifies.
-     Ahead of the sign off's own note, so a pair is always numbered in the
-     order the markup writes them. */
-  function placeTransNote() {
-    var note = $("transNote"), box = $("sendNotes"), send = $("sendIt");
-    var deck = document.querySelector(".deckrow");
-    if (!note || !box || !send || !deck) return;
-    if (touchPointer.matches) box.insertBefore(note, box.firstChild);
-    else deck.insertBefore(note, send);
+  /* THE SEE-THRU NOTICE AND THE TELEGRAM NOTE HAVE A DIFFERENT HOME ON EACH
+     SHAPE. A desktop keeps them in one box under the disc, in the deck row's
+     own note cell, where there is room beside everything else. A phone has one
+     column, and a bubble of its own there reads as a second thing to deal with,
+     so both go inside the sign off as addenda to the line they qualify.
+     THE NOTICE GOES FIRST AND THE TELEGRAM NOTE LAST, on both shapes, with the
+     sign off's own note between them on a phone. A set is numbered in the
+     order it stands, so it has to stand in the same order every time. */
+  function placeNotes() {
+    var trans = $("transNote"), tg = $("tgNote"), box = $("sendNotes"), deck = $("deckNotes");
+    if (!trans || !tg || !box || !deck) return;
+    if (touchPointer.matches) {
+      box.insertBefore(trans, box.firstChild);
+      box.appendChild(tg);
+    } else {
+      deck.appendChild(trans);
+      deck.appendChild(tg);
+    }
   }
 
   function paintDiscEdit() {
@@ -2414,31 +2419,41 @@
     paintSendNotes();
   }
 
-  /* THE NOTES IN THE SIGN OFF, AND THEIR NUMBERS.
-     Two notes can apply to one picture: a see-thru background, and a picture
-     over the size a chat app will recompress. A lone note is "Note:" and a
-     pair is "Note 1:" and "Note 2:", because a Note 1 with nothing under it
-     reads as a list with an item missing from it.
-     Every number is cleared before any is written, so a notice that has moved
-     out to the deck row cannot keep a number it was given in here. */
+  /* THE NOTES, WHEREVER THEY ARE, AND THEIR NUMBERS.
+     Three notes can apply to one picture: a see-thru background, a picture
+     over the size a chat app will recompress, and how to send it through
+     Telegram, which applies to every picture. A lone note is "Note:" and a set
+     is "Note 1:", "Note 2:" and on, because a Note 1 with nothing under it
+     reads as a list with an item missing from it. Each box is numbered on its
+     own: the sign off on a phone, and the box under the disc on a desktop.
+     Every number is cleared before any is written, so a note that has moved
+     to the other box cannot keep a number it was given in this one. */
   function paintSendNotes() {
-    var box = $("sendNotes"), big = $("bigNote"), cd = $("cd");
-    if (!box || !big || !cd) return;
+    var box = $("sendNotes"), big = $("bigNote"), cd = $("cd"), tg = $("tgNote");
+    var deck = $("deckNotes");
+    if (!box || !big || !cd || !tg || !deck) return;
 
     /* THIS ONE IS ABOUT THE FINISHED PICTURE, so it is measured off the
        picture. The warning under the Make button is about a picture that does
        not exist yet, which is a different sentence at a different moment. */
     big.hidden = !homeDiscOut || !cd.naturalWidth || cd.naturalWidth <= BIG_PASTE_PX;
+    // Every picture can be compressed on the way, so this one comes with every disc.
+    tg.hidden = !homeDiscOut;
 
-    var all = [$("transNote"), big];
+    var all = [$("transNote"), big, tg];
     all.forEach(function (el) { numberNote(el, ""); });
-    var shown = all.filter(function (el) {
-      return el && el.parentNode === box && !el.hidden;
+    /* NUMBERED IN THE ORDER THEY STAND, read off the box and not off a list here,
+       so a note placed out of turn is still Note 1 when it is the first a person
+       reads. */
+    [box, deck].forEach(function (holder) {
+      var shown = Array.prototype.filter.call(holder.children, function (el) {
+        return all.indexOf(el) >= 0 && !el.hidden;
+      });
+      if (shown.length > 1) {
+        shown.forEach(function (el, i) { numberNote(el, " " + (i + 1)); });
+      }
+      holder.hidden = shown.length === 0;
     });
-    if (shown.length > 1) {
-      shown.forEach(function (el, i) { numberNote(el, " " + (i + 1)); });
-    }
-    box.hidden = shown.length === 0;
   }
 
   // The number is a span of its own, so writing one never rewrites the word.
@@ -4540,6 +4555,19 @@
     if (!skip || !always) return;
 
     skip.addEventListener("click", function () { endInterlude(); });
+
+    /* A PRESS ON THE DIM IS A DESKTOP'S SKIP. The light and everything in it is
+       the show, and the dim round it is the page a person came from, so pressing
+       it asks for that page back. A phone has no dim: the show is a screen of
+       its own, and a stray thumb on it must not end it. Like the pill, it has
+       nothing to skip once the show's time is up. */
+    var panel = $("interlude");
+    if (panel) {
+      panel.addEventListener("click", function (e) {
+        if (e.target !== panel || touchPointer.matches || !ilRunning || ilOver) return;
+        endInterlude();
+      });
+    }
 
     always.addEventListener("change", function () {
       // Ticked means no show, so the stored preference is the box read the other

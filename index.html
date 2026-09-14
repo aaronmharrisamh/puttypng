@@ -1038,19 +1038,32 @@
                A desktop never shows any of it. It says what the deck, the tip
                beside the disc and the bin already say there, and saying it
                twice in one region is how two designs start. -->
-          <!-- THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
+          <!-- THE DESKTOP'S NOTES, IN ONE BOX UNDER THE DISC. A phone has no room
+               for a bubble of its own, so placeNotes() moves both of these into
+               the sign off below, where they read as addenda to the instruction
+               they qualify. They are moved, never copied, and a pair or more is
+               numbered wherever they are.
+               THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
                when the board loads, and it goes the moment the switch goes back
                to Solid. A warning that outlives its cause is noise.
-               THIS IS WHERE A DESKTOP KEEPS IT, under the disc in the deck row.
-               A phone has no room for a bubble of its own, so placeTransNote()
-               moves it into the sign off below, where it reads as an addendum
-               to the instruction it qualifies. It is moved, never copied. -->
-          <div class="transnote" id="transNote" hidden>
-            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-              <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
-                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span><b>Note<span class="nno"></span>:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+               THE TELEGRAM NOTE IS ABOUT SENDING ANY PICTURE, so it is there
+               whenever a disc is, and it is bold from end to end: a chat app
+               that compresses the picture loses what is inside it. -->
+          <div class="decknotes" id="deckNotes" hidden>
+            <div class="transnote" id="transNote" hidden>
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span><b>Note<span class="nno"></span>:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+            </div>
+            <div class="transnote" id="tgNote" hidden>
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span><b>Note<span class="nno"></span>: When possible, send it as a "Full document" in Telegram so the image's information doesn't get compressed!</b></span>
+            </div>
           </div>
 
           <!-- THE SIGN OFF, WHICH IS WHAT TO DO NEXT AND ANY WARNING ABOUT IT.
@@ -1063,7 +1076,8 @@
             <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Now, send it!</b>
             <span>Click the download or copy button above and send it off to someone!</span>
             <div class="notes" id="sendNotes">
-              <!-- #transNote is moved in here on a phone, ahead of this one.
+              <!-- #transNote is moved in here on a phone, ahead of this one, and
+                   #tgNote after it.
                    THIS NOTE IS ABOUT THE FINISHED PICTURE, so it is measured
                    from the picture in the tray. The warning under the Make
                    button is about a picture that does not exist yet and can
@@ -1107,10 +1121,10 @@
              none of them and a show that has run leaves nothing behind. -->
         <div class="interlude" id="interlude" hidden>
           <div class="il-card">
-            <!-- ONE WAY OUT, READ TWO WAYS. A phone has the room for the word
-                 beside the mark. A desktop keeps the mark alone in the corner,
-                 in red, which is how its other modals close. Two buttons would
-                 be two things doing one job. -->
+            <!-- ONE WAY OUT: A PILL WITH A MARK AND A WORD, at the foot of the
+                 show on both shapes. A desktop can also press the dim round
+                 the show, which is the same skip. Two buttons would be two
+                 things doing one job. -->
             <button type="button" class="il-x" id="ilSkip" aria-label="Skip the animation">
               <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                 <path d="M7.5 7.5l9 9M16.5 7.5l-9 9" fill="none" stroke="currentColor"
@@ -1176,7 +1190,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.23.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.23.1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>
