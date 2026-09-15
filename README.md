@@ -12,7 +12,7 @@ server, no link that expires, no account to sign into.
 
 Open `index.html`. There is nothing to install and nothing to build.
 
-Current release: page **2.24.0**, engine **2.3.0**, protocol **1**.
+Current release: page **2.24.1**, engine **2.3.0**, protocol **1**.
 
 Serving the folder over HTTP is better than opening the file directly, because
 a browser blocks `fetch` against a `file://` path. Making and reading a
@@ -21,9 +21,11 @@ can only fill itself over HTTP.
 
 ## What a press gives you
 
-The picture arrives in **Made!**: a window with the disc in it, **Edit Title**,
-**Download** and **Copy** in a row under it, and a note on how to send it
-without losing what is inside. On a phone Made! is a screen of its own. On a
+The picture arrives in **Made!**: a window with the disc in it, a switch in the
+window's top right corner that reads **Solid** or **See-thru**, **Edit Title**,
+**Download** and **Copy** in a row under the disc, and a note on how to send it
+without losing what is inside. The switch remakes the same picture with a white
+background or a see-thru one. On a phone Made! is a screen of its own. On a
 desktop it takes the place of Load, beside the Make card, so the picture you
 made and the next note you type stand side by side, and typing never throws the
 picture away. The red cross on its corner closes it and brings Load back.

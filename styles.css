@@ -949,9 +949,9 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 .readbox { grid-area: bytes; text-align: center; }
 
-/* Under the button, hard against its right edge, one control to a row. They
-   take the one cell the action bar would otherwise leave empty. Stacked
-   rather than side by side, so neither reads as a qualifier of the other. */
+/* Advanced, under the button and hard against its right edge, in the one cell
+   the action bar would otherwise leave empty. The background switch stood above
+   it on a desktop until v2.24.1, and it stands in Made!'s window now. */
 .actbar .adv-row {
   grid-area: adv;
   flex-direction: column;
@@ -1023,17 +1023,25 @@ details.sect > summary::-webkit-details-marker { display: none; }
    together.
    WHERE THE DISC COMES TO REST is measured from the top of the window, and it
    is read twice: once to place the disc, once to work out how far above the lip
-   it has to start from. 33px leaves the same 24px of paper under the lip as
-   over the row. A phone's switch stands in the window, so a phone needs more:
-   Section 7. */
+   it has to start from. The switch stands in the window above the picture, and
+   40px was the floor and not the spacing: the switch is 24px tall, so its edge
+   sat one pixel above the picture's. A solid picture is a white square, so its
+   box is its edge and not only the circle drawn on it, and the two read as one
+   block with nothing between them. 56px from v2.18.1 leaves 17px of paper
+   between them, on both shapes from v2.24.1. */
 .discwin {
-  --disc-top: 33px;
+  --disc-top: 56px;
   --win-foot: 107px;
   position: relative; overflow: hidden; flex: none;
   height: calc(var(--disc-top) + var(--slot-w) + var(--win-foot));
   border: 1px solid var(--line-strong); border-radius: 12px;
   background: #fbfbfc;
 }
+
+/* THE SWITCH STANDS IN THE WINDOW, TOP RIGHT, which is where R5 has it. It is
+   about the picture, so it is in the frame with the picture on both shapes, and
+   over the disc in the stack, because a disc on its way out passes under it. */
+.discwin > .switch { position: absolute; top: 15px; right: 13px; z-index: 11; }
 
 /* THE SLOT IS THE TOP EDGE OF THE WINDOW, so the frame and the machine are one
    object. The disc passes behind the lip on the way out, and that is the whole
@@ -2001,13 +2009,13 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      making  the show
      loaded  the Load heading reading Loaded!, and the whole Load column
 
-   THREE CONTROLS ARE NOT WHERE THE MARKUP PUTS THEM. The divider, the two Load
-   buttons and the background switch are moved by placeWayOut() and
-   placeSolidSwitch() in scripts.js when the pointer is coarse, and moved back
-   when it is not. They are moved, never copied, so each still exists once.
-   That is why the make screen no longer has to keep the Load column alive for
-   two buttons: the buttons are in the Make card. The switch goes into the
-   picture window on the made screen, where the picture it describes is.
+   TWO CONTROLS ARE NOT WHERE THE MARKUP PUTS THEM. The divider and the two
+   Load buttons are moved by placeWayOut() in scripts.js when the pointer is
+   coarse, and moved back when it is not. They are moved, never copied, so each
+   still exists once. That is why the make screen no longer has to keep the Load
+   column alive for two buttons: the buttons are in the Make card. The
+   background switch is written in the picture window, where the picture it
+   describes is, on both shapes.
 
    A region the grid does not ask for is removed with display:none rather than
    hidden, because only display:none takes it out of the accessibility tree.
@@ -2235,16 +2243,6 @@ html.vt-fade::view-transition-new(root) {
      third way back beside the heading's corner and the button at the foot. */
   .deckrow { border: 0; border-radius: 0; background: none; box-shadow: none; padding: 0; }
   .deckrow > .xbtn { display: none; }
-
-  /* THE SWITCH STANDS IN THE WINDOW, top right, which is where R5 has it, so
-     the disc rests lower here than on a desktop.
-     40px was the floor and not the spacing: the switch is 24px tall at 15px,
-     so its edge sat one pixel above the picture's. A solid picture is a white
-     square, so its box is its edge and not only the circle drawn on it, and
-     the two read as one block with nothing between them.
-     56px from v2.18.1, which leaves 17px of paper between them. */
-  .discwin { --disc-top: 56px; }
-  .discwin > .switch { position: absolute; top: 15px; right: 13px; z-index: 11; }
 
   /* Edit says its short word, so the row of three still reads on a 384px
      screen. */

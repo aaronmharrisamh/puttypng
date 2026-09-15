@@ -299,20 +299,6 @@
             <!-- Advanced sits in the one cell the action bar leaves empty,
                  under the button and hard against its right edge. -->
             <div class="row adv-row">
-              <!-- ON BY DEFAULT, AND THAT IS THE POINT. A solid PuttyPNG can be
-                   flattened onto a background and still decode. A see-thru one
-                   cannot, so fewer places will carry it safely.
-
-                   THE WORD REPORTS THE STATE, IT DOES NOT NAME THE ACTION. It
-                   reads Solid while the picture is solid, and the knob agrees
-                   with it. The accessible name opens with the same word, which
-                   WCAG 2.5.3 requires, then adds the half a word leaves out:
-                   what pressing will do. -->
-              <label class="switch" id="solidWrap">
-                <input type="checkbox" id="solidBg" checked
-                       aria-label="Solid. The picture has a white background. Uncheck to make it see-thru.">
-                <span class="track"></span> <span class="say" id="solidWord">Solid</span>
-              </label>
               <button class="drawer-toggle" id="advToggle" type="button" aria-expanded="false" aria-controls="advDrawer">
                 <span class="chev">&rsaquo;</span> Advanced
               </button>
@@ -993,6 +979,27 @@
                down into it and rests inside it, and the window is what clips the
                disc while it is still above the lip. -->
           <div class="discwin" id="discWin">
+            <!-- THE BACKGROUND SWITCH STANDS IN THE WINDOW, TOP RIGHT, ON BOTH
+                 SHAPES. It is about the picture, so it belongs in the frame the
+                 picture is in, and it restyles the picture that is out. A
+                 desktop had it under the Make button until v2.24.1, and a phone
+                 moved it in here. Before a press, the same setting is in
+                 Advanced, under Disc.
+
+                 ON BY DEFAULT, AND THAT IS THE POINT. A solid PuttyPNG can be
+                 flattened onto a background and still decode. A see-thru one
+                 cannot, so fewer places will carry it safely.
+
+                 THE WORD REPORTS THE STATE, IT DOES NOT NAME THE ACTION. It
+                 reads Solid while the picture is solid, and the knob agrees
+                 with it. The accessible name opens with the same word, which
+                 WCAG 2.5.3 requires, then adds the half a word leaves out:
+                 what pressing will do. -->
+            <label class="switch" id="solidWrap">
+              <input type="checkbox" id="solidBg" checked
+                     aria-label="Solid. The picture has a white background. Uncheck to make it see-thru.">
+              <span class="track"></span> <span class="say" id="solidWord">Solid</span>
+            </label>
             <div class="lip"></div>
             <img class="cd" id="cd" alt="The PuttyPNG you made. Download it or copy it with the buttons below.">
             <!-- THE THREE THINGS TO DO WITH THE PICTURE, IN THE FRAME WITH IT.
@@ -1163,7 +1170,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.24.0</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.24.1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>

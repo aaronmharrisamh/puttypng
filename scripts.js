@@ -2053,11 +2053,10 @@
     wireExamples();
     wireInterlude();
 
-    // Before the first paint of the board, because both of these decide which
-    // card a control is drawn in, and a control that arrives and then jumps
-    // has already been read in the wrong place.
+    // Before the first paint of the board, because this decides which card a
+    // control is drawn in, and a control that arrives and then jumps has
+    // already been read in the wrong place.
     placeWayOut();
-    placeSolidSwitch();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -2072,7 +2071,7 @@
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
        on its own, so everything that reads it has to be asked again when it
-       does. That is the sizes, the box height, the placeholder, the three
+       does. That is the sizes, the box height, the placeholder, the two
        controls that live in a different card on each shape, and the two
        readings, because a phone says Made! under the Make heading and a desktop
        says it under the heading over the right-hand cell.
@@ -2081,7 +2080,6 @@
        the board in NaN pixels. */
     touchPointer.addEventListener("change", function () {
       placeWayOut();
-      placeSolidSwitch();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
@@ -2123,23 +2121,6 @@
       note.insertBefore(ordiv, openIn);
       note.insertBefore(chips, openIn);
     }
-  }
-
-  /* THE BACKGROUND SWITCH BELONGS BESIDE THE PICTURE IT DESCRIBES.
-     A desktop shows the switch and the finished picture together, so the
-     switch stays under the Make button where the rest of the settings are.
-     A phone makes them two screens. A switch on the first one asks a person to
-     decide something about a picture they have not seen yet, so it moves to
-     the screen that has the picture on it. */
-  function placeSolidSwitch() {
-    var wrap = $("solidWrap");
-    var win = $("discWin");
-    var adv = document.querySelector(".actbar .adv-row");
-    if (!wrap || !win || !adv) return;
-    // Inside the window, top right, which is where R5 puts it: the switch is
-    // about the picture, so it belongs in the frame the picture is in.
-    if (touchPointer.matches) win.insertBefore(wrap, win.firstChild);
-    else adv.insertBefore(wrap, adv.firstChild);
   }
 
   function paintDiscEdit() {
@@ -2415,9 +2396,9 @@
 
   /* PRESSING THE SWITCH RESTYLES THE PICTURE. IT DOES NOT THROW IT AWAY.
      The switch used to sit on the Make screen, where a press rarely had a
-     finished picture to spoil, so emptying the window was enough. A phone has
-     it beside the picture, and a control that empties the window it stands in
-     reads as a fault rather than a setting.
+     finished picture to spoil, so emptying the window was enough. It stands in
+     the picture's window on both shapes now, and a control that empties the
+     window it stands in reads as a fault rather than a setting.
      The press restyles the picture that is out, pressing it again with this one
      setting changed. Nothing here waits on it: it is a promise, the button says
      it is working, and the disc arrives when it arrives.
