@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-  index.html - Make and Load side by side, and the deck the disc comes out of.
+  index.html - Make beside one card: Load, Made! or Loaded!.
 
   One of five pages. The head, masthead, navigation, and footer are the same on
   all of them and are marked SYNC so .devtools/sync-chrome.mjs can prove it.
@@ -88,12 +88,14 @@
 
   <!-- ==========================================================================
        SECTION 4 - THE BOARD
-       Make and Load side by side, and the deck the disc comes out of.
+       Make beside one card: Load, the Made! card the disc comes out into, or
+       Loaded!.
        ========================================================================== -->
     <main class="panel" id="board">
 
-      <!-- Two columns and one deck. Make presses a disc, Load reads one, and
-           the disc that comes out of Make can be dragged straight into Load.
+      <!-- Two cards side by side. Make presses a disc on the left, and the
+           right-hand card is Load, which reads one, or Made!, which holds the
+           disc Make pressed, or Loaded!, which shows what came out of one.
 
            TWO NAMES, TWO ELEMENTS. #board is the page region above, and
            #boardGrid is this grid. The grid needs a name of its own because the
@@ -107,11 +109,12 @@
             <circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/>
             <path d="M12 1.6v2.2M12 20.2v2.2M1.6 12h2.2M20.2 12h2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
-          <!-- TWO WORDS, ONE HEADING. The desktop shows Make and Load beside each
-               other and never uses the second word. A phone shows one screen at
-               a time, so this heading has to say Made! once a PuttyPNG exists.
-               Both words stay in the markup and CSS chooses, because a word
-               written by JavaScript is a word some crawlers never read. -->
+          <!-- TWO WORDS, ONE HEADING. A phone shows one screen at a time, so this
+               heading has to say Made! once a PuttyPNG exists. A desktop keeps
+               this heading on the Make card and never uses the second word: its
+               Made! is a card of its own on the right, named by the heading
+               there. Both words stay in the markup and CSS chooses, because a
+               word written by JavaScript is a word some crawlers never read. -->
           <h2 id="headMake" tabindex="-1"><span class="w-a">Make</span><span class="w-b">Made!</span></h2>
           <!-- SOMETHING TO TRY WITHOUT TYPING ANYTHING. It sits beside the word
                rather than in the reading below, because the reading is
@@ -172,8 +175,8 @@
                nothing on it must not offer a way to empty it.
                On Made it reads Close and goes back to Make with the words
                still in the box.
-               This is R5's control. It is a phone control: a desktop shows
-               every region at once, so it has no screen to close.
+               This is R5's control. It is a phone control: a desktop closes
+               its Made! and Loaded! cards with the red cross on the card.
                Its label and its mark are written by paintCorner(). -->
           <button type="button" class="corner" id="cornerBtn" hidden></button>
           <!-- THE MAKE READING. It is not a live region. It changes on every
@@ -189,11 +192,17 @@
             <path d="M12 2.5v11M8 10l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M3.2 16v3.3a1.5 1.5 0 0 0 1.5 1.5h14.6a1.5 1.5 0 0 0 1.5-1.5V16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
-          <h2 id="headLoad" tabindex="-1"><span class="w-a">Load</span><span class="w-b">Loaded!</span></h2>
+          <!-- THREE WORDS, ONE HEADING, because the card under it is one of three.
+               A phone shows this heading on its Loaded screen only, and a desktop
+               names whichever card stands in the right-hand cell: Load, Loaded!,
+               or Made!, which a phone names on the Make heading instead. -->
+          <h2 id="headLoad" tabindex="-1"><span class="w-a">Load</span><span class="w-b">Loaded!</span><span class="w-c">Made!</span></h2>
           <!-- THE BOARD'S ONE LIVE REGION. Loading is the thing that happens to
                a person rather than because of them, so it is the one that has
                to speak. The decode spinner below lost its role to this line, so
-               there is one voice in this column and not two. -->
+               there is one voice in this column and not two.
+               A desktop's Made! card stands under this heading too, so this line
+               says what a finished picture holds when that card arrives. -->
           <p class="say" id="loadSay" role="status"><span>Drop a PuttyPNG here, or open one.</span></p>
         </div>
 
@@ -971,98 +980,40 @@
         </div>
           </div>
 
+        <!-- MADE!, THE PICTURE A PRESS MADE. It is the card in the right-hand
+             cell, and Load and Loaded! are the other two cards that cell holds:
+             one of the three is up at a time. A phone shows it as a screen of its
+             own and a desktop shows it where Load was, beside the Make card, so
+             the next picture and the last one stand side by side.
+             THE CROSS THAT CLOSES IT IS BUILT BY scripts.js, the way the Loaded!
+             panel's is, and only a desktop shows it. A phone closes this screen
+             from the corner of its heading. -->
         <div class="deckrow">
-          <!-- THE PICTURE WINDOW. On a desktop this element has no box at all:
-               display:contents takes it out of the box tree, so the tray keeps
-               positioning against the deck row exactly as it did before and
-               the desktop is unmoved.
-               On a phone it becomes R5's window. The slot lip is its top edge,
-               the disc ejects down into it and rests inside it, and the window
-               is what clips the disc while it is still above the lip. -->
+          <!-- THE PICTURE WINDOW. The slot lip is its top edge, the disc ejects
+               down into it and rests inside it, and the window is what clips the
+               disc while it is still above the lip. -->
           <div class="discwin" id="discWin">
-          <div class="tray">
             <div class="lip"></div>
-            <img class="cd" id="cd" alt="Your PuttyPNG. Drag it into Load, or press the bin to throw it away.">
-            <!-- THE TWO OVERLAY BUTTONS ARE NOT DRAWN ON THE PICTURE ANY MORE.
-                 They sat on top of the one thing this screen exists to show.
-                 They stay in the markup because a phone still moves them into
-                 its own row: placeMadeActions() is the only thing that touches
-                 them, and the gate counts one of each. -->
-            <div class="cdtools">
-              <button type="button" id="cdCopy"></button>
-              <button type="button" id="cdSave"></button>
-            </div>
-          </div>
-          <!-- THE THREE THINGS TO DO WITH THE PICTURE, IN THE FRAME WITH IT.
-               Edit, Download and Copy are one row, and what the picture is
-               reads as a slim line under them. Both were outside the window
-               until v2.17.0: the caption was placed against the disc's bottom
-               corner and the two buttons were a row below the frame, which
-               cost the screen a row it needed for the sign off.
-               #madeActs is filled by placeMadeActions() and placeDiscEdit().
-               It is empty in this markup for that reason. -->
-          <div class="discfoot">
-            <div class="madeacts" id="madeActs" hidden></div>
-            <div class="discnote" id="discNote" hidden></div>
-          </div>
-          </div>
-
-          <!-- WHAT TO DO WITH IT, BESIDE THE PICTURE.
-               The deck spans both columns so these four fit next to a disc
-               drawn at its real size. The arrow points at the invitation only.
-               #discEdit is moved in here by placeDiscEdit(), so its place in
-               this markup is where a desktop finds it and nothing more. -->
-          <div class="cdtip">
-            <div class="tiprow">
-              <svg class="arrow" width="26" height="16" viewBox="0 0 26 16" aria-hidden="true">
-                <path d="M1 8h21M17 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <button type="button" class="say" id="cdTipCopy"></button>
-            </div>
-            <button type="button" class="say" id="cdTipSave"></button>
-            <button type="button" class="disc-edit" id="discEdit" aria-label="Edit title" aria-haspopup="dialog" aria-controls="titleDialog" hidden>
-              <span class="edit-short">Edit</span><span class="edit-full">Edit Title</span>
-            </button>
-            <button type="button" class="bin ghost" id="bin" aria-label="Trash this PuttyPNG">
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6.5 7l.8 12.1A2 2 0 0 0 9.3 21h5.4a2 2 0 0 0 2-1.9L17.5 7M10 11v6M14 11v6"
-                      fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              ...or trash me!
-            </button>
-          </div>
-
-          <!-- EVERYTHING BELOW IS THE PHONE'S MADE SCREEN, and it is R5's, in
-               this order: what the picture is, the notice if it applies, the two
-               things to do with it, the sign off, then the way back.
-               A desktop never shows any of it. It says what the deck, the tip
-               beside the disc and the bin already say there, and saying it
-               twice in one region is how two designs start. -->
-          <!-- THE DESKTOP'S NOTES, IN ONE BOX UNDER THE DISC. A phone has no room
-               for a bubble of its own, so placeNotes() moves both of these into
-               the sign off below, where they read as addenda to the instruction
-               they qualify. They are moved, never copied, and a pair or more is
-               numbered wherever they are.
-               THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
-               when the board loads, and it goes the moment the switch goes back
-               to Solid. A warning that outlives its cause is noise.
-               THE TELEGRAM NOTE IS ABOUT SENDING ANY PICTURE, so it is there
-               whenever a disc is, and it is bold from end to end: a chat app
-               that compresses the picture loses what is inside it. -->
-          <div class="decknotes" id="deckNotes" hidden>
-            <div class="transnote" id="transNote" hidden>
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
-                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span><b>Note<span class="nno"></span>:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
-            </div>
-            <div class="transnote" id="tgNote" hidden>
-              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-                <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
-                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span><b>Note<span class="nno"></span>: When possible, send it as a "Full document" in Telegram so the image's information doesn't get compressed!</b></span>
+            <img class="cd" id="cd" alt="The PuttyPNG you made. Download it or copy it with the buttons below.">
+            <!-- THE THREE THINGS TO DO WITH THE PICTURE, IN THE FRAME WITH IT.
+                 Edit, Download and Copy are one row, and what the picture is
+                 reads as a slim line under them. The caption was placed against
+                 the disc's bottom corner and the buttons were a row below the
+                 frame until v2.17.0, which cost the screen a row it needed for
+                 the sign off.
+                 ONE OF EACH, IN THE ROW ON BOTH SHAPES. A desktop had a stack of
+                 chips beside the disc until v2.24.0, and a phone moved these three
+                 into this row. Made! is one card on both shapes now, so nothing
+                 moves: the gate counts one of each. -->
+            <div class="discfoot">
+              <div class="madeacts" id="madeActs" hidden>
+                <button type="button" class="disc-edit" id="discEdit" aria-label="Edit title" aria-haspopup="dialog" aria-controls="titleDialog" hidden>
+                  <span class="edit-short">Edit</span><span class="edit-full">Edit Title</span>
+                </button>
+                <button type="button" id="cdSave"></button>
+                <button type="button" id="cdCopy"></button>
+              </div>
+              <div class="discnote" id="discNote" hidden></div>
             </div>
           </div>
 
@@ -1071,18 +1022,30 @@
                buttons in the window above. Every note the picture has earned
                follows, inside this box rather than in a bubble of its own:
                two bubbles in a column read as two things to deal with, and
-               neither of these is a thing to deal with. -->
+               none of these is a thing to deal with. -->
           <div class="signoff" id="sendIt" hidden>
             <b><span class="ic" id="sendItMark" aria-hidden="true"></span>Now, send it!</b>
             <span>Click the download or copy button above and send it off to someone!</span>
+            <!-- THE NOTES STAND IN THE ORDER THEY ARE NUMBERED: the see-thru
+                 notice, the over-512 note, then the Telegram note.
+                 THE NOTICE FOLLOWS THE PRESS THAT CAUSED IT. It is not on screen
+                 when the board loads, and it goes the moment the switch goes back
+                 to Solid. A warning that outlives its cause is noise.
+                 THE OVER-512 NOTE IS ABOUT THE FINISHED PICTURE, so it is measured
+                 from the picture in the window. The warning under the Make button
+                 is about a picture that does not exist yet and can still be made
+                 smaller, which is a different sentence for a different moment.
+                 THE TELEGRAM NOTE IS ABOUT SENDING ANY PICTURE, so it is there
+                 whenever a disc is, and it is bold from end to end: a chat app
+                 that compresses the picture loses what is inside it. -->
             <div class="notes" id="sendNotes">
-              <!-- #transNote is moved in here on a phone, ahead of this one, and
-                   #tgNote after it.
-                   THIS NOTE IS ABOUT THE FINISHED PICTURE, so it is measured
-                   from the picture in the tray. The warning under the Make
-                   button is about a picture that does not exist yet and can
-                   still be made smaller, which is a different sentence for a
-                   different moment. -->
+              <div class="transnote" id="transNote" hidden>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                        stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span><b>Note<span class="nno"></span>:</b> Some messaging platforms do not accept transparent PuttyPNGs. Test it first!</span>
+              </div>
               <div class="transnote" id="bigNote" hidden>
                 <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                   <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
@@ -1090,9 +1053,19 @@
                 </svg>
                 <span><b>Note<span class="nno"></span>:</b> Over 512 px. Download it and send the file instead.</span>
               </div>
+              <div class="transnote" id="tgNote" hidden>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                  <path d="M12 4.5 21 20H3z M12 10v4 M12 16.6v.2" fill="none" stroke="currentColor"
+                        stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span><b>Note<span class="nno"></span>: When possible, send it as a "Full document" in Telegram so the image's information doesn't get compressed!</b></span>
+              </div>
             </div>
           </div>
 
+          <!-- THE PHONE'S WAY BACK, AT THE FOOT. A phone has scrolled past the
+               heading's Close by the time it reads this far. A desktop has the
+               Make card standing beside this one, so it has no need of it. -->
           <div class="againrow" id="againRow" hidden>
             <button type="button" class="btn ghost" id="againBtn"></button>
           </div>
@@ -1190,7 +1163,7 @@
       </div>
       <div class="line">
         <b>PuttyPNG</b>
-        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.23.1</span>
+        <span class="sep" aria-hidden="true">&middot;</span><span>Page v2.24.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Engine v2.3.0</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>Protocol v1</span>
         <span class="sep" aria-hidden="true">&middot;</span><span>MIT License</span>

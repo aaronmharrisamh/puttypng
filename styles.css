@@ -263,19 +263,17 @@ nav.tabs a {
 .ext { vertical-align: -1px; margin-left: 5px; opacity: .75; }
 
 /* THE HOME BOARD.
-   One grid holds the two headings, the two columns, and the deck, so a
-   heading can never be separated from the column it names. */
+   One grid holds the two headings and the two cards, so a heading can never be
+   separated from the card it names. */
 .board {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: 24px;
   row-gap: 8px;
-  /* THE DECK SPANS BOTH COLUMNS. The disc is drawn at the size the picture
-     really is, and the chips sit beside it, and the two of them do not fit in
-     one column. The right half of this row was empty in every state the board
-     has ever had, so the deck takes it rather than pushing the chips under
-     the picture. The disc itself is still held to the Make column's width. */
-  grid-template-areas: "hm hl" "cm cl" "ad ad" "sm sm";
+  /* THE RIGHT-HAND CELL HOLDS ONE CARD AT A TIME: Load, Made! or Loaded!. The
+     disc had a row of its own under both columns until v2.24.0, with its chips
+     beside it, while Load stood beside Make with nothing to do. */
+  grid-template-areas: "hm hl" "cm cl" "ad ad";
   align-items: stretch;
 }
 
@@ -286,7 +284,8 @@ nav.tabs a {
 /* Advanced opens across the whole board. Its groups are two columns wide, and
    half a card would squeeze every slider against its number field. */
 .board > .drawer { grid-area: ad; }
-.deckrow { grid-area: sm; }
+/* Made! shares Load's cell. The view contract in Section 7 keeps one of them up. */
+.deckrow { grid-area: cl; }
 
 /* THE HEADING WRAPS SO ITS READING CAN SIT UNDER IT. The mark and the word
    stay on one line, and the status line takes the whole of the next. */
@@ -386,13 +385,14 @@ nav.tabs a {
   border: 0; border-bottom: 1px solid var(--clay); padding: 0; cursor: pointer;
 }
 
-/* THE SECOND WORD IS FOR ONE SCREEN ONLY. Each heading carries both the word
-   the desktop uses and the word a phone needs once that screen is reached.
-   The desktop shows Make and Load beside each other and never uses the second,
-   so it is hidden here and turned back on inside the touch query in Section 7.
-   Both stay in the markup, so a crawler reads the heading whichever shape it
-   renders, and the word is never written by JavaScript. */
-.head h2 .w-b { display: none; }
+/* THE FIRST WORD IS THE RESTING ONE. Each heading also carries the words for
+   what can take its place: Made! on the Make heading, for a phone's screen, and
+   Loaded! and Made! on the heading over the right-hand cell, for its cards.
+   They are hidden here and turned on by the view contract in Section 7. All of
+   them stay in the markup, so a crawler reads the heading whichever shape it
+   renders, and a word is never written by JavaScript. */
+.head h2 .w-b,
+.head h2 .w-c { display: none; }
 
 /* The heading takes focus when a phone changes screen. It is not in the tab
    order, so it must not look like a control that is. The show's heading is one
@@ -421,8 +421,11 @@ nav.tabs a {
 /* The line marks are kept for a change of mind. Nothing shows them today. */
 .head .mark { display: none; color: var(--clay); flex: none; }
 
-/* The two columns are always the same height, whatever either one holds. */
-.col {
+/* THE CARD FRAME. Make, Load and a desktop's Made! wear it. Make and Load are
+   always the same height, whatever either one holds. Made! runs as long as its
+   picture needs, and the view contract keeps Make at its own height beside it. */
+.col,
+.deckrow {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -623,91 +626,6 @@ textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 
 
 .adv-row { justify-content: flex-end; margin-top: 8px; }
-
-
-/* The deck. A square slot with a lip along the bottom edge. Phase 2 turns
-   the lip into the front of a machine and adds the eject motion. */
-/* The deck reads as a machine with a slot in it. Taller than wide, because
-   the lower third is the face the disc comes out of. */
-/* TALLER THAN THE DISC, ON PURPOSE.
-   The bay has to be deeper than the disc is tall. Otherwise the disc cannot
-   rise clear of the lip, and the layer change at the top of the move has to
-
-/* z0 THE BAY. A recess, not a panel. The hard shadow under its own top edge
-   is what tells the eye it has depth. */
-/* A medium grey where the picture sits, falling to near black at the opening.
-   RULE: the dark end is not a matter of taste. The shade fades a moving disc
-   into this exact colour, and the black line needs something lighter above it
-
-
-/* z6 THE SHADE. What covers the disc up as it reaches the opening, so it is
-   swallowed rather than clipped by a hard edge.
-   RULE: this sits ABOVE the disc in every state, including when the disc is
-   in front of the machine. If it did not, the shading would jump off the disc
-   the moment the disc changed layer, which is the fault it exists to hide.
-   It stops at the line, so it never overlaps the face and a high z-index
-   costs nothing.
-   It is short and steep on purpose. A tall soft one dimmed a disc that was
-   sitting at rest, which is meant to be on show, not on its way in.
-   RULE: it fades to the colour of the bay floor, NOT to black. Fading to
-   black would leave the area above the opening as dark as the opening itself,
-   and the black line would have nothing to stand out against. The disc has to
-
-/* On its way in, at full strength, so the disc is swallowed rather than cut
-   off. The holder is drawn before the shade, so the shade can be styled from
-   the state of the disc without any code being told about it. */
-
-
-/* THE BUTTON, ON THE FASCIA.
-   A key in a sunken shelf, so it reads as part of the machine.
-   RULE: an empty drive hides the button but KEEPS its space. The face is a
-   fixed share of the slot, and letting the row collapse would move the six
-
-
-/* THE FASCIA.
-   The window keeps the middle. Three values a side, wing and wing.
-   The height never changes, so nothing on the page moves when a disc comes
-
-
-/* z4 THE LINE. The opening the disc goes into, and rises back out of. Hard
-   edged and black, because that is what the front of a slot drive looks
-
-/* The chamfer below the line, where the light catches the front edge. It is
-   drawn here rather than as a third layer, because it belongs to the opening
-
-/* THE DRIVE.
-   A window in the face, a button that says what happens next, and a slim
-
-/* The same two acts as on the picture, on a card over the window.
-   Icons alone: two named buttons will not fit in 64px, and the picture spells
-   both of them out in full. */
-/* BELOW the window, not above it. The button sits directly above, and a card
-   there covered its words. Below is the same distance away and covers
-
-/* Only when there is a disc in there to act on. Focus counts as well as
-   hover, or the two buttons could never be reached from a keyboard. */
-
-
-/* THE DISC IN THE WINDOW.
-   It slides in from above and is cut off by the window, which is what sells
-
-
-/* One turning layer carries all three levels of blur. Cross-fading between
-   them changes the blur without touching the turn, so the disc never jumps
-
-
-@keyframes spin-turn { to { transform: rotate(360deg); } }
-
-
-/* Save and Copy live on the picture, because that is what they act on.
-   AT THE FOOT, CENTRED, not in a corner. A generated CD cover is transparent
-   outside the disc, so a corner button would float over the bay instead of
-   sitting on the picture it acts on. The centre of the foot is on the disc at
-   every cover size. They cover a strip only, so the rest of the picture is
-   still there to right-click or press and hold. */
-/* STACKED, not side by side. Named buttons are far wider than the icons they
-   replaced, and a generated CD cover is a circle: a row 167px wide had its
-   corners off the edge of the disc, floating over the bay. A column is narrow
 
 
 /* ADVANCED, IN SIX GROUPS.
@@ -936,7 +854,8 @@ details.sect > summary::-webkit-details-marker { display: none; }
 
 /* ONE GHOST TREATMENT. It never fills in. The ground stays white and only the
    outline and the mark darken, so a quiet control answers without becoming
-   the loudest thing on the card. The attach button and the bin both wear it. */
+   the loudest thing on the card. The attach button and the way back at the
+   foot of a phone's Made! screen both wear it. */
 .ghost {
   background: #fff;
   color: var(--muted);
@@ -1084,49 +1003,43 @@ details.sect > summary::-webkit-details-marker { display: none; }
 .rungno { font: 400 10px/1.3 ui-monospace, Consolas, monospace; color: #a6a6ad; letter-spacing: .06em; }
 
 /* ==========================================================================
-   HOME - THE DECK AND THE DISC
+   HOME - MADE!, THE CARD WITH THE DISC IN IT
    ========================================================================== */
 
-/* Everything here is worked out from the one token, so the slot and the disc
-   grow at the same moment and the same rate as the donut above them. */
-/* THE DECK, SAID AS A SHAPE RATHER THAN AS OFFSETS.
-   The picture on the left, what to do with it on the right, and the notice
-   under both. It used to be a fixed frame with each chip placed against the
-   disc by calc(var(--slot-w) + ...), which only works while the disc is a
-   thumbnail. Naming the areas costs four lines and survives a disc of any
-   size, and a phone overrides the whole thing with a column in Section 7. */
-.deckrow {
-  display: grid; align-items: start;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "tray tip" "note note";
-  gap: 14px 18px;
-  min-width: 0;
+/* A COLUMN ON BOTH SHAPES: the window, then the sign off, then a phone's way
+   back, each as wide as the card, in the order they are read. A desktop's disc
+   sat in a row under both columns until v2.24.0 with a stack of chips beside
+   it, and a phone's Made! screen was a design of its own. It is one card now.
+   The frame is the Load card's, from the rule in Section 4, and a phone takes
+   it off in Section 7. It is positioned so the cross can sit on its corner. */
+.deckrow { position: relative; gap: 10px; }
+
+/* THE WINDOW RESERVES THE FOOTER'S ROOM RATHER THAN GROWING TO HOLD IT. The row
+   of three buttons and the size line arrive with the disc, and a window that
+   grew at that moment would move the page under a hand already reaching for
+   it. r5-sendoff.js asserts the reserved room really holds what goes in it.
+   107px is the footer's own height plus the paper above it: it leaves 24px
+   between the picture and the row, where 92px left 9px and the two ran
+   together.
+   WHERE THE DISC COMES TO REST is measured from the top of the window, and it
+   is read twice: once to place the disc, once to work out how far above the lip
+   it has to start from. 33px leaves the same 24px of paper under the lip as
+   over the row. A phone's switch stands in the window, so a phone needs more:
+   Section 7. */
+.discwin {
+  --disc-top: 33px;
+  --win-foot: 107px;
+  position: relative; overflow: hidden; flex: none;
+  height: calc(var(--disc-top) + var(--slot-w) + var(--win-foot));
+  border: 1px solid var(--line-strong); border-radius: 12px;
+  background: #fbfbfc;
 }
 
-/* A DESCENDANT, NOT A CHILD. .discwin is display:contents on a desktop, and
-   that takes the box out of the tree without taking the element out of the
-   DOM, so .deckrow > .tray matches nothing: the tray's parent is still
-   .discwin. It landed in the right cell by the order it is auto-placed in,
-   which is luck rather than a rule. */
-.deckrow .tray { grid-area: tray; }
-/* It sizes to its widest chip rather than to the cell, so the bin can line
-   its right edge up with the invitation above it. Stretched, the bin would
-   sit against the far edge of the board. */
-.deckrow > .cdtip { grid-area: tip; justify-self: start; }
-.deckrow > .decknotes { grid-area: note; }
-
-.tray {
-  position: relative; flex: none;
-  width: var(--slot-w); height: calc(var(--slot-w) + 28px);
-  /* Only the TOP of this clip matters: it is what hides the disc above the
-     slot. The other three sides are held wide so nothing inside is ever cut,
-     including the two chips when they sit under the disc on a narrow screen. */
-  clip-path: inset(0 -320px -220px -40px);
-  transition: width var(--grow), height var(--grow);
-}
-
+/* THE SLOT IS THE TOP EDGE OF THE WINDOW, so the frame and the machine are one
+   object. The disc passes behind the lip on the way out, and that is the whole
+   illusion. The window's own edge hides the disc while it is still above. */
 .lip {
-  position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 6;
+  position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 12;
   background: #0b0b0e; border-radius: 3px; box-shadow: 0 2px 7px rgba(0,0,0,.30);
 }
 
@@ -1136,73 +1049,111 @@ details.sect > summary::-webkit-details-marker { display: none; }
   background: linear-gradient(180deg, #f4f4f6, #dedee1 55%, #c4c4ca);
 }
 
+/* THE DISC WAITS ABOVE THE LIP, CENTRED IN THE WINDOW. Its size is the one
+   token, so it grows at the same moment and the same rate as the donut does.
+   NOTHING DRAGS IT from v2.24.0, so it keeps the page's own cursor, and a thumb
+   on it scrolls the page. It was carried into Load with the mouse while the two
+   stood side by side, and Made! stands where Load was now. */
 .cd {
-  position: absolute; left: 0; top: 9px;
-  width: var(--slot-w); height: var(--slot-w);
-  cursor: grab; touch-action: none; z-index: 8;
+  position: absolute; left: 50%; top: var(--disc-top); z-index: 8;
+  width: var(--slot-w); height: var(--slot-w); margin-left: calc(var(--slot-w) / -2);
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.30));
-  transform: translateY(calc(-1 * (var(--slot-w) + 20px)));
+  transform: translateY(calc(-1 * (var(--disc-top) + var(--slot-w) + 10px)));
   opacity: 0;
   transition: transform 620ms cubic-bezier(.2,.85,.25,1), opacity .2s ease,
               width var(--grow), height var(--grow);
 }
 
-/* NOTHING IS DRAWN ON THE PICTURE ANY MORE. These two lay over the disc,
-   which is the one thing the screen exists to show, and a person had to hover
-   the picture to find out they were there at all. The words they carried are
-   under the disc now, on chips that are always visible.
-   The element stays because a phone still needs somewhere to keep the pair
-   between moves. placeMadeActions() takes them out of here and puts them
-   back, and the gate counts one of each in the markup. */
-.cdtools { display: none; }
-
-/* WHAT TO DO WITH A FRESH DISC, BESIDE IT.
-   One stack: copy it, save it, change what it says, throw it away. It is a
-   cell of the deck rather than a box placed against the disc, so it stands
-   beside a picture of any size without being told where to go. */
-.cdtip {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
-  padding-top: calc(var(--slot-w) * 0.22);
-  opacity: 0; transform: translateX(-8px); pointer-events: none;
-  transition: opacity .25s ease, transform .25s ease, padding-top var(--grow);
+/* WHAT TO DO WITH THE PICTURE, IN THE FRAME WITH IT. Placed rather than flowed,
+   because the disc above it is placed and the window's height is written from
+   the disc's size. */
+.discfoot {
+  display: grid; gap: 6px;
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px 10px;
 }
 
-.tiprow { display: flex; align-items: center; gap: 6px; }
+/* Copy leads somewhere, a message to a friend, so it is the filled one.
+   Download leads to a folder. Edit is hidden whenever the cover is not a disc,
+   so the row is a flex line rather than three named columns: a hidden Edit then
+   costs the row nothing at all. */
+.madeacts { display: flex; gap: 6px; }
+.madeacts[hidden] { display: none; }
+.madeacts button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 10px; border-radius: 999px;
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  white-space: nowrap; min-width: 0;
+}
+.madeacts #cdSave, .madeacts #cdCopy { flex: 1 1 0; }
+.madeacts #cdSave,
+.madeacts .disc-edit { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
+/* Edit takes the width of its own word and the other two share what is left,
+   so the row still reads on a 384px screen. */
+.madeacts .disc-edit { flex: none; padding: 0 14px; }
+.madeacts #cdCopy { background: var(--ink); color: #fff; border: 0; }
 
-.cdtip .arrow { color: var(--clay); flex: none; }
-
-/* THE ARROW SETS THE INDENT. Everything below the invitation starts where the
-   invitation's words start, so the stack reads as one block rather than four
-   chips that happen to be near each other. */
-.cdtip > .say, .cdtip > .disc-edit { margin-left: 32px; }
-
-
-.cdtip .say {
-  display: inline-flex; align-items: center; gap: 7px;
-  font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap;
-  border: 0; cursor: pointer;
-  background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 999px;
-  transition: background .15s, transform .12s;
+/* ABOVE THE CONFIRMATIONS, WHICH WIN A TIE ON THE SAME SELECTOR. Written after
+   them, a hover would turn a Copied! black under the mouse that pressed it. */
+@media (hover: hover) and (pointer: fine) {
+  .madeacts #cdCopy:hover { background: #000; }
+  .madeacts #cdSave:hover,
+  .madeacts .disc-edit:hover { border-color: var(--ink); }
 }
 
-/* Its right edge lines up with the invitation's, so the stack reads as one
-   block rather than two chips that happen to be near each other. */
-.bin {
-  align-self: flex-end;
-  display: inline-flex; align-items: center; gap: 7px;
-  font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap;
-  padding: 8px 14px; border-radius: 999px;
-}
+.madeacts #cdCopy.done { background: var(--ok); }
+/* THE TICK IS DRAWN IN WHITE, so the button it lands on has to stop being
+   white. Download kept its paper background through the confirmation and the
+   tick was invisible on it: only the word changed. */
+.madeacts #cdSave.done { background: var(--ok); color: #fff; border-color: var(--ok); }
 
-.bin svg { flex: none; }
+/* THE CAPTION IS A SLIM LINE OF ITS OWN UNDER THE ROW. It sat in the window's
+   bottom corner beside the Edit chip until v2.17.0, where a row of three
+   buttons left it nowhere to sit.
+   RIGHT, NOT CENTRED. It is a footnote to the row above it, and its right edge
+   lands under the right edge of Copy, so the block reads as one thing rather
+   than as two lines of different widths. */
+.discnote { display: block; text-align: right; font-size: 11px; color: var(--muted); }
+.discnote[hidden] { display: none; }
 
-/* The title entry point stays visible beside a finished disc. */
-.disc-edit {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  min-height: 36px; padding: 7px 14px;
-  border: 0; border-radius: 999px; background: var(--ink); color: #fff;
-  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+.signoff {
+  display: block; padding: 10px 12px; border-radius: 12px; line-height: 1.45;
+  background: #f2f8ec; border: 1px solid #d8ecc4;
 }
+.signoff[hidden] { display: none; }
+/* THE CHILD COMBINATOR IS THE POINT. The notes below carry a bold label and a
+   span of their own, and without it the sign off's heading rules reach inside
+   them: a note read "Note  :" in green at 15px, spaced out by the heading's own
+   flex gap. */
+.signoff > b {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 700; color: #2f6b13; margin-bottom: 2px;
+}
+.signoff .ic { display: flex; flex: none; }
+/* A BLOCK, SO A LINE THAT WRAPS IS SPACED FOR ITS OWN SIZE. Inline, it took the
+   line height of the box's larger type, and a desktop's card wraps it. */
+.signoff > span { display: block; font-size: 13px; color: var(--ink-soft); }
+
+/* THE NOTES ARE ADDENDA, so they read as part of the instruction above them
+   and not as another thing to deal with. */
+.signoff .notes {
+  display: grid; gap: 6px;
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8ecc4;
+}
+.signoff .notes[hidden] { display: none; }
+
+/* THE CROSS ON MADE! IS THE CROSS ON LOADED!. The same round red button sits on
+   the corner of the picture's frame, as the Loaded! panel's sits on the corner
+   of its dashed one, so the right-hand cell closes the same way whichever card
+   is up. The card's padding is where the window's corner is, and the cross
+   stands over the lip there. A phone closes Made! from its heading instead. */
+.deckrow > .xbtn { display: grid; top: var(--card-pad); right: var(--card-pad); z-index: 13; }
+
+/* A PUTTYPNG HELD OVER MADE! LIGHTS ITS WINDOW the way one held over Load lights
+   the drop zone, because letting go there reads it. */
+.deckrow.over .discwin { border-color: var(--clay); box-shadow: 0 0 0 4px rgba(201,111,82,.14); }
+
+/* THE TITLE'S WAY IN IS THE ROW'S FIRST BUTTON, and its look is the row's.
+   What is its own is that it can be hidden, and which of its two words it says. */
 .disc-edit[hidden] { display: none; }
 .disc-edit svg { flex: none; }
 .disc-edit .edit-short { display: none; }
@@ -1239,17 +1190,10 @@ details.sect > summary::-webkit-details-marker { display: none; }
 .title-editor :focus-visible { outline: 3px solid #247791; outline-offset: 3px; }
 .title-editor button:disabled { opacity: .5; cursor: default; }
 
-/* THE PHONE'S MADE SCREEN, OFF BY DEFAULT.
-   A desktop shows the deck, the tip beside the disc and the bin, and those say
-   what these say. One region must not carry two designs at once, so every rule
-   below is turned on inside the touch query in Section 7 and nowhere else.
-
-   display:contents on the window is the whole trick: on a desktop the element
-   is taken out of the box tree, so the tray still positions against the deck
-   row and not one desktop pixel moves. */
-.discwin { display: contents; }
-
-.corner, .discnote, .discfoot, .signoff, .madeacts, .againrow { display: none; }
+/* A PHONE'S TWO WAYS BACK, OFF BY DEFAULT. The corner of the heading and the
+   button at the foot of Made! are turned on inside the touch query in Section 7
+   and nowhere else: a desktop closes a card with the cross on its corner. */
+.corner, .againrow { display: none; }
 
 /* ==========================================================================
    HOME - LOAD
@@ -1599,50 +1543,6 @@ textarea:focus, input:focus, select:focus {
 /* Advanced drawer */
 .drawer-toggle[aria-expanded="true"] .chev { transform: rotate(90deg); }
 
-/* Dropzone */
-/* THE EJECT
-   One transition covers the whole move: the rise, the spin, and the tilt.
-   Order matters below, because several of these rules have equal weight and
-   the later one wins.
-
-   Transform only, so the browser can run it on the compositor and it stays
-   smooth on a weak machine. */
-/* Parked means fully inside. 104 per cent puts the top edge below the lip, so
-   nothing of the disc shows while the drive is holding it.
-
-   RULE: every state below lists the same three functions in the same order.
-   When the lists match, the browser interpolates them one by one. When they do
-   not, it falls back to decomposing a matrix, which yields NaN while the
-   holder still has no height. Do not drop a function from one of these. */
-/* ONE MOVE EACH WAY.
-   The curve carries the rise. Coming out it overshoots the resting place;
-   going in it lifts before it drops. So there is no second move and no hold,
-   and nothing stops part way.
-   The numbers were solved, not guessed. For a cubic-bezier the reach past the
-   end depends only on y1 and y2, and the timing only on x1 and x2, so the
-   height and the speed were set apart from each other.
-
-
-/* Ejected, and tilted toward the viewer. */
-
-/* Being drawn back in. Same place as parked, with no spin, because a disc
-   going into a machine does not need to be flung.
-   GOING IN: 400ms, lifting 45px before it drops. The negative y1 is what
-
-/* THE Z SWITCH.
-   The disc is BEHIND the face while it passes through the slot, which is what
-   makes it look like it comes out of a hole. It is ABOVE the face and the lip
-   at every other moment, because then it is an object in front of a machine.
-   The page adds this class once the disc is clear of the lip, where there is
-
-
-/* THE TILT, IN FULL.
-   The pointer is over the deck, so the disc lies flat. The pointer is away, so
-   it leans. There is no third state and no script, which is why it cannot get
-   stuck.
-   The whole deck is the target, not only the picture, so it is easy to hit. */
-
-
 @media (hover: hover) and (pointer: fine) {
   .subtabs button:hover { color: var(--ink); }
 }
@@ -1789,38 +1689,6 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .cd.out { transform: translateY(0); opacity: 1; }
 .cd.gone { transform: translateY(0) scale(.3); opacity: 0; transition: transform .34s ease-in, opacity .3s ease-in; }
 
-/* While one is being carried, what is left in the slot is only a trace of it. */
-.cd.lifted { opacity: .25; }
-
-/* The copy that follows the pointer. It is fixed to the window, so it is put
-   on the body and cannot be scoped to the panel. */
-.cd.ghost {
-  position: fixed; z-index: 100; pointer-events: none;
-  transition: none; opacity: 1;
-  filter: drop-shadow(0 16px 26px rgba(0,0,0,.38));
-}
-
-/* THE CHIPS ARE NOT THE DISC'S SIBLINGS ANY MORE, so the state is read off
-   the deck instead of off the element next to it. The disc lives in the tray
-   and the chips live under it, and :has is what still lets one speak for the
-   other. */
-.deckrow:has(.cd.out) .cdtip { opacity: 1; transform: none; pointer-events: auto; }
-
-/* THE WHOLE STACK CLEARS WHILE THE DISC IS IN HAND. Neither chip is a place
-   to drop any more, so there is nothing for them to do until the disc is set
-   down again, and both come back if it returns to its slot. */
-.deckrow:has(.cd.lifted) .cdtip { opacity: 0; transform: translateX(-10px); pointer-events: none; }
-
-@media (hover: hover) and (pointer: fine) {
-  .cdtip .say:hover { background: #000; }
-}
-.cdtip .say:active { transform: scale(.97); }
-.cdtip .say.done { background: var(--ok); }
-
-@media (hover: hover) and (pointer: fine) {
-  .bin:hover { color: var(--bad); border-color: var(--bad); }
-}
-
 /* ==========================================================================
    HOME - LOAD
    ========================================================================== */
@@ -1877,18 +1745,18 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
    this, only a choice, and this is the choice.
 
    THE MOUSE QUERY IS NOT WRITTEN HERE. Every hover rule carries its own copy,
-   in place, beside the component it belongs to. Gathering all 27 into one
-   block here would move them to the end of the sheet, and four of them would
-   then beat a rule that beats them today: .subtabs button.active,
-   .dropzone.drag-over and .cdtip .say.done. A copied
-   chip would lose its green while the pointer rested on it, which is the
+   in place, beside the component it belongs to. Gathering them into one block
+   here would move them to the end of the sheet, and some of them would then
+   beat a rule that beats them today: .subtabs button.active,
+   .dropzone.drag-over and .madeacts #cdCopy.done. A copied
+   button would lose its green while the pointer rested on it, which is the
    moment a person is looking at it. */
 
 /* THE TAIL OF THE PAGE, ON A PHONE.
-   .panel ends with 100px so a desktop has room under the whole board, where
-   the deck sits below the Make card inside it. A phone shows one screen at a
-   time and the make screen has no deck, so that 100px landed straight under
-   the card and read as a hole rather than as spacing.
+   .panel ends with 100px so a desktop has room under the whole board, with
+   Advanced open under its two cards. A phone shows one screen at a time, and
+   that 100px landed straight under the make screen's card and read as a hole
+   rather than as spacing.
    The closed Advanced drawer already contributes 18px below the card: 8px of
    the board's row gap and its own 6px and 4px margins. 8px here brings the
    space above the footer's rule to 26px, which is what sits below it. */
@@ -2093,24 +1961,50 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
 .ordiv::before, .ordiv::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); }
 .ordiv span { font-family: var(--display-font), cursive; font-style: italic; font-size: 15px; color: var(--muted); }
 
-/* ONE SCREEN AT A TIME. THIS BLOCK IS THE VIEW CONTRACT.
-   The desktop shows Make, Load and the deck at once and never matches this
-   query, so none of it applies there. A phone shows the one region the
-   data-view flag on #boardGrid names.
+/* ONE CARD IN THE RIGHT-HAND CELL. THIS IS WHERE THE VIEW CONTRACT STARTS.
+   A desktop shows Make beside the card the data-view flag on #boardGrid names:
+
+     make    Load, which reads a PuttyPNG
+     made    Made!, which holds the picture Make pressed
+     loaded  Loaded!, which is Load with something in it
+
+   The show stands over the board on a desktop, and the cell under it holds
+   Load while it runs: a Made! card that was there goes as the dim gathers, and
+   the new one comes as the dim clears.
+   A phone starts from these rules too, and the block below takes every region
+   but one away. */
+.board[data-view="made"] > .col.load,
+.board:not([data-view="made"]) > .deckrow { display: none; }
+
+/* MADE! RUNS AS LONG AS ITS PICTURE NEEDS, and the Make card keeps its own
+   height beside it. Stretched to match, Make would grow and shrink with every
+   disc while a person types the next note in it. */
+.board[data-view="made"] > .col.make { align-self: start; }
+
+/* The heading over the cell names the card in it. */
+.board[data-view="loaded"] .head.hl h2 .w-a,
+.board[data-view="made"]   .head.hl h2 .w-a { display: none; }
+.board[data-view="loaded"] .head.hl h2 .w-b,
+.board[data-view="made"]   .head.hl h2 .w-c { display: inline; }
+
+/* ONE SCREEN AT A TIME. THIS BLOCK IS THE REST OF THE VIEW CONTRACT.
+   A desktop never matches this query, so none of it applies there. A phone
+   shows the one region the data-view flag on #boardGrid names.
 
    Every region below already exists once in the markup. Nothing here builds a
    second copy of anything, and no later part may. What each view shows:
 
      make    the Make heading and the Make column, with the divider and the
              two Load buttons inside its action bar, and Advanced
-     made    the Make heading reading Made!, the background switch, and the deck
+     made    the Make heading reading Made!, and the Made! card with the
+             background switch in its window
+     making  the show
      loaded  the Load heading reading Loaded!, and the whole Load column
 
-   FIVE CONTROLS ARE NOT WHERE THE MARKUP PUTS THEM. The divider, the two Load
-   buttons, the background switch, and Download and Copy are moved by
-   placeWayOut(), placeSolidSwitch() and placeMadeActions() in scripts.js when
-   the pointer is coarse, and moved back when it is not. They are moved, never
-   copied, so each still exists once.
+   THREE CONTROLS ARE NOT WHERE THE MARKUP PUTS THEM. The divider, the two Load
+   buttons and the background switch are moved by placeWayOut() and
+   placeSolidSwitch() in scripts.js when the pointer is coarse, and moved back
+   when it is not. They are moved, never copied, so each still exists once.
    That is why the make screen no longer has to keep the Load column alive for
    two buttons: the buttons are in the Make card. The switch goes into the
    picture window on the made screen, where the picture it describes is.
@@ -2133,7 +2027,7 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
   .head .say { line-height: 1.45; }
 
   .board[data-view="make"]   { grid-template-areas: "hm" "cm" "ad"; }
-  .board[data-view="made"]   { grid-template-areas: "hm" "sm"; }
+  .board[data-view="made"]   { grid-template-areas: "hm" "cl"; }
   .board[data-view="making"] { grid-template-areas: "iv"; }
   .board[data-view="loaded"] { grid-template-areas: "hl" "cl"; }
 
@@ -2162,12 +2056,10 @@ details.sect > summary:focus-visible { outline: 2px solid var(--clay); outline-o
      this section. This block is the contract, which says which regions each
      screen has, and the rules that change a component are kept with it. */
 
-  /* The heading names the screen. The first word is the desktop's, the second
-     belongs to the screen this phone has arrived at. */
-  .board[data-view="made"]   .head.hm h2 .w-a,
-  .board[data-view="loaded"] .head.hl h2 .w-a { display: none; }
-  .board[data-view="made"]   .head.hm h2 .w-b,
-  .board[data-view="loaded"] .head.hl h2 .w-b { display: inline; }
+  /* A phone names its Made! screen on the Make heading, which is the heading
+     that screen shows. Loaded! is named by the rule both shapes share. */
+  .board[data-view="made"] .head.hm h2 .w-a { display: none; }
+  .board[data-view="made"] .head.hm h2 .w-b { display: inline; }
 }
 
 /* CHANGING SCREEN ON A PHONE: THE OLD SCREEN SLIDES OUT AS THE NEW ONE SLIDES IN.
@@ -2272,55 +2164,23 @@ html.vt-fade::view-transition-new(root) {
 .lede { font-size: 17px; color: var(--ink-soft); }
 
 /* THE HOME BOARD, ON A NARROW SCREEN.
-   Make and its deck come first as one block, then Load under them, so a
-   column can never be separated from the heading that names it. */
+   Make and Advanced come first as one block, then the right-hand card under its
+   heading, so a card can never be separated from the heading that names it. */
 @media (max-width: 760px) {
-  .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "ad" "sm" "hl" "cl"; }
-
+  .board { grid-template-columns: 1fr; grid-template-areas: "hm" "cm" "ad" "hl" "cl"; }
 }
 
-/* THE TRANSPARENCY NOTICE. A light notice with a mark, not a black bar, and it
-   sits on the picture because it is about the picture. It is shown only while
-   a see-thru PuttyPNG is in the tray, so it can never outlive its cause. */
+/* A NOTE IS A LINE WITH A MARK, AND NEVER A BOX OF ITS OWN. Every note on the
+   board stands in the sign off, which already has an edge and a colour, and a
+   box inside it would read as a second thing to deal with. The see-thru notice
+   was a box of its own on a desktop until v2.24.0. */
 .transnote {
   display: flex; align-items: flex-start; gap: 7px;
-  width: min(300px, 100%); padding: 8px 10px;
-  border: 1px solid #e8dcae; border-radius: var(--radius-sm);
-  background: #fffaec; color: var(--ink); font-size: 12.5px; line-height: 1.45;
+  color: var(--ink); font-size: 12px; line-height: 1.45;
 }
 /* display:flex on the class beats the browser's own [hidden] rule, so hiding
    it has to be said here or the notice never goes away. */
 .transnote[hidden] { display: none; }
-
-/* A DESKTOP'S NOTES SHARE ONE BOX, and a note inside it is a line rather than a
-   box of its own, the way the sign off holds them on a phone. On its own the
-   see-thru notice looks as it always did. Wider than one notice, because the
-   Telegram note is a long sentence and three lines of it read better than
-   five. */
-.decknotes {
-  display: grid; gap: 6px; width: min(420px, 100%); padding: 8px 10px;
-  border: 1px solid #e8dcae; border-radius: var(--radius-sm); background: #fffaec;
-}
-.decknotes[hidden] { display: none; }
-.decknotes .transnote { width: auto; padding: 0; border: 0; background: none; }
-
-/* THE NOTICE GOES UNDER THE TIP AND THE BIN, NOT ON TOP OF THEM.
-   A wide screen puts the tip beside the disc, so the band under the disc holds
-   the bin and then the notice, and none of them meet. Below 760px there is no
-   room beside the disc, so the rule above moves the tip under it, into the
-   band the notice was already using.
-   Measured on 2026-09-07 with .devtools/r5-deck.js: the notice and the bin
-   overlapped by 17px, and the tip sat behind both.
-
-   THIS IS A WIDTH QUERY AND NOT A POINTER QUERY, because the rule that causes
-   the collision is a width query. A tablet at 800px keeps the tip beside the
-   disc and needs none of this.
-   The row grows only while the notice is showing, so a solid PuttyPNG is not
-   charged for space it does not use. */
-/* THE NARROW DESKTOP NEEDS NOTHING OF ITS OWN NOW. Two rules used to move the
-   notice and grow the deck row to make room for chips that had been pushed
-   under the disc. The deck is a column at every width, so the notice follows
-   the chips and the row is as tall as what is in it. */
 
 /* THE LOADED SCREEN ON A PHONE. THIS IS R5's SCREEN.
    Top to bottom: the heading with Close in its corner, the green line, the
@@ -2358,162 +2218,38 @@ html.vt-fade::view-transition-new(root) {
 }
 
 /* THE MADE SCREEN ON A PHONE. THIS IS R5's SCREEN.
-   Top to bottom: the window with the picture in it, what the picture is, the
-   notice when it applies, the sign off, the two things to do with it, then the
-   way back. The heading carries the way back a second time in its corner, so a
-   person who has scrolled does not have to scroll up to leave.
-
-   THE SLOT IS STILL THE SLOT. The lip is the top edge of the window, so the
-   frame and the machine are one object, and the disc still ejects out of it.
-   It comes to rest inside the window rather than on open page.
+   Top to bottom: the window with the picture, the three things to do with it
+   and what it is, the sign off with its notes, then the way back. The heading
+   carries the way back a second time in its corner, so a person who has
+   scrolled does not have to scroll up to leave.
+   MADE! IS ONE CARD ON BOTH SHAPES from v2.24.0, and its rules are in Section
+   5. What is left here is what a phone does differently.
 
    This block comes after the width query above on purpose. A narrow desktop
    window matches that one and still needs it; a finger matches this one and
    must beat it. */
 @media (hover: none), (pointer: coarse) {
 
-  /* A PHONE HAS NO ROOM BESIDE THE PICTURE, so the deck is a plain column
-     here: the window, the notice, the buttons, the sign off, the way back,
-     each taking the whole screen in the order they are read. The desktop's
-     two-cell grid above is undone rather than adjusted, because a column and
-     a grid are two different shapes and half of one is neither. */
-  .deckrow {
-    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
-  }
+  /* A SCREEN, NOT A CARD. Made! is the whole of this screen, so a frame round
+     it would be a card with nothing beside it, and the cross on its corner a
+     third way back beside the heading's corner and the button at the foot. */
+  .deckrow { border: 0; border-radius: 0; background: none; box-shadow: none; padding: 0; }
+  .deckrow > .xbtn { display: none; }
 
-  /* WHERE THE DISC COMES TO REST, measured from the top of the window. The
-     number is read twice: once to place the disc, once to work out how far
-     above the lip it has to start from. One place to change it.
+  /* THE SWITCH STANDS IN THE WINDOW, top right, which is where R5 has it, so
+     the disc rests lower here than on a desktop.
      40px was the floor and not the spacing: the switch is 24px tall at 15px,
      so its edge sat one pixel above the picture's. A solid picture is a white
      square, so its box is its edge and not only the circle drawn on it, and
      the two read as one block with nothing between them.
      56px from v2.18.1, which leaves 17px of paper between them. */
-  /* THE FOOTER'S ROOM IS RESERVED, NOT MEASURED. The row of three buttons
-     and the size line arrive with the disc, and a window that grew at that
-     moment would move the page under a thumb already reaching for it. The
-     probe asserts the reserved room really holds what goes in it.
-     It is the footer's own height plus the paper above it: 107px leaves 24px
-     between the picture and the row, where 92px left 9px and the two ran
-     together. */
-  .discwin {
-    --disc-top: 56px;
-    --win-foot: 107px;
-    display: block; position: relative; overflow: hidden; flex: none;
-    height: calc(var(--disc-top) + var(--slot-w) + var(--win-foot));
-    border: 1px solid var(--line-strong); border-radius: 12px;
-    background: #fbfbfc;
-  }
-
-  /* WHAT TO DO WITH THE PICTURE, IN THE FRAME WITH IT. Placed rather than
-     flowed, because the disc above it is placed and the window's height is
-     written from the disc's size. */
-  .discfoot {
-    display: grid; gap: 6px;
-    position: absolute; left: 0; right: 0; bottom: 0; padding: 0 10px 10px;
-  }
-
-  /* The tray gives up being a positioned box, so the lip and the disc position
-     against the window instead. The lip then runs the full width of the window
-     and reads as its top edge, and the window's overflow is what hides the
-     disc while it is still above the lip. The tray's own clip is off for the
-     same reason: two things clipping one disc is one too many. */
-  .tray { position: static; width: auto; height: auto; clip-path: none; }
-
-  /* The lip has to be over the disc. The disc passes behind it on the way out
-     and that is the whole illusion. */
-  .lip { z-index: 12; }
-
-  .cd {
-    left: 50%; margin-left: calc(var(--slot-w) / -2); top: var(--disc-top);
-    transform: translateY(calc(-1 * (var(--disc-top) + var(--slot-w) + 10px)));
-    /* NO DRAGGING ON A PHONE, so the disc stops swallowing the page scroll.
-       touch-action:none was set for the drag and it made the disc a dead zone
-       a thumb could not scroll on. */
-    cursor: default; touch-action: auto;
-  }
-
-  /* The switch is inside the window, top right, which is where R5 has it. */
+  .discwin { --disc-top: 56px; }
   .discwin > .switch { position: absolute; top: 15px; right: 13px; z-index: 11; }
 
-  /* A MOUSE'S CONTROLS. The tip is revealed by a hover and the bin is there
-     for a drag that no longer happens here. The button row under the window
-     does both jobs on a phone. */
-  .cdtip { display: none; }
-
-  /* Edit takes the width of its own word and the other two share what is
-     left, so the row still reads on a 384px screen. */
-  .madeacts .disc-edit {
-    flex: none; margin: 0;
-    background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
-  }
+  /* Edit says its short word, so the row of three still reads on a 384px
+     screen. */
   .disc-edit .edit-short { display: inline; }
   .disc-edit .edit-full { display: none; }
-
-  /* The notice joins the column instead of being hung off the deck row. */
-  .transnote { position: static; width: auto; top: auto; }
-
-  /* The caption is a slim line of its own under the row. It sat in the
-     window's bottom corner beside the Edit chip until v2.17.0, where a row of
-     three buttons left it nowhere to sit.
-     RIGHT, NOT CENTRED. It is a footnote to the row above it, and its right
-     edge lands under the right edge of Copy, so the block reads as one thing
-     rather than as two lines of different widths. */
-  .discnote {
-    display: block; text-align: right; font-size: 11px; color: var(--muted);
-  }
-  .discnote[hidden] { display: none; }
-
-  .signoff {
-    display: block; padding: 10px 12px; border-radius: 12px; line-height: 1.45;
-    background: #f2f8ec; border: 1px solid #d8ecc4;
-  }
-  .signoff[hidden] { display: none; }
-  /* THE CHILD COMBINATOR IS THE POINT. The notes below carry a bold label and
-     a span of their own, and without it the sign off's heading rules reach
-     inside them: a note read "Note  :" in green at 15px, spaced out by the
-     heading's own flex gap. */
-  .signoff > b {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 15px; font-weight: 700; color: #2f6b13; margin-bottom: 2px;
-  }
-  .signoff .ic { display: flex; flex: none; }
-  .signoff > span { font-size: 13px; color: var(--ink-soft); }
-
-  /* THE NOTES ARE ADDENDA, so they read as part of the instruction above and
-     not as another thing to deal with. A note in here is a line and not a
-     box: it is already inside something with an edge and a colour. */
-  .signoff .notes {
-    display: grid; gap: 6px;
-    margin-top: 8px; padding-top: 8px; border-top: 1px solid #d8ecc4;
-  }
-  .signoff .notes[hidden] { display: none; }
-  .signoff .transnote {
-    width: auto; padding: 0; border: 0; background: none; font-size: 12px;
-  }
-
-  /* Copy leads somewhere, a message to a friend, so it is the filled one.
-     Download leads to a folder. Edit is the third and it is moved in by
-     placeDiscEdit(), so the row is a flex line rather than two named columns:
-     a hidden Edit then costs the row nothing at all. */
-  .madeacts { display: flex; gap: 6px; }
-  .madeacts[hidden] { display: none; }
-  .madeacts button {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    min-height: 48px; padding: 0 10px; border-radius: 999px;
-    font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
-    white-space: nowrap; min-width: 0;
-  }
-  .madeacts #cdSave, .madeacts #cdCopy { flex: 1 1 0; }
-  .madeacts #cdSave { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); }
-  .madeacts #cdCopy { background: var(--ink); color: #fff; border: 0; }
-  .madeacts #cdCopy.done { background: var(--ok); }
-  /* THE TICK IS DRAWN IN WHITE, so the button it lands on has to stop being
-     white. Download kept its paper background through the confirmation and the
-     tick was invisible on it: only the word changed. */
-  .madeacts #cdSave.done {
-    background: var(--ok); color: #fff; border-color: var(--ok);
-  }
 
   .againrow { display: block; }
   .againrow[hidden] { display: none; }
@@ -2980,7 +2716,7 @@ html.vt-fade::view-transition-new(root) {
 /* ==========================================================================
    THE GLOW CHAIN
    Three stops that lead a first time person through one whole PuttyPNG: the
-   text box, then the mark on the Make button, then Copy in the tray.
+   text box, then the mark on the Make button, then Copy under the picture.
    Which stop is lit is worked out in scripts.js from the board itself, never
    from a timer, so the chain cannot get out of step with what is on screen.
 
@@ -2990,10 +2726,9 @@ html.vt-fade::view-transition-new(root) {
    repaired in v2.6.4, and this chain is the first thing to depend on it.
    ========================================================================== */
 
-/* A ring for the things shaped like a box: the text box and the Copy chip. */
+/* A ring for the things shaped like a box: the text box and Copy. */
 .makebox.glow #makeText,
-#cdCopy.glow,
-#cdTipCopy.glow { animation: boxglow 1.68s ease-in-out infinite; }
+#cdCopy.glow { animation: boxglow 1.68s ease-in-out infinite; }
 .makebox.glow #makeText { border-color: #3fbf00; }
 
 @keyframes boxglow {
@@ -3020,8 +2755,7 @@ html.vt-fade::view-transition-new(root) {
    needs to know where to start, so the glow stops moving and stays lit. */
 @media (prefers-reduced-motion: reduce) {
   .makebox.glow #makeText,
-  #cdCopy.glow,
-  #cdTipCopy.glow { animation: none; box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
+  #cdCopy.glow { animation: none; box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
   .act .ic.glow::after { animation: none; opacity: .6; transform: scale(1); }
 }
 
@@ -3032,8 +2766,7 @@ html.vt-fade::view-transition-new(root) {
    the browser's own motion setting is usually on.
    The same lit ring, standing still. */
 body.still .makebox.glow #makeText,
-body.still #cdCopy.glow,
-body.still #cdTipCopy.glow { box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
+body.still #cdCopy.glow { box-shadow: 0 0 0 5px rgba(var(--limergb), .32); }
 body.still .act .ic.glow::after { opacity: .6; transform: scale(1); }
 
 /* TWO NAMES, ONE EFFECT: nothing on the page moves.

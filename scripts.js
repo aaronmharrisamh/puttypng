@@ -35,9 +35,9 @@
 
   /* ==========================================================================
      THE BOARD
-     Make and Load, the two columns the page opens on, and the deck the disc
-     comes out of. Advanced hangs below them and is read at the moment of the
-     press.
+     Make, and the card beside it: Load, the Made! card the disc comes out
+     into, or Loaded!. Advanced hangs below them and is read at the moment of
+     the press.
      ========================================================================== */
 
   // THE RUNGS. Capacities measured from the engine at the deeper depth, which
@@ -94,7 +94,6 @@
     loadIdle: "Drop a PuttyPNG here, or open one.",
     loaded:   "PuttyPNG loaded successfully!",
     reading:  "Decoding...",
-    plain:    "That is a plain picture. Nothing was hidden in it.",
     noPaste:  "There was no PuttyPNG on the clipboard. Copy the picture, then press Paste one!",
     /* A picture that holds nothing is still a good thing to hide, so it is
        attached rather than refused. The second half of the sentence is the
@@ -122,6 +121,12 @@
     egTitle:  "You have something here",
     egAsk:    "An example replaces what is here. You cannot undo this.",
     egYes:    "Yes, replace it",
+    /* WHAT THE QUESTION SAYS WHEN A PUTTYPNG WOULD REPLACE THE ONE MADE. Made!
+       and Loaded! share one card, so opening one closes the other, and the
+       picture in Made! is nowhere else until it is downloaded or copied. */
+    replaceTitle: "Are you sure?",
+    replaceAsk:   "Opening this one replaces the PuttyPNG you made. Download or copy yours first if you want to keep it.",
+    replaceYes:   "Yes, open it",
     examplesFailed: "The examples did not load. Check the connection and pick again."
   };
 
@@ -144,15 +149,14 @@
      has a row to itself, so it takes the width the picture is worth.
 
      ON A DESKTOP IT IS THE SIZE THE PICTURE REALLY IS, where the room exists
-     for that. A 256px PuttyPNG is drawn 256px across, so what sits in the tray
+     for that. A 256px PuttyPNG is drawn 256px across, so what sits in the window
      is the thing a person is about to send rather than a thumbnail of it.
      The larger rungs cannot be true: a 512px disc does not fit a 448px column,
-     and a 2048px one never will. They take a share of the deck instead,
+     and a 2048px one never will. They take a share of the column instead,
      ramping to nine tenths of it, so the step from rung to rung is still
-     something a person can see. Whichever of the two is smaller wins, which is
-     what makes 256 exact and everything above it proportional.
-     The shares are read against the deck row rather than the card, because the
-     deck row is the box the disc sits in.
+     something a person can see. Whichever is smaller wins, which is what makes
+     256 exact and everything above it proportional, and the window's own room
+     inside the Made! card is the ceiling over both.
 
      A PHONE HAS NO TABLE. It had R5's four absolute sizes until v2.17.0 and
      four shares after that, and neither could say the one thing that matters
@@ -177,8 +181,6 @@
   var HOME_CONFIRM_MS = 1500;  // how long a control says it did its job
   var DISC_TOSS_MS = 360;      // a disc shrinking away
   var DISC_EJECT_MS = 20;      // the pause before a fresh disc is told to come out
-  var DISC_DRAG_MS = 300;      // the carried copy fading after it is let go
-  var DISC_SLACK_PX = 5;       // movement before a press counts as a drag
   var HOME_SAVE_MS = 4000;     // how long a download URL is kept alive
   var VIEW_SLIDE_MS = 500;     // one screen sliding out as the next slides in
   var VIEW_SLIDE_SLACK_MS = 60;  // what a slow phone takes to picture the new screen
@@ -606,10 +608,9 @@
     "puttypng.js could not be loaded.\n" +
     "Check that the file sits next to index.html on the server.";
 
-  // Each Make chooses a new automatic saying. Background changes keep the
-  // current saying because they update the same disc.
+  // Each Make chooses a new automatic saying. The background switch keeps the
+  // saying a picture carries, because it presses that picture's own label again.
   var homeSaying = null;
-  var homeSayingLocked = false;
   var homeEditedLabel = null;
   var homeLabelLocked = false;
   // The title of the example on the board, until anything on the board changes.
@@ -667,11 +668,11 @@
   // What came out of the last PuttyPNG read, for Copy Contents. Null for a
   // file, which has a chip of its own instead.
   var homeLoadedText = null;
-  var homeLastBlob = null;   // the disc in the tray, for Copy, Save, and Load
+  var homeLastBlob = null;   // the disc in Made!'s window, for Copy and Save
   var homeLoadedBlob = null; // the disc showing in Load, for its own Copy and Save
-  var homeDiscOut = false;   // a disc is sitting in the tray
+  var homeDiscOut = false;   // a disc is out, in Made!'s window
+  var homeDiscSide = 0;      // the side of the picture in the window, once it has loaded
   var homePressing = false;  // a press is running, and a second must wait
-  var homeDrag = null;       // the disc being carried, or null
   var homeSettleTimer = 0;   // the wait after a keystroke before the meter redraws
   var homeRunToken = 0;      // which meter run is current, so a stale one cannot paint
   var homeReadTimer = 0;     // the wait before a decode says it is working
@@ -735,10 +736,10 @@
      so the two can never disagree about the shape on screen. */
   var touchPointer = window.matchMedia("(hover: none), (pointer: coarse)");
 
-  /* WHICH SCREEN THE PHONE IS ON. The desktop shows every region at once and
-     its CSS never reads this attribute. The phone shows the one region named
-     here. Setting it on a desktop is harmless and keeps one code path for both
-     shapes, which is the whole reason there is one block of markup. */
+  /* WHICH SCREEN THE PHONE IS ON, AND WHICH CARD A DESKTOP SHOWS. A phone shows
+     the one region named here. A desktop shows Make beside the card it names:
+     Load, Made! or Loaded!. One attribute for both shapes keeps one code path,
+     which is the whole reason there is one block of markup. */
   /* IT HANDS BACK A PROMISE THAT RESOLVES WHEN THE SCREEN HAS ARRIVED: at once
      when nothing moves, and once the slide or the fade is over when something
      does. A caller that has more to do on the new screen waits on it, so nothing
@@ -754,13 +755,14 @@
     if (!grid) return done;
     var turn = ++viewTurn;
     var from = grid.getAttribute("data-view");
-    if (slide && from !== name) {
-      if (canSlide()) return transitionView(grid, name, changed, turn, "vt-slide");
-      /* A DESKTOP HAS NO SCREEN TO SLIDE TO, BUT THE SHOW COMES AND GOES OVER
-         IT. The page dims as the show comes up and clears as it goes. Every
-         other change on a desktop stays instant, because both of its pictures
-         would be the same board. */
-      if (canFade() && (from === "making" || name === "making")) {
+    if (from !== name) {
+      if (slide && canSlide()) return transitionView(grid, name, changed, turn, "vt-slide");
+      /* A DESKTOP FADES WHENEVER ITS PICTURE CHANGES. The show dims the page as
+         it comes up and clears as it goes, and the right-hand card changes
+         between Load, Made! and Loaded!, which a phone changes at once as it
+         always has. THE ONE CHANGE THAT DOES NOT FADE IS A SKIP: the show has
+         taken its dim down before it asks, so there is nothing left to fade. */
+      if (canFade() && (slide || (from !== "making" && name !== "making"))) {
         return transitionView(grid, name, changed, turn, "vt-fade");
       }
     }
@@ -780,14 +782,16 @@
     focusView(name);
     paintGlow();
     paintMakeSay(false);
+    paintCardSay();
     paintMadeScreen();
   }
 
   /* A SLIDE NEEDS A PHONE, MOVEMENT, AND A BROWSER THAT CAN DO IT. A desktop
-     shows every region at once, so both pictures of its board would be the same
-     picture sliding past itself. Animations off is a person asking for nothing
-     to move. A browser without view transitions changes screen at once, the way
-     every screen changed before there was a slide. */
+     keeps Make on screen through every change, so a slide would carry the card
+     a person is working in away with the one that changed. Animations off is a
+     person asking for nothing to move. A browser without view transitions
+     changes screen at once, the way every screen changed before there was a
+     slide. */
   function canSlide() {
     return touchPointer.matches && animationsOn &&
            typeof document.startViewTransition === "function";
@@ -816,9 +820,10 @@
 
      A DESKTOP FADES INSTEAD, THROUGH THE SAME ROUTINE. vt-fade leaves the page
      named, so the browser fades the whole page from its picture before the
-     change to its picture after: the dim comes in round the show, or clears
-     away from it. It has the slide's length and curve, so the two shapes move
-     at the same pace, and every guard below holds for both.
+     change to its picture after: the dim comes in round the show or clears away
+     from it, and one card gives way to the next. It has the slide's length and
+     curve, so the two shapes move at the same pace, and every guard below holds
+     for both.
 
      THE SHOW IS NOT MADE TO WAIT ON A SLIDE THAT NEVER COMES. finished is the
      browser's word that the slide is over, and a browser that cannot draw the
@@ -909,8 +914,10 @@
      and tabindex="-1" lets it take focus without joining the tab order.
      Without this, focus is left on a button that has left the page, and the
      next tab starts again at the top of the document.
-     The desktop shows every region at once, so nothing moved and nothing is
-     focused there. */
+     A DESKTOP IS NOT FOCUSED HERE. Make stays on screen through every change
+     there, and a person may be typing in it while the card beside it changes.
+     Focus moves on a desktop only where the control that was pressed goes with
+     its card: the show, and the cross on Made! or Loaded!. */
   var VIEW_HEAD = { make: "headMake", made: "headMake", making: "headMaking",
     loaded: "headLoad" };
 
@@ -1130,12 +1137,9 @@
   }
 
   // The board supplies wording; the engine draws and embeds it.
-  function applyDiscWriting(input, opts, keepSaying) {
+  function applyDiscWriting(input, opts) {
     var locked = !!opts.password;
-    if (!keepSaying || !homeSaying || homeSayingLocked !== locked) {
-      homeSaying = pickDiscSaying(locked, homeSaying);
-      homeSayingLocked = locked;
-    }
+    homeSaying = pickDiscSaying(locked, homeSaying);
     if (locked) {
       // A public title from an earlier press must not cross into a locked disc.
       if (opts.label && opts.label.trim() && !homeLabelLocked) opts.label = null;
@@ -1244,11 +1248,6 @@
     var blob = new Blob([bytes]);
     var packed = await new Response(blob.stream().pipeThrough(cs)).blob();
     return Math.min(packed.size, bytes.byteLength);
-  }
-
-  function pointerInside(el, e) {
-    var r = el.getBoundingClientRect();
-    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
   }
 
   // Save bytes to disk under a name. Used by every download the home offers.
@@ -1971,7 +1970,7 @@
 
   /* ==========================================================================
      THE HOME BOARD
-     Every listener the two columns and the deck need, in one place.
+     Every listener Make and the card beside it need, in one place.
      ========================================================================== */
 
   /* THE MENU BESIDE THE HEADING. It keeps its own listeners, because nothing
@@ -2059,9 +2058,6 @@
     // has already been read in the wrong place.
     placeWayOut();
     placeSolidSwitch();
-    placeMadeActions();
-    placeDiscEdit();
-    placeNotes();
 
     // The first paint. force skips the settle wait and the two effects, so an
     // empty box starts at a drawn ring rather than a blank one.
@@ -2076,23 +2072,21 @@
 
     /* A TABLET THAT ROTATES CHANGES SHAPE WITHOUT A RELOAD. The query re-answers
        on its own, so everything that reads it has to be asked again when it
-       does. That is the sizes, the box height, the placeholder, and the three
-       controls that live in a different card on each shape.
+       does. That is the sizes, the box height, the placeholder, the three
+       controls that live in a different card on each shape, and the two
+       readings, because a phone says Made! under the Make heading and a desktop
+       says it under the heading over the right-hand cell.
        The listener takes no argument from the event: setBoardSizes reads a rung
        index, and handing it a MediaQueryListEvent would clamp to NaN and size
        the board in NaN pixels. */
     touchPointer.addEventListener("change", function () {
       placeWayOut();
       placeSolidSwitch();
-      placeMadeActions();
-      placeDiscEdit();
-      placeNotes();
       setBoardSizes(homeShownRung);
       growMakeBox();
       paintPlaceholder();
-      // The notes are numbered by how many of them are in the sign off, and
-      // the move above changes that.
-      paintSendNotes();
+      paintMakeSay(false);
+      paintCardSay();
     });
   }
 
@@ -2146,56 +2140,6 @@
     // about the picture, so it belongs in the frame the picture is in.
     if (touchPointer.matches) win.insertBefore(wrap, win.firstChild);
     else adv.insertBefore(wrap, adv.firstChild);
-  }
-
-  /* DOWNLOAD AND COPY ARE NOT NEW CONTROLS. They are the two buttons a
-     desktop reveals by hovering the disc. A phone cannot hover, so the same
-     two move out of the overlay into a row under the window.
-     They are moved, never copied. The gate counts them. */
-  function placeMadeActions() {
-    var save = $("cdSave"), copy = $("cdCopy");
-    var row = $("madeActs"), tools = document.querySelector(".cdtools");
-    var cd = $("cd");
-    if (!save || !copy || !row || !tools) return;
-    if (touchPointer.matches) { row.appendChild(save); row.appendChild(copy); }
-    else { tools.appendChild(copy); tools.appendChild(save); }
-    // The alt text names what a person can do with it, and that differs.
-    if (cd) {
-      cd.alt = touchPointer.matches
-        ? "The PuttyPNG you made. Download it or copy it with the buttons below."
-        : "Your PuttyPNG. Drag it into Load, or press the bin to throw it away.";
-    }
-  }
-
-  /* Move the same edit button into the row under the phone's picture.
-     First in the row, so it reads Edit, Download, Copy. placeMadeActions()
-     appends the other two, so that order holds whichever of the two runs
-     first and however many times either of them runs. */
-  function placeDiscEdit() {
-    var button = $("discEdit"), row = $("madeActs"), tip = document.querySelector(".cdtip");
-    if (!button || !row || !tip) return;
-    if (touchPointer.matches) row.insertBefore(button, row.firstChild);
-    else tip.insertBefore(button, $("bin"));
-  }
-
-  /* THE SEE-THRU NOTICE AND THE TELEGRAM NOTE HAVE A DIFFERENT HOME ON EACH
-     SHAPE. A desktop keeps them in one box under the disc, in the deck row's
-     own note cell, where there is room beside everything else. A phone has one
-     column, and a bubble of its own there reads as a second thing to deal with,
-     so both go inside the sign off as addenda to the line they qualify.
-     THE NOTICE GOES FIRST AND THE TELEGRAM NOTE LAST, on both shapes, with the
-     sign off's own note between them on a phone. A set is numbered in the
-     order it stands, so it has to stand in the same order every time. */
-  function placeNotes() {
-    var trans = $("transNote"), tg = $("tgNote"), box = $("sendNotes"), deck = $("deckNotes");
-    if (!trans || !tg || !box || !deck) return;
-    if (touchPointer.matches) {
-      box.insertBefore(trans, box.firstChild);
-      box.appendChild(tg);
-    } else {
-      deck.appendChild(trans);
-      deck.appendChild(tg);
-    }
   }
 
   function paintDiscEdit() {
@@ -2267,17 +2211,11 @@
     $("makeBox").classList.toggle("glow", stage === "box");
     var ic = document.querySelector(".act .ic");
     if (ic) ic.classList.toggle("glow", stage === "make");
-    /* THE LAST STOP HAS TO BE THE COPY A PERSON CAN SEE. A phone's is
-       #cdCopy, moved into its row by placeMadeActions(). A desktop's is the
-       chip under the disc, because #cdCopy is parked out of sight there from
-       v2.12.0. A glow on a hidden control is a chain that ends nowhere.
-       The other one is cleared either way, so a change of pointer cannot
-       leave a glow behind on the shape that is no longer showing. */
-    var lit = touchPointer.matches ? "cdCopy" : "cdTipCopy";
-    ["cdCopy", "cdTipCopy"].forEach(function (id) {
-      var el = $(id);
-      if (el) el.classList.toggle("glow", stage === "copy" && id === lit);
-    });
+    /* THE LAST STOP IS COPY, in the row under the picture on both shapes. A
+       desktop's was a chip beside the disc until v2.24.0, while this button
+       waited out of sight for a phone to move it. */
+    var copy = $("cdCopy");
+    if (copy) copy.classList.toggle("glow", stage === "copy");
   }
 
   /* A keystroke puts the chain out until the typing settles. The wait is
@@ -2311,17 +2249,6 @@
     note.hidden = backgroundIsSolid() || !homeDiscOut;
   }
 
-  /* PRESSING THE SWITCH REMAKES THE PICTURE. IT DOES NOT THROW IT AWAY.
-     The switch used to sit on the Make screen, where a press rarely had a
-     finished picture to spoil, so emptying the tray was enough. On a phone it
-     now stands beside the picture, and a control that empties the tray it is
-     standing next to reads as a fault rather than a setting.
-     pressHomeDisc() encodes with whatever Advanced currently says, and this
-     switch is kept in step with Advanced, so pressing it again is the whole of
-     the work. Nothing here waits on it: it is a promise, the button says it is
-     working, and the disc arrives when it arrives.
-     setView("made") inside it is a no-op while the phone is already on that
-     screen, so focus stays on the switch the person pressed. */
   /* THE CORNER, WHICH IS ONE SLOT WITH TWO JOBS.
      It is derived from the same two facts as the reading under the heading:
      which screen this is, and whether the board is carrying anything. The two
@@ -2371,11 +2298,28 @@
 
   /* CLOSE GOES BACK TO MAKE, AND THE WORDS ARE STILL THERE.
      Nothing clears the text box when a PuttyPNG is pressed, so what a person
-     typed is still in it. Closing is a change of screen and not a loss. */
+     typed is still in it. Closing is a change of screen and not a loss, and on
+     a desktop it is Load coming back into the right-hand cell.
+     THE CARD IS EMPTIED INSIDE THE CHANGE THAT SHOWS IT GOING. A desktop fades
+     from its picture of the page before to its picture after, and the browser
+     takes the first picture a frame after it is asked. A card emptied before
+     then is already empty in the picture it fades from, and it snaps. */
   function closeToMake() {
-    tossDisc();
-    setView("make");
-    paintMadeScreen();
+    setView("make", false, function () {
+      tossDisc();
+      paintMadeScreen();
+    });
+    focusCardHead();
+  }
+
+  /* THE CROSS GOES WITH ITS CARD ON A DESKTOP, so the focus it held goes to the
+     heading over the cell, which names the card that took its place. Left on a
+     button that has left the page, the next Tab starts at the top of the
+     document. A phone's change of screen has focused its own heading already. */
+  function focusCardHead() {
+    if (touchPointer.matches) return;
+    var head = $("headLoad");
+    if (head) head.focus();
   }
 
   /* CLEAR EMPTIES THE BOARD AND LEAVES THE PERSON WHERE THEY ARE.
@@ -2395,10 +2339,9 @@
     paintMakeSay(false);
   }
 
-  /* WHAT THE PHONE'S MADE SCREEN SHOWS. Derived from two facts: which screen
-     the board is on, and whether a disc is out. The stylesheet keeps every one
-     of these elements off on a desktop, so this runs there and a person sees
-     no difference. */
+  /* WHAT MADE! SHOWS. Derived from two facts: which screen the board is on, and
+     whether a disc is out. The row, the caption and the sign off arrive with the
+     disc, on both shapes, and the way back at the foot is a phone's alone. */
   function paintMadeScreen() {
     paintTransNote();
     paintDiscEdit();
@@ -2419,19 +2362,17 @@
     paintSendNotes();
   }
 
-  /* THE NOTES, WHEREVER THEY ARE, AND THEIR NUMBERS.
+  /* THE NOTES AND THEIR NUMBERS.
      Three notes can apply to one picture: a see-thru background, a picture
      over the size a chat app will recompress, and how to send it through
      Telegram, which applies to every picture. A lone note is "Note:" and a set
      is "Note 1:", "Note 2:" and on, because a Note 1 with nothing under it
-     reads as a list with an item missing from it. Each box is numbered on its
-     own: the sign off on a phone, and the box under the disc on a desktop.
-     Every number is cleared before any is written, so a note that has moved
-     to the other box cannot keep a number it was given in this one. */
+     reads as a list with an item missing from it.
+     Every number is cleared before any is written, so a note left on its own
+     when another goes does not keep the number it had in the set. */
   function paintSendNotes() {
     var box = $("sendNotes"), big = $("bigNote"), cd = $("cd"), tg = $("tgNote");
-    var deck = $("deckNotes");
-    if (!box || !big || !cd || !tg || !deck) return;
+    if (!box || !big || !cd || !tg) return;
 
     /* THIS ONE IS ABOUT THE FINISHED PICTURE, so it is measured off the
        picture. The warning under the Make button is about a picture that does
@@ -2445,15 +2386,13 @@
     /* NUMBERED IN THE ORDER THEY STAND, read off the box and not off a list here,
        so a note placed out of turn is still Note 1 when it is the first a person
        reads. */
-    [box, deck].forEach(function (holder) {
-      var shown = Array.prototype.filter.call(holder.children, function (el) {
-        return all.indexOf(el) >= 0 && !el.hidden;
-      });
-      if (shown.length > 1) {
-        shown.forEach(function (el, i) { numberNote(el, " " + (i + 1)); });
-      }
-      holder.hidden = shown.length === 0;
+    var shown = Array.prototype.filter.call(box.children, function (el) {
+      return all.indexOf(el) >= 0 && !el.hidden;
     });
+    if (shown.length > 1) {
+      shown.forEach(function (el, i) { numberNote(el, " " + (i + 1)); });
+    }
+    box.hidden = shown.length === 0;
   }
 
   // The number is a span of its own, so writing one never rewrites the word.
@@ -2474,6 +2413,16 @@
       : "";
   }
 
+  /* PRESSING THE SWITCH RESTYLES THE PICTURE. IT DOES NOT THROW IT AWAY.
+     The switch used to sit on the Make screen, where a press rarely had a
+     finished picture to spoil, so emptying the window was enough. A phone has
+     it beside the picture, and a control that empties the window it stands in
+     reads as a fault rather than a setting.
+     The press restyles the picture that is out, pressing it again with this one
+     setting changed. Nothing here waits on it: it is a promise, the button says
+     it is working, and the disc arrives when it arrives.
+     setView("made") inside it is a no-op while the board is already on Made!,
+     so focus stays on the switch the person pressed. */
   function afterBackgroundChange() {
     paintSolidWord();
     paintMadeScreen();
@@ -2508,11 +2457,39 @@
     paintCorner();
     var grid = $("boardGrid");
     var view = grid ? grid.getAttribute("data-view") : "make";
-    if (view === "made") { paintSay(line, "ok", SAY.made); wirePeekLink(); return; }
+    /* A PHONE SAYS MADE! UNDER THIS HEADING, which is the heading its Made!
+       screen shows. A desktop's Made! is a card with a heading of its own, and
+       this line goes on talking about the next picture. */
+    if (view === "made" && touchPointer.matches) {
+      paintSay(line, "ok", SAY.made); wirePeekLink(); return;
+    }
     if (over) { paintSay(line, "quiet", SAY.over); return; }
     if (homeAttached) { paintSay(line, "ok", homeAttachedSay); return; }
     var ta = $("makeText");
     paintSay(line, "quiet", (ta && ta.value.length) ? SAY.fits : SAY.empty);
+  }
+
+  /* WHAT THE HEADING OVER THE RIGHT-HAND CELL SAYS WHILE NOTHING IS BEING READ.
+     It names the card in the cell, so it is painted whenever the card changes.
+     A desktop's Made! card stands in that cell, so a desktop says the Made line
+     here, and a phone says it under the Make heading.
+     IT IS THE BOARD'S ONE LIVE REGION, so a sentence already on it is not
+     written again: a screen reader reads a rewritten line out a second time.
+     The show stands over the board and changes nothing under the dim, so the
+     line is left as it is while the show runs. */
+  function paintCardSay() {
+    var line = $("loadSay"), grid = $("boardGrid");
+    if (!line || !grid) return;
+    var view = grid.getAttribute("data-view");
+    if (view === "making") return;
+    var made = view === "made" && !touchPointer.matches;
+    var kind = made || view === "loaded" ? "ok" : "quiet";
+    var html = made ? SAY.made : view === "loaded" ? SAY.loaded : SAY.loadIdle;
+    var same = line.textContent === html.replace(/<[^>]*>/g, "") &&
+               line.classList.contains("ok") === (kind === "ok");
+    if (same) return;
+    paintSay(line, kind, html);
+    if (made) wirePeekLink();
   }
 
   /* THE CONTENTS PANEL. It decodes the finished PuttyPNG and shows what came
@@ -2661,16 +2638,12 @@
   }
 
   function wireHomeDisc() {
-    var cd = $("cd");
     /* 18px, where the board's other marks are 15 and 16. This one has to hold
        its own beside a bold label, and on a phone it sits on the picture
        window rather than on the page's white. The label's own size does not
        move: it is 12px in both pills. */
     $("discEdit").innerHTML = homeIcon(D_WRITE, 18) + $("discEdit").innerHTML;
 
-    // The tip is a button too, so the invitation and the act are one thing.
-    $("cdTipCopy").innerHTML = homeIcon(D_COPY, 15) + "<span>Copy me and paste to a friend!</span>";
-    $("cdTipSave").innerHTML = homeIcon(D_DOWN, 15) + "<span>Download and send me later!</span>";
     $("cdCopy").innerHTML = homeIcon(D_COPY, 13) + "<span>Copy</span>";
     $("cdSave").innerHTML = homeIcon(D_DOWN, 13) + "<span>Download</span>";
 
@@ -2728,12 +2701,23 @@
       paintBigWarn();
     });
 
-    // The phone's Made screen. Both marks are drawn once: neither changes.
+    // Made!'s two marks are drawn once: neither changes.
     $("sendItMark").innerHTML = homeIcon(D_PLANE, 18);
     $("againBtn").innerHTML = homeIcon(D_AGAIN, 16) + "<span>Make another one!</span>";
     // The same action the corner's Close does, offered again at the bottom so
     // a person who has scrolled does not have to scroll back up to leave.
     $("againBtn").addEventListener("click", closeToMake);
+
+    /* A DESKTOP CLOSES MADE! WITH THE CROSS LOADED! WEARS. It is the same
+       generated button on the card's corner, so the right-hand cell closes the
+       same way whichever card is up, and it does what a phone's Close does. The
+       stylesheet keeps it off a phone, which has the heading's corner. */
+    var deck = document.querySelector(".deckrow");
+    if (deck) {
+      var madeX = makeXButton("Close this PuttyPNG");
+      madeX.addEventListener("click", closeToMake);
+      deck.appendChild(madeX);
+    }
 
     /* THE LAST STOP. Copy is what leads somewhere, a message to a friend, so it
        is the one that ends the chain. Download leads to a folder and never
@@ -2743,64 +2727,7 @@
       glowDone = true; paintGlow();
       copyHomeDisc(this, "Copied!");
     });
-    /* Both Copies end the chain, because either one of them is the one the
-       person could see when they pressed it. */
-    $("cdTipCopy").addEventListener("click", function () {
-      glowDone = true; paintGlow();
-      copyHomeDisc(this, "Copied!");
-    });
-    /* TWO BUTTONS, ONE SAVE. #cdSave is the phone's, moved into its row by
-       placeMadeActions(). #cdTipSave is the desktop's chip under the disc.
-       Neither is a copy of the other's work: they call the same function. */
     $("cdSave").addEventListener("click", function () { saveHomeDisc(this); });
-    $("cdTipSave").addEventListener("click", function () { saveHomeDisc(this); });
-
-    // The disc going takes its two chips with it, because the tip only shows
-    // while the disc is out. Nothing else has to be cleared by hand.
-    /* THE BIN THROWS IT AWAY, so the phone goes back to Make with nothing in
-       the tray. tossDisc is also how a new press clears the old disc, which is
-       why the flag moves here and not inside it. */
-    $("bin").addEventListener("click", function () {
-      tossDisc(); setView("make"); paintMadeScreen();
-    });
-
-    cd.addEventListener("pointerdown", function (e) {
-      /* NO DRAGGING ON A PHONE. Carrying the disc into Load is a mouse
-         gesture: it needs somewhere to carry it to, and a phone shows one
-         screen at a time. The Make another one! button is the way back there.
-         The matching half of this is in styles.css, where touch-action goes
-         back to auto so a thumb on the disc can scroll the page again. */
-      if (touchPointer.matches) return;
-      if (!homeDiscOut || e.button !== 0) return;
-      e.preventDefault();
-      homeDrag = { x: e.clientX, y: e.clientY, live: false, ghost: null, r: cd.getBoundingClientRect() };
-    });
-
-    document.addEventListener("pointermove", function (e) {
-      if (!homeDrag) return;
-      var dx = e.clientX - homeDrag.x, dy = e.clientY - homeDrag.y;
-      if (!homeDrag.live) {
-        // A press is not a drag until it has moved, so a click on the disc
-        // does not throw a copy of it across the page.
-        if (Math.abs(dx) + Math.abs(dy) < DISC_SLACK_PX) return;
-        homeDrag.live = true;
-        var g = cd.cloneNode(true);
-        g.removeAttribute("id");
-        g.className = "cd ghost";
-        g.style.left = homeDrag.r.left + "px";
-        g.style.top = homeDrag.r.top + "px";
-        g.style.width = homeDrag.r.width + "px";
-        g.style.height = homeDrag.r.height + "px";
-        document.body.appendChild(g);
-        homeDrag.ghost = g;
-        cd.classList.add("lifted");
-      }
-      homeDrag.ghost.style.transform = "translate(" + dx + "px," + dy + "px)";
-      $("zone").classList.toggle("over", pointerInside($("zone"), e));
-    });
-
-    document.addEventListener("pointerup", endDiscDrag);
-    document.addEventListener("pointercancel", function () { endDiscDrag(null); });
   }
 
   /* ------------------------------------------------------------------------
@@ -2972,6 +2899,27 @@
       zone.classList.remove("over");
       readHomeFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
     });
+
+    /* A PUTTYPNG DROPPED ON MADE! IS READ THE WAY ONE DROPPED ON LOAD IS. Made!
+       stands in Load's cell on a desktop, and a drop there would land on nothing
+       else. The read asks before it replaces the picture that is out. */
+    var deck = document.querySelector(".deckrow");
+    if (deck) {
+      ["dragenter", "dragover"].forEach(function (n) {
+        deck.addEventListener(n, function (e) {
+          e.preventDefault(); e.stopPropagation();
+          deck.classList.add("over");
+        });
+      });
+      deck.addEventListener("dragleave", function (e) {
+        if (!deck.contains(e.relatedTarget)) deck.classList.remove("over");
+      });
+      deck.addEventListener("drop", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        deck.classList.remove("over");
+        readHomeFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+      });
+    }
 
     $("openBtn").addEventListener("click", function () { $("openIn").click(); });
     $("openIn").addEventListener("change", function () {
@@ -3319,13 +3267,11 @@
   /* THE SQUEEZE, AND THE PICTURE. Each rung gives the donut a larger share of
      the card, and the button gives that width up. The disc grows with it. Both
      are turned into pixels from the MEASURED card, because the action bar and
-     the deck below it are different widths and a per cent would resolve
+     the picture's window are different widths and a per cent would resolve
      differently in each of them.
 
-     The two are written apart. On a wide screen they agree, because the deck
-     sits under the same column the donut takes its share of. On a touch screen
-     they must not: the donut shares a row with a button that holds words, and
-     the disc has a row to itself, so each reads its own tuning. */
+     The two are written apart. The donut shares a row with a button that holds
+     words, and the disc has a window to itself, so each reads its own tuning. */
   // True once the sizes have been written at least once. The first write
   // happens on arrival and must not animate. See setBoardSizes.
   var boardSized = false;
@@ -3349,6 +3295,16 @@
     return Math.min(room, Math.round(from + t * (room - from)));
   }
 
+  /* WHICH RUNG A PICTURE OF THIS SIDE STANDS ON: the smallest disc as wide as
+     it. A picture in the window takes its share from the rung it was pressed on,
+     and not from the rung the Make box has reached since. */
+  function rungOfSide(side) {
+    for (var i = 0; i < RUNGS.length; i++) {
+      if (side <= RUNGS[i].px) return i;
+    }
+    return RUNGS.length - 1;
+  }
+
   function setBoardSizes(k) {
     homeShownRung = Math.min(k, RUNGS.length - 1);
     var col = document.querySelector(".col.make");
@@ -3360,12 +3316,17 @@
     var t = METER_TUNING[touchPointer.matches ? "touch" : "wide"];
     var meter = Math.min(t.max, Math.max(t.min, Math.round(inner * t.share[homeShownRung])));
 
-    /* THE SHARE IS OF THE MAKE COLUMN, NOT THE DECK ROW. The deck spans the
-       whole board so the chips have room beside the picture, but the picture
-       itself stays as wide as the column it was pressed in. Reading the deck
-       instead would draw an 828px disc on a 920px board. */
+    /* THE MAKE CARD IS MEASURED, NOT THE MADE! CARD. The two are the same width
+       on both shapes, and the Make card is on screen whenever the next picture's
+       size can change. */
     var slot;
     var colW = col.getBoundingClientRect().width || inner + pad * 2;
+    /* THE PICTURE IN THE WINDOW DECIDES ITS OWN SIZE ONCE IT HAS LOADED. Until
+       then the size is the plan for what the Make box holds, which is what the
+       next press makes. A desktop's Make box can hold the next note while Made!
+       still shows the last picture, and that picture must not grow and shrink
+       with the typing beside it. */
+    var side = homeDiscSide || homeTrueSide || RUNGS[homeShownRung].px;
     if (touchPointer.matches) {
       /* THE PICTURE'S OWN SIZE DECIDES IT, not the rung. A rung is a band, and
          the whole of the smallest band is drawn at one size on a phone: the
@@ -3375,19 +3336,23 @@
          The card is what is measured, not the window, because the two are
          never on screen at once on a phone and they are the same width. */
       var room = Math.max(0, Math.round(colW) - 2 - DISC_GUTTER_PX * 2);
-      slot = phoneDiscSize(homeTrueSide || RUNGS[homeShownRung].px, room);
+      slot = phoneDiscSize(side, room);
     } else {
       /* THE TRUE PICTURE WINS OVER THE RUNG. The rung is a band, and a disc
          drawn at the band's top would be wider than the file really is. The
          rung is the fallback for the first paint, before anything has been
-         measured. */
-      var ceiling = homeTrueSide || RUNGS[homeShownRung].px;
-      slot = Math.round(Math.min(ceiling, colW * DISC_TUNING.wide[homeShownRung]));
+         measured.
+         THE WINDOW'S ROOM IS THE CEILING. The Made! card has the Make card's
+         frame, so its window is the card's inside less its own edge, and the
+         gutter a phone leaves is left here too. */
+      var rung = homeDiscSide ? rungOfSide(homeDiscSide) : homeShownRung;
+      var roomW = Math.max(0, Math.round(inner) - 2 - DISC_GUTTER_PX * 2);
+      slot = Math.round(Math.min(side, colW * DISC_TUNING.wide[rung], roomW));
     }
 
     // Both tokens are set on the root, because that is where every rule that
-    // reads them resolves. Setting them on the column would leave the deck
-    // behind.
+    // reads them resolves. Setting them on the column would leave Made!'s
+    // window behind.
     var root = document.documentElement.style;
 
     /* THE FIRST WRITE MUST NOT ANIMATE. The stylesheet has to declare some
@@ -3613,7 +3578,7 @@
          the arithmetic, and with the drawer's own settings so a change to the
          depth or the background moves the answer. A failure here must not
          stop the meter: the rung is what the ring is drawn from, and the true
-         size only decides the tray's width and the warning. */
+         size only decides the window's width and the warning. */
       try {
         var plan = await PuttyPNG.planSize(currentHomeInput(), gatherOptions());
         if (token !== homeRunToken) return;
@@ -3680,16 +3645,16 @@
      before the compression finishes, so a big paste can wash the ring on the
      same frame rather than a tenth of a second later. */
   function noteHomeInput() {
-    // What is in the tray was pressed from what the box used to hold. One
-    // letter is enough to make it wrong, so it goes.
-    if (homeDiscOut) tossDisc();
-    // A different PuttyPNG deserves its own saying. Flipping the background
-    // does not come through here, which is what keeps that one wording.
+    /* THE PICTURE THAT IS OUT STAYS. Make is the next picture and Made! is the
+       last one, and a person can see which is which: on a desktop the two stand
+       side by side, and a phone's Make screen never has one out. It was thrown
+       away on the first letter typed until v2.24.0, because the tray sat under
+       the box it was pressed from and read as that box's picture. */
+    // A different PuttyPNG deserves its own saying, and its own title.
     homeSaying = null;
     homeExampleTitle = null;
     if (homeEditedLabel !== null && $("optLabel").value === homeEditedLabel) $("optLabel").value = "";
     homeEditedLabel = null;
-    homeMade = null;
     var raw = currentHomeBytes().byteLength;
     var top = Math.min(homeLastRung, RUNGS.length - 1);
     var band = capOf(top) - (homeLastRung ? capOf(homeLastRung - 1) : 0);
@@ -4292,7 +4257,7 @@
      its last frame, so a second show would open on a ball already grown, a
      flare already spent and a colour turn already finished. Taking the property
      off, reading the box, and putting it back is what starts them from the
-     beginning. The same move resetDisc() makes for the tray. */
+     beginning. The same move resetDisc() makes for the disc. */
   function ilRestart() {
     var parts = [$("ilStage"), $("ilCore"), $("ilFlare"), $("ilBox")];
     for (var i = 0; i < parts.length; i++) {
@@ -4524,12 +4489,14 @@
        document. The board was inert while the show stood over it, and an inert
        heading cannot take focus, so the change that brought Made up asked for
        its heading and got nothing. The board is reachable again from here.
-       A phone's heading is the heading of whichever screen is up. A desktop has
-       no change of screen, so its focus goes back to the board's Make heading. */
+       A phone's heading is the heading of whichever screen is up. A desktop's
+       is the heading of the card the picture arrived in when the show brought
+       Made! up, and the Make heading when the show was skipped. */
+    var view = $("boardGrid").getAttribute("data-view");
     if (touchPointer.matches) {
-      focusView($("boardGrid").getAttribute("data-view"));
+      focusView(view);
     } else {
-      var head = $("headMake");
+      var head = $(view === "made" ? "headLoad" : "headMake");
       if (head) head.focus();
     }
 
@@ -4538,16 +4505,25 @@
 
   /* THE WAY OUT BEFORE THE END: the skip control, Escape, or an encode that
      threw. It runs once, and a second call has nothing left to take down.
-     IT GOES BACK TO MAKE AND NOT ON TO MADE. Only the press knows whether there
-     is a picture yet, and often there is not: somebody who skips is still
-     waiting on the encode. Left on the show's own screen with the panel taken
-     off, a phone would be looking at nothing at all, because that screen has no
-     other region on it. Make is where the show came from and it is always
-     there, and the press slides on to Made from it when the picture is ready. */
+     IT GOES BACK TO WHERE THE BOARD RESTED, AND NOT ON TO THE NEW MADE!. Only
+     the press knows whether there is a picture yet, and often there is not:
+     somebody who skips is still waiting on the encode. Left on the show's own
+     screen with the panel taken off, a phone would be looking at nothing at
+     all, because that screen has no other region on it. The press moves on to
+     Made! from the resting screen when the picture is ready. */
   function endInterlude() {
     if (!ilRunning) return;
     finishInterlude();
-    setView("make");
+    setView(restView());
+  }
+
+  /* WHERE THE BOARD RESTS WHEN THE SHOW COMES DOWN EARLY. A phone always pressed
+     from Make, where no disc is out and nothing is open, so it goes back there.
+     A desktop pressed beside Made! or Loaded!, and that card is still true until
+     the new picture arrives, so it comes back as it was. */
+  function restView() {
+    if (homeDiscOut) return "made";
+    return $("zone").classList.contains("has") ? "loaded" : "make";
   }
 
   function wireInterlude() {
@@ -4596,21 +4572,25 @@
   function resetDisc() {
     var cd = $("cd");
     cd.style.transition = "none";
-    cd.classList.remove("out", "gone", "lifted");
+    cd.classList.remove("out", "gone");
     void cd.getBoundingClientRect();
     cd.style.transition = "";
   }
 
-  /* Throw away whatever is in the tray, then run then() once it has gone.
+  /* Throw away whatever is in Made!'s window, then run then() once it has gone.
 
      THE CLEAR-UP CHECKS IT IS STILL THE CURRENT ONE. Pressing Make within a
-     third of a second of a change used to leave an empty tray: the change
+     third of a second of a change used to leave an empty window: the change
      started a toss, the press put a fresh disc in before that toss finished,
      and the toss then cleared the disc that had arrived meanwhile. */
   function tossDisc(then) {
     if (!homeDiscOut) { if (then) then(); return; }
     homeDiscOut = false;
     homeMade = null;
+    /* A PICTURE THAT FOLLOWS KEEPS THE LAST ONE'S SIZE UNTIL IT HAS LOADED, so the
+       window does not jump to whatever the Make box plans for in between. One
+       that goes with nothing after it gives the window back to that plan. */
+    if (!then) homeDiscSide = 0;
     closeTitleEditor();
     paintDiscEdit();
     var run = homeDiscRun;
@@ -4621,7 +4601,7 @@
     }, DISC_TOSS_MS);
   }
 
-  async function pressHomeDisc(keepSaying) {
+  async function pressHomeDisc(restyle) {
     if (homePressing || homeTitleSaving) return;
     homePressing = true;
     paintDiscEdit();
@@ -4629,19 +4609,32 @@
     btn.disabled = true;
     lab.textContent = "Pressing...";
     try {
-      var input = homeAttached ? homeAttached.bytes : ($("makeText").value || "(empty)");
-      /* EVERY ADVANCED SETTING REACHES THE ENGINE. The drawer is read in full
-         and the board only fills in what it was not told: the ladder's top
-         rung as a ceiling, unless Advanced named a size of its own. */
-      var opts = gatherOptions();
-      if (!opts.size) opts.maxSize = RUNGS[RUNGS.length - 1].px;
-      // The engine takes a name and a type in its options, so a file comes out
-      // of the other end still knowing what it was called.
-      if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
+      var input, opts, made;
+      if (restyle) {
+        /* THE BACKGROUND SWITCH RESTYLES THE PICTURE THAT IS OUT, AND NOTHING
+           ELSE ABOUT IT. A desktop's Make box stands beside Made! and may hold
+           the next note already, so the switch presses the finished picture's
+           own contents, title and settings again with the background changed,
+           the way the title editor presses them with the title changed. */
+        input = homeMade.input;
+        opts = Object.assign({}, homeMade.opts);
+        if (opts.coverStyle === "cd") opts.solidBackground = backgroundIsSolid();
+        made = Object.assign({}, homeMade, { opts: opts });
+      } else {
+        input = homeAttached ? homeAttached.bytes : ($("makeText").value || "(empty)");
+        /* EVERY ADVANCED SETTING REACHES THE ENGINE. The drawer is read in full
+           and the board only fills in what it was not told: the ladder's top
+           rung as a ceiling, unless Advanced named a size of its own. */
+        opts = gatherOptions();
+        if (!opts.size) opts.maxSize = RUNGS[RUNGS.length - 1].px;
+        // The engine takes a name and a type in its options, so a file comes out
+        // of the other end still knowing what it was called.
+        if (homeAttached) { opts.name = homeAttached.name; opts.mime = homeAttached.mime; }
 
-      applyDiscWriting(input, opts, keepSaying);
-      var made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
-        category: discCategory(homeAttached, !!opts.password), customText: opts.label };
+        applyDiscWriting(input, opts);
+        made = { input: input, opts: opts, name: homeAttached ? homeAttached.name : "",
+          category: discCategory(homeAttached, !!opts.password), customText: opts.label };
+      }
 
       /* THE SHOW AND THE WORK RUN TOGETHER, AND THE SHOW IS THE FLOOR. The
          encode is usually over in a blink, so the show is not covering a wait:
@@ -4650,12 +4643,12 @@
          finish underneath it and cost nothing on top of it.
          WITH NO SHOW THIS IS AN ALREADY RESOLVED PROMISE, and the two lines
          around the encode are the only trace of it in the press.
-         THE SHOW BELONGS TO THE MAKE BUTTON AND TO NOTHING ELSE. keepSaying is
+         THE SHOW BELONGS TO THE MAKE BUTTON AND TO NOTHING ELSE. A restyle is
          the background switch pressing the same picture again, where a person
          is changing one thing about a picture they already have. Taking them
          through the whole show for that would move the screen out from under
          the switch they are still looking at. */
-      var show = keepSaying ? Promise.resolve() : playInterlude();
+      var show = restyle ? Promise.resolve() : playInterlude();
       /* THE SLIDE IS UNDER WAY BEFORE THE WORK BEGINS. Pressing a picture is
          heavy for a moment, and a phone's slide needs that moment free to take
          its two pictures. It waits a frame or two for them and no more, because
@@ -4675,28 +4668,38 @@
         homeDiscRun++;
         homeMade = made;
         resetDisc();
-        // The width and the height are read off the image, so the reading has
-        // to wait for the image. once:true, or every press adds another.
-        cd.addEventListener("load", paintDiscFacts, { once: true });
+        /* THE WIDTH AND THE HEIGHT ARE READ OFF THE IMAGE, so everything read from
+           them waits for it: the window's size, the caption and the notes.
+           once:true, or every press adds another. A picture closed or replaced
+           before it loaded is not the one to measure. */
+        cd.addEventListener("load", function () {
+          if (homeMade !== made) return;
+          homeDiscSide = cd.naturalWidth;
+          setBoardSizes(homeShownRung);
+          paintDiscFacts();
+        }, { once: true });
         cd.src = png.dataUrl;
-        // The PuttyPNG exists and the tray is where it lives. On a phone that
-        // is a screen of its own, so the flag moves before the disc ejects
-        // into it. On a desktop nothing moves and the flag is a record.
-        // It slides in, because this is the far side of the handover the show
-        // exists to make: the picture arrives from where the words went.
+        // The PuttyPNG exists and Made! is where it lives: a screen of its own on
+        // a phone, and the card in the right-hand cell on a desktop. The flag
+        // moves before the disc ejects into it. It slides or fades in, because
+        // this is the far side of the handover the show exists to make: the
+        // picture arrives from where the words went.
         /* THE DISC COMES OUT ONCE THE SCREEN HAS STOPPED. An eject that ran while
            the screen slid was two movements at once, and the slide hides the
-           slot the disc comes out of. A desktop coming out of the show waits for
-           the dim to clear from over the tray, and a desktop with no show up has
-           nothing to wait for, so the disc comes out as it always did.
-           IT CHECKS IT IS STILL THIS DISC, ON THIS SCREEN. The slide is long
-           enough for the corner's Close to be pressed, and a late eject would
-           push a disc out onto Make, where nothing is showing the tray. */
+           slot the disc comes out of. A desktop waits for its fade the same way,
+           and a desktop already showing Made! has nothing to wait for: the last
+           picture goes and the new one comes out in the same window.
+           IT CHECKS IT IS STILL THIS DISC, ON THIS SCREEN. The change is long
+           enough for Close or the cross to be pressed, and a late eject would
+           push a disc out onto Make, where nothing is showing the window. */
         var run = homeDiscRun;
         /* THE SHOW COMES DOWN IN THE CHANGE THAT BRINGS MADE UP, so the screen
            a phone slides out is the show's own and not a Make screen put back
            for one frame. With no show up, finishInterlude does nothing. */
-        setView("made", true, finishInterlude).then(function () {
+        setView("made", true, function () {
+          finishInterlude();
+          emptyHomeLoaded();
+        }).then(function () {
           // A timer, not requestAnimationFrame. The frame callback does not run
           // in a headless test, and the disc would then never be told to come out.
           setTimeout(function () {
@@ -4737,38 +4740,6 @@
     }
   }
 
-  /* CARRYING A DISC. A copy of it follows the pointer and the original stays
-     as a trace in the slot, so the tray never looks empty mid-move.
-     THERE IS ONLY ONE PLACE TO PUT ONE DOWN. The bin is a button, so a release
-     anywhere but Load carries the disc back to its slot. */
-  function endDiscDrag(e) {
-    if (!homeDrag) return;
-    var d = homeDrag;
-    homeDrag = null;
-    if (!d.live) return;
-    var cd = $("cd"), zone = $("zone");
-    zone.classList.remove("over");
-    var g = d.ghost;
-    if (!!e && pointerInside(zone, e)) {
-      g.style.transition = "transform .25s ease, opacity .25s ease";
-      g.style.transform += " scale(.4)";
-      g.style.opacity = 0;
-      cd.classList.remove("lifted");
-      loadHomeFromSrc(cd.src, "the one you made", homeLastBlob);
-      homeDiscOut = false;
-      homeMade = null;
-      paintDiscEdit();
-      cd.classList.add("gone");
-      var run = homeDiscRun;
-      setTimeout(function () { if (run === homeDiscRun) resetDisc(); }, DISC_TOSS_MS);
-    } else {
-      g.style.transition = "transform .25s ease";
-      g.style.transform = "translate(0,0)";
-      setTimeout(function () { cd.classList.remove("lifted"); }, 240);
-    }
-    setTimeout(function () { g.remove(); }, DISC_DRAG_MS);
-  }
-
   /* ==========================================================================
      THE HOME BOARD - LOAD
      ========================================================================== */
@@ -4802,7 +4773,10 @@
      Peeking here covers every way in that a person has: the drop on the Load
      zone, Load one!, and Paste one! all arrive at this function.
      The Loaded screen now means one thing, which is what lets its line be
-     green and be true. */
+     green and be true.
+     A PUTTYPNG THAT WOULD REPLACE MADE! ASKS FIRST. Made! and Loaded! share one
+     card, so opening one closes the other, and the picture in Made! is nowhere
+     else until it has been downloaded or copied. */
   async function readHomeFile(file) {
     if (!file) return;
     if (!/png/i.test(file.type) && !/\.png$/i.test(file.name || "")) {
@@ -4813,13 +4787,37 @@
     try {
       var head = await PuttyPNG.peek(file);
       if (!head.isPuttyPNG) { offerPlain(file); return; }
-      var res = await PuttyPNG.decode(file);
-      showHomeLoaded(URL.createObjectURL(file), file.name || "pasted.png", res, file);
+      if (homeDiscOut) { askReplaceMade(file); return; }
+      await openHomeFile(file);
     } catch (err) {
       toast(friendly(err), "bad");
     } finally {
       stopReading();
     }
+  }
+
+  // Decode a PuttyPNG that has been peeked at already, and show what came out.
+  async function openHomeFile(file) {
+    var res = await PuttyPNG.decode(file);
+    showHomeLoaded(URL.createObjectURL(file), file.name || "pasted.png", res, file);
+  }
+
+  /* THE QUESTION BEFORE MADE! IS REPLACED. Nothing is decoded until the answer
+     is Yes, and the reading, which the peek may have left saying Decoding, goes
+     back to naming the card that is still up. */
+  function askReplaceMade(file) {
+    paintCardSay();
+    askHome({ title: SAY.replaceTitle, body: SAY.replaceAsk, yes: SAY.replaceYes },
+      async function () {
+        startReading();
+        try {
+          await openHomeFile(file);
+        } catch (err) {
+          toast(friendly(err), "bad");
+        } finally {
+          stopReading();
+        }
+      });
   }
 
   /* WHAT TO DO WITH A PICTURE THAT HOLDS NOTHING. It is not a failure: it is a
@@ -4860,7 +4858,7 @@
 
   function offerPlain(file) {
     // The reading is left saying Decoding, and nothing is being decoded now.
-    paintSay($("loadSay"), "quiet", SAY.loadIdle);
+    paintCardSay();
     var ta = $("makeText");
     if (!ta || ta.value.trim() === "") {
       takeHomeAttachment(file, SAY.tookPlain);
@@ -4870,55 +4868,41 @@
       function () { takeHomeAttachment(file, SAY.tookPlain); });
   }
 
-  async function loadHomeFromSrc(src, name, blob) {
-    startReading();
-    try {
-      showHomeLoaded(src, name, await PuttyPNG.decode(src), blob);
-    } catch (err) {
-      showHomeLoaded(src, name, null, blob);
-      toast(friendly(err), "bad");
-    } finally {
-      stopReading();
-    }
-  }
-
   /* What came out is shown as the disc and its name, then whatever came out as
      a file, then the text. A file gets its own chip with a download arrow, so
-     it can be taken on its own rather than through the picture. */
+     it can be taken on its own rather than through the picture.
+     MADE! GOES IN THE SAME CHANGE, because the two cards share one cell. A disc
+     that is out has been asked about by now, and the answer was Yes. */
   function showHomeLoaded(url, name, res, blob) {
-    homeLoadedBlob = blob || null;
-    homeLoadedText = null;
-    $("gotImg").src = url;
-    $("gotName").textContent = name;
-    $("gotFiles").textContent = "";
-    var text = null;
+    setView("loaded", false, function () {
+      if (homeDiscOut) tossDisc();
+      homeLoadedBlob = blob || null;
+      homeLoadedText = null;
+      $("gotImg").src = url;
+      $("gotName").textContent = name;
+      $("gotFiles").textContent = "";
+      var text = null;
 
-    if (res === null) {
-      $("gotSize").textContent = "no PuttyPNG data inside";
-    } else {
-      /* WHAT CAME OUT, AGAINST WHAT CARRIED IT. R5's line, and the ratio is
-         the interesting part: a small note inside a large picture is the whole
+      /* WHAT CAME OUT, AGAINST WHAT CARRIED IT. R5's line, and the ratio is the
+         interesting part: a small note inside a large picture is the whole
          point of the thing. */
       var payload = res.bytes ? res.bytes.length : 0;
       $("gotSize").textContent = homeFmt(payload) +
         (homeLoadedBlob ? " out of " + homeFmt(homeLoadedBlob.size) : " inside");
       if (res.text != null) { text = res.text; homeLoadedText = res.text; }
       else addHomeFileChip(res.name || "a file", res.bytes, res.mime);
-    }
-    // All of it. The panel is meant to hold a whole book if one went in.
-    $("gotText").textContent = text === null ? "" : text;
-    $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
-    // The label and Copy Contents belong to text. A file has its own chip.
-    $("gotLabel").hidden = !text;
-    paintCopyContents();
-    $("zone").classList.add("has");
-    /* A null result means the picture held nothing. From v2.9.1 the load
-       paths peek first, so that no longer arrives here from the board's own
-       controls, and this stays as the answer for a disc dragged in that will
-       not read. It is not a success, so it is not green. */
-    if (res === null) paintSay($("loadSay"), "quiet", SAY.plain);
-    else paintSay($("loadSay"), "ok", SAY.loaded);
-    setView("loaded");
+
+      // All of it. The panel is meant to hold a whole book if one went in.
+      $("gotText").textContent = text === null ? "" : text;
+      $("gotBody").classList.toggle("filesonly", !text && $("gotFiles").children.length > 0);
+      // The label and Copy Contents belong to text. A file has its own chip.
+      $("gotLabel").hidden = !text;
+      paintCopyContents();
+      $("zone").classList.add("has");
+      // A second PuttyPNG over the first changes no screen, so the reading is
+      // put right here, where the read may have left it saying Decoding.
+      paintCardSay();
+    });
   }
 
   /* R5's rule: a PuttyPNG that carries a file has nothing to copy as text, and
@@ -4955,10 +4939,18 @@
     $("gotFiles").appendChild(chip);
   }
 
+  // Close Loaded! and put Load back: the cross, OK, done! and a phone's Close.
   function clearHomeLoaded() {
-    paintSay($("loadSay"), "quiet", SAY.loadIdle);
-    setView("make");
+    setView("make", false, emptyHomeLoaded);
+    focusCardHead();
+  }
+
+  /* EMPTY THE LOADED! PANEL AND LEAVE THE SCREEN ALONE. Closing it does this, and
+     so does a new Made! arriving: the two cards share one cell, and a panel left
+     holding the last PuttyPNG would come back with it when Made! is closed. */
+  function emptyHomeLoaded() {
     homeLoadedBlob = null;
+    homeLoadedText = null;
     $("zone").classList.remove("has");
     $("gotImg").removeAttribute("src");
     $("gotFiles").textContent = "";
@@ -5054,21 +5046,25 @@
     /* THE MEASUREMENT OF WHAT WAS IN VIEW, as the show takes it, so a probe can
        set the box up, ask, and hold the answer to the box it came from. */
     window.PuttyPNGDebug.interludeSource = interludeSource;
-    // The side the engine says the picture will be, which is what the tray is
-    // capped at and what the over-512 warning is read from.
+    // The side the engine says the next picture will be, which is what the
+    // window is sized from until a picture is out, and what the over-512
+    // warning is read from.
     window.PuttyPNGDebug.trueSide = function () { return homeTrueSide; };
     /* WHAT THE LAST DISC SAYS ACROSS ITS TOP, and which press made it, so a probe
-       that presses twice reads the second disc and not the first one again. */
+       that presses twice reads the second disc and not the first one again. The
+       side is the one the window is sized from while the picture is out. */
     window.PuttyPNGDebug.madeDisc = function () {
-      return { run: homeDiscRun, out: homeDiscOut, title: homeMade ? homeMade.customText : null };
+      return { run: homeDiscRun, out: homeDiscOut, title: homeMade ? homeMade.customText : null,
+               side: homeDiscSide };
     };
     window.PuttyPNGDebug.tuning = function () {
       return { rungs: RUNGS.length, wide: METER_TUNING.wide.share,
                touch: METER_TUNING.touch.share,
-               // The phone's ramp as its two ends and the white it leaves: a
-               // probe works the expected width out from these rather than
-               // holding a copy of four numbers that go stale in silence.
-               disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX },
+               // The phone's ramp as its two ends and the white it leaves, and a
+               // desktop's shares: a probe works the expected width out from
+               // these rather than holding a copy of numbers that go stale.
+               disc: { from: RUNGS[0].px, to: BIG_PASTE_PX, gutter: DISC_GUTTER_PX,
+                       wide: DISC_TUNING.wide.slice(), rungs: RUNGS.map(function (r) { return r.px; }) },
                // How many letters break apart before words do, and words before
                // lines; the share a show after the first gets; and the whole
                // show's time and its wait for the pull, at full length.
